@@ -22,16 +22,22 @@ Design decisions:
 ```mermaid
 flowchart TD
     subgraph View[React view layer]
+        AppProvider --> App
+        App --> Toolbar
         App --> Breadcrumb
         App --> CanvasView
         App --> Inspector
         App --> ConfirmDialog
         App --> NotificationBar
+        App -->|owns one| DeleteFlow
+        CanvasView --> DeleteFlow
+        Inspector --> DeleteFlow
+        ConfirmDialog --> DeleteFlow
     end
     subgraph Domain[Domain, no React]
         Workspace --> Diagram --> Component --> Diagram
         Diagram --> Link
-        Navigator --> Workspace
+        Navigator -->|root| Workspace
     end
     subgraph Persistence
         WorkspaceLoader --> Repository
@@ -101,6 +107,7 @@ Layers depend downward only. The domain knows nothing about the view or storage.
   - `addLink(sourceId, targetId): Link` (throws `DomainError`)
   - `removeLink(id): void`
 - Rules:
+  - `removeComponent`, `deletionImpact` and `removeLink` throw `DomainError('NOT_IN_DIAGRAM')` for an id that is not in this Diagram.
   - `addLink` throws `DomainError('SELF_LINK')` when `sourceId === targetId`, and `DomainError('NOT_IN_DIAGRAM')` when either id is not a Component of this Diagram.
   - `removeComponent` removes the Component (and with it, its child Diagram and everything inside) plus every Link of this Diagram whose endpoint is that Component.
   - `deletionImpact` counts the descendants of the child Diagram (Components and Links, recursively) as `contents`, and the attached Links in this Diagram as `links`. The UI asks for confirmation when either is above zero.
@@ -126,9 +133,9 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 - Responsibility: the current Level as a path of Component ids from the root.
 - Interface: `path: readonly string[]` (Component ids only, no names), `trail(): readonly Component[]` (the path resolved to live Components), `current: Diagram`, `open(componentId)`, `navigateTo(index)`.
 - Names are never copied into the path. The Breadcrumb reads `trail()[i].details.name`, so a rename shows immediately.
-- Rules: `open` accepts only a Component of the current Diagram. `navigateTo(i)` keeps the first `i` path elements (index 0 is the root).
+- Rules: `open` accepts only a Component of the current Diagram and throws `DomainError('NOT_IN_DIAGRAM')` otherwise. `trail` throws the same error if a path id no longer resolves. `navigateTo(i)` keeps the first `i` path elements (index 0 is the root) and throws `RangeError` for a non-integer or out-of-range index.
 - Deleting a Component never invalidates the path, because the path holds ancestors of the current Diagram and deletion only targets the current Diagram's own Components.
-- Collaborators: Workspace.
+- Collaborators: a root provider, `{ readonly root: Diagram }` (the Workspace in the app). Depending on this narrow shape lets tests skip building a Workspace.
 - Serves 2.1, 2.2, 2.3, 2.4, 4.2.
 
 ### Persistence
@@ -153,8 +160,8 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 
 **AutoSaver**
 - Responsibility: save after changes with a trailing debounce.
-- Interface: `start(): void`, `flush(): Promise<void>`, `stop(): void`.
-- Behavior: subscribes to the Workspace and schedules a save 500 ms after the last change, with a maximum wait of 900 ms so continuous editing still saves inside 1 second (see Error Handling). It also calls `flush` on `pagehide`. On failure it posts a persistent `save` message to the Notifier; on the next success it clears it.
+- Interface: constructor `(workspace, serializer, repository, notifier, scheduler, pageEvents?)`, `start(): void`, `flush(): Promise<void>`, `stop(): void`. `pageEvents` is an `EventTarget` that defaults to `window` and is undefined outside a browser.
+- Behavior: subscribes to the Workspace and schedules a save 500 ms after the last change, with a maximum wait of 900 ms so continuous editing still saves inside 1 second (see Error Handling). It calls `flush` on `pagehide` of `pageEvents`. A `dirty` flag is set on every change and stays set after a failed save, so a later `flush` retries. Saves are serialized through a promise queue, and each serializes the workspace when it runs, so a slow earlier write cannot overwrite a newer one. `flush` cancels both timers. On failure it posts a persistent `save` message to the Notifier; on the next success it clears it.
 - Collaborators: Workspace, WorkspaceSerializer, Repository, Notifier, Scheduler.
 - Serves 5.1, 5.3.
 
@@ -175,7 +182,7 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 - `useSyncExternalStore(store.subscribe, store.getVersion)`, returns the store. The single bridge from domain to React.
 
 **AppProvider**
-- React context supplying Workspace, Navigator, Notifier. Constructed in `main.tsx` (dependency injection).
+- React context supplying Workspace, Navigator, Notifier, read with `useApp()`. Constructed in `main.tsx` (dependency injection). DeleteFlow is not in the context; App owns it.
 
 **DiagramProjector**
 - Responsibility: stateless mapping from a Diagram to React Flow `nodes` and `edges`, one node per Component and one edge per Link, with the same ids.
@@ -183,14 +190,16 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 - Serves 1.1, 3.1, 3.3 (rendering side).
 
 **CanvasView**
-- Responsibility: host `ReactFlow` for `navigator.current`. Keyed by Diagram id so the canvas remounts on Level change and applies `defaultViewport` from the Diagram (4.2).
-- Behavior:
-  - Nodes and edges come from DiagramProjector. Transient drag state lives in React Flow's own node state and resets on the next model version.
+- Responsibility: host `ReactFlow` for `navigator.current`. `CanvasView` reads the Navigator and renders an inner `Level` keyed by Diagram id, so the canvas remounts on Level change and applies `defaultViewport` from the Diagram (4.2).
+- Props: `deleteFlow`, `onSelectionChange(selection)`.
+- Behavior (in `Level`):
+  - Nodes and edges come from DiagramProjector. React Flow keeps local state for drags and selection, and `Level` rebuilds it from the Diagram on each Workspace version, carrying the `selected` flags over so a rename keeps the selection.
   - `onNodeDragStop` calls `component.setPosition` (1.3).
-  - `onMoveEnd` calls `recordViewport(navigator.current, viewport)` (4.1, 4.2).
+  - `onMoveEnd` calls `recordViewport(diagram, viewport)` (4.1, 4.2).
   - `onConnect` calls `diagram.addLink`. It catches `DomainError` and posts the reason to the Notifier as a transient message under key `link` (3.4).
-  - Double-click on a node calls `navigator.open` (2.1).
-  - Delete key on a selection calls DeleteFlow.
+  - Double-click on a node calls `navigator.open` (2.1). `zoomOnDoubleClick` is disabled so it does not also zoom.
+  - Delete key: `onBeforeDelete` calls `DeleteFlow.request` for each Component, and for each Link not attached to a deleted Component, then returns `false` so React Flow never deletes by itself.
+  - `onSelectionChange` reports exactly one selected Component or Link, otherwise `null`. The selection itself is kept in App, which resolves the live item each render and drops a stale one.
 - Collaborators: Navigator, DiagramProjector, Notifier, DeleteFlow, recordViewport.
 
 **recordViewport(diagram, viewport)**
@@ -200,8 +209,10 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 **Inspector**
 - Edits name, description, and notes of the selected `Describable` (Component or Link) through `details.patch` (1.2, 3.2). It also exposes Delete for the selection.
 
-**DeleteFlow**
-- Responsibility: single path for deleting a Component or Link. For a Component, read `deletionImpact`. If `contents + links > 0`, show ConfirmDialog first (1.5), then call `removeComponent` (1.4). Links delete directly (3.3). Used by both the Delete key and the Inspector.
+**DeleteFlow** (implements ObservableStore, no React imports)
+- Responsibility: single path for deleting a Component or Link. For a Component, read `deletionImpact`. If `contents + links > 0`, hold a `pending` deletion for ConfirmDialog (1.5), then call `removeComponent` on confirm (1.4). Links delete directly (3.3).
+- Interface: `request(diagram, { kind, id })`, `confirm()`, `cancel()`, `pending: PendingDelete | null`.
+- App owns one instance and passes it to CanvasView, Inspector and ConfirmDialog, so the Delete key and the Inspector share one pending confirmation.
 
 **ConfirmDialog**, **Breadcrumb** (renders the Root label plus `navigator.trail()` names from the live Components, subscribed to both Navigator and Workspace so renames appear at once, calls `navigateTo`, 2.2 and 2.3), **NotificationBar** (renders Notifier messages and a dismiss button on transient ones, 3.4, 5.3 and 5.5), **Toolbar** (adds a Component at the canvas center, 1.1).
 
@@ -320,7 +331,7 @@ The generator for these properties builds a random Workspace by applying random 
 
 ### Property 7: Navigation follows the nesting
 
-*For any* workspace and any sequence of `open` calls on Components of the current Diagram, `current` SHALL be the opened Component's Diagram and `path` SHALL list the opened Components in order, to any depth. *For any* index in the path, `navigateTo(index)` SHALL make `current` the Diagram at that depth and truncate the path to match.
+*For any* workspace and any sequence of `open` calls on Components of the current Diagram, `current` SHALL be the opened Component's Diagram and `path` SHALL list the ids of the opened Components in order (ids only, no names), to any depth. *For any* index in the path, `navigateTo(index)` SHALL make `current` the Diagram at that depth and truncate the path to match.
 
 **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
 

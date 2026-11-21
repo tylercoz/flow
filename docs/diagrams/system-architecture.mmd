@@ -1,20 +1,24 @@
 flowchart TD
+    Main[main.tsx composition root]
     subgraph View[React view layer]
-        App --> Breadcrumb
-        App --> CanvasView
-        App --> Inspector
-        App --> ConfirmDialog
-        App --> NotificationBar
-        CanvasView --> DiagramProjector
-        CanvasView --> recordViewport
-        CanvasView --> DeleteFlow
-        Inspector --> DeleteFlow
-        DeleteFlow --> ConfirmDialog
+        AppProvider
+        App
+        DeleteFlow
+        Toolbar
+        Breadcrumb
+        CanvasView
+        Inspector
+        ConfirmDialog
+        NotificationBar
+        DiagramProjector
+        recordViewport
+        useStore
     end
     subgraph Domain[Domain, no React]
         Workspace --> Diagram --> Component --> Diagram
         Diagram --> Link
         Navigator --> Workspace
+        Notifier --> Scheduler
     end
     subgraph Persistence
         WorkspaceLoader --> Repository
@@ -22,11 +26,29 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
-        Repository -.implemented by.-> LocalStorageRepository
+        LocalStorageRepository -.implements.-> Repository
     end
+    Main -->|builds and starts| Persistence
+    Main -->|creates| Domain
+    Main -->|services| AppProvider
+    AppProvider --> App
+    App -->|owns one instance| DeleteFlow
+    App --> Toolbar
+    App --> Breadcrumb
+    App --> CanvasView
+    App --> Inspector
+    App --> ConfirmDialog
+    App --> NotificationBar
+    App -->|passes deleteFlow| CanvasView
+    App -->|passes deleteFlow| Inspector
+    ConfirmDialog -->|reads pending| DeleteFlow
+    CanvasView --> DiagramProjector
+    CanvasView --> recordViewport
+    CanvasView -->|request| DeleteFlow
+    Inspector -->|request| DeleteFlow
     View -->|useStore| Domain
     View -->|commands| Domain
     AutoSaver -->|subscribes| Workspace
-    AutoSaver -->|failures| Notifier
-    View -->|reads| Notifier
+    AutoSaver -->|save failures| Notifier
+    WorkspaceLoader -->|load failures| Notifier
     LocalStorageRepository --> Browser[(localStorage)]

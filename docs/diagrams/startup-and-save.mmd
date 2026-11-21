@@ -12,26 +12,28 @@ sequenceDiagram
         R-->>L: raw
         L->>S: deserialize(raw)
         S-->>L: snapshot (plain data)
-        L->>W: Workspace.restore(snapshot)
-    else none
+        L->>W: Workspace.restore(snapshot, ids)
+    else none stored
         R-->>L: null
-        L->>W: Workspace.empty()
-    else unreadable
+        L->>W: Workspace.empty(ids)
+    else unreadable (load or deserialize throws PersistenceError)
         L->>N: post("load", persistent)
-        L->>W: Workspace.empty()
+        L->>W: Workspace.empty(ids)
     end
     L-->>M: workspace, canSave
+    M->>M: new Navigator(workspace)
     opt canSave
         M->>A: start()
+        A->>W: subscribe
     end
-    A->>W: subscribe
     W-->>A: change
     A->>A: debounce 500 ms, max wait 900 ms
     A->>S: serialize(workspace)
     A->>R: save(snapshot)
     alt save fails
         R-->>A: PersistenceError
-        A->>N: post("save", changes not saved)
+        A->>N: post("save", changes not saved, persistent)
     else save succeeds
         A->>N: clear("save")
     end
+    Note over A: pagehide calls flush() and saves immediately

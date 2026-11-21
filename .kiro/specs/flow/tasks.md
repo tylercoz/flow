@@ -6,188 +6,188 @@ Build bottom-up in TypeScript (strict). The framework-free domain comes first, t
 
 ## Tasks
 
-- [ ] 1. Scaffold the project
-  - [ ] 1.1 Create the Vite React + TypeScript project in the existing repo root
+- [x] 1. Scaffold the project
+  - [x] 1.1 Create the Vite React + TypeScript project in the existing repo root
     - The repo already contains `.kiro/`, `docs/` and `.git/`. Generate the template in a temporary directory and copy in only the files that don't already exist. Don't overwrite or delete anything existing.
     - Enable TypeScript `strict`. Add `@xyflow/react`. Add a `.gitignore` entry for `node_modules` and `dist` if one is missing.
     - Add scripts: `build`, `test` (`vitest --run`), `lint`, `dev`.
     - _Requirements: 5.4 (no backend)_
 
-  - [ ] 1.2 Add Vitest, fast-check and ESLint with typescript-eslint
+  - [x] 1.2 Add Vitest, fast-check and ESLint with typescript-eslint
     - Configure Vitest with the `src/**/*.test.ts` and `src/**/*.property.test.ts` globs.
     - Add an ESLint rule that blocks imports from `react` and `@xyflow/react` inside `src/domain` and `src/persistence`.
     - Add a trivial passing test to confirm that `test`, `lint` and `build` all run.
     - _Design: Testing Strategy (Lint), Overview (stack)_
 
-  - [ ] 1.3 Fill in `.kiro/steering/tech.md`
+  - [x] 1.3 Fill in `.kiro/steering/tech.md`
     - Record languages, frameworks and libraries, build tooling, and the real build, test, lint and run commands from 1.1 and 1.2. Keep the existing template headings.
     - _Design: Overview (stack)_
 
-- [ ] 2. Implement the domain model
-  - [ ] 2.1 Build the shared domain primitives in `src/domain`
+- [x] 2. Implement the domain model
+  - [x] 2.1 Build the shared domain primitives in `src/domain`
     - `ChangeSignal`, `ObservableStore` (interface), `IdGenerator` (interface) with `UuidGenerator`, `Scheduler` (interface) with `TimerScheduler`, `DomainError` (`SELF_LINK`, `NOT_IN_DIAGRAM`), `Viewport` (default `{0, 0, 1}`), `Details` (with `patch`), `Describable` (interface).
     - _Requirements: 1.2, 3.2, 3.4, 4.1, 4.2, 5.1, 5.3_
 
-  - [ ] 2.2 Implement `Component`, `Link` and `Diagram`
+  - [x] 2.2 Implement `Component`, `Link` and `Diagram`
     - `Component` owns `Details`, `position` and exactly one child `Diagram`. `Link` has immutable endpoints.
     - `Diagram` implements `addComponent`, `removeComponent` (cascade), `deletionImpact`, `addLink` (throws `DomainError`), `removeLink`, and `setViewport`. Every mutation calls the change callback supplied by the Workspace.
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 3.1, 3.2, 3.3, 3.4, 4.2_
 
-  - [ ] 2.3 Implement `Workspace` and the snapshot types
+  - [x] 2.3 Implement `Workspace` and the snapshot types
     - Define `WorkspaceSnapshot` and its DTOs in `src/domain` (plain data, no behavior).
     - `Workspace` holds the root `Diagram` and implements `ObservableStore`. `empty(ids)` and `restore(snapshot, ids)` both build every Diagram, Component, Link and Details through one private factory that wires the shared `ChangeSignal` and the `IdGenerator`. `restore` walks the validated snapshot, keeps the stored ids, and returns a tree that behaves exactly like newly created content.
     - _Requirements: 5.1, 5.2_
 
-  - [ ] 2.4 Implement `Navigator`
+  - [x] 2.4 Implement `Navigator`
     - `path` is an array of Component ids only. `trail()` resolves the path to the live Components. Also `current`, `open(componentId)` (current Diagram's Components only) and `navigateTo(index)`. It implements `ObservableStore`.
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 4.2_
 
-  - [ ]* 2.5 Write the shared workspace arbitrary
+  - [x]* 2.5 Write the shared workspace arbitrary
     - A fast-check arbitrary that builds random nested workspaces from random command sequences, using a counter-based `IdGenerator`.
     - _Design: Correctness Properties (generator), Testing Strategy_
 
-  - [ ]* 2.6 Write property test for created Components
+  - [x]* 2.6 Write property test for created Components
     - **Property 1: Created Components start empty**
     - **Validates: Requirements 1.1**
 
-  - [ ]* 2.7 Write property test for edits
+  - [x]* 2.7 Write property test for edits
     - **Property 2: Edits are read back unchanged**
     - **Validates: Requirements 1.2, 1.3, 3.2**
 
-  - [ ]* 2.8 Write property test for valid links
+  - [x]* 2.8 Write property test for valid links
     - **Property 3: Valid links are created, and removal restores the link set**
     - **Validates: Requirements 3.1, 3.3**
 
-  - [ ]* 2.9 Write property test for deletion cascade
+  - [x]* 2.9 Write property test for deletion cascade
     - **Property 5: Deletion cascades and keeps references intact**
     - **Validates: Requirements 1.4**
 
-  - [ ]* 2.10 Write property test for deletion impact
+  - [x]* 2.10 Write property test for deletion impact
     - **Property 6: Deletion impact matches what is deleted**
     - **Validates: Requirements 1.5**
 
-  - [ ]* 2.11 Write property test for navigation
+  - [x]* 2.11 Write property test for navigation
     - **Property 7: Navigation follows the nesting**
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4**
 
-  - [ ]* 2.12 Write property test for viewports
+  - [x]* 2.12 Write property test for viewports
     - **Property 8: Viewports survive navigation**
     - **Validates: Requirements 4.2**
 
-  - [ ]* 2.13 Write unit tests for `Workspace.restore` and `Navigator.trail`
+  - [x]* 2.13 Write unit tests for `Workspace.restore` and `Navigator.trail`
     - A nested Component built by `restore` notifies on change, and new Components added after `restore` get fresh ids.
     - `trail()` shows the new name after a Component is renamed.
     - _Requirements: 2.2, 5.2_
 
-- [ ] 3. Checkpoint - Ensure all tests pass
+- [x] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Implement persistence and notifications
-  - [ ] 4.1 Implement `PersistenceError` and `WorkspaceSerializer`
+- [x] 4. Implement persistence and notifications
+  - [x] 4.1 Implement `PersistenceError` and `WorkspaceSerializer`
     - `serialize(workspace)` returns a `WorkspaceSnapshot`. `deserialize(raw: unknown)` validates and returns plain data only, without building domain objects. It throws `PersistenceError` for an unknown `schemaVersion`, a malformed shape, or a dangling link endpoint.
     - _Requirements: 5.2, 5.5, 4.2_
 
-  - [ ] 4.2 Implement `Repository` and `LocalStorageRepository`
+  - [x] 4.2 Implement `Repository` and `LocalStorageRepository`
     - Async `load(): Promise<unknown | null>` and `save(snapshot)` under the key `flow.workspace`, with `Storage` injected. Wrap quota and parse errors in `PersistenceError`.
     - _Requirements: 5.1, 5.2, 5.4, 5.5_
 
-  - [ ] 4.3 Implement `Notifier`
+  - [x] 4.3 Implement `Notifier`
     - `post(key, text, kind)`, `clear(key)` and `messages`, as an `ObservableStore`. The constructor takes a `Scheduler` and a transient timeout (default 5000 ms). Posting under an existing key replaces the message and restarts a transient timer. Transient messages auto-clear after the timeout, and `clear` cancels the timer. Persistent messages stay until cleared.
     - _Requirements: 3.4, 5.3, 5.5_
 
-  - [ ] 4.4 Implement `AutoSaver`
+  - [x] 4.4 Implement `AutoSaver`
     - Subscribes to the `Workspace`. Debounces 500 ms with a 900 ms maximum wait, using the injected `Scheduler`. `flush` also runs on `pagehide`. On failure it posts a persistent `save` message to the `Notifier`, and it clears the message on the next success.
     - _Requirements: 5.1, 5.3_
 
-  - [ ] 4.5 Implement `WorkspaceLoader`
+  - [x] 4.5 Implement `WorkspaceLoader`
     - `load()` returns `{ workspace, canSave }`. No stored data gives `Workspace.empty()`. Readable data goes through `serializer.deserialize` and `Workspace.restore`. If loading or deserializing throws `PersistenceError`, return an empty Workspace with `canSave: false` and post a persistent `load` message to the `Notifier`.
     - _Requirements: 5.2, 5.5_
 
-  - [ ]* 4.6 Write property test for invalid links
+  - [x]* 4.6 Write property test for invalid links
     - **Property 4: Invalid links are rejected and change nothing**
     - **Validates: Requirements 3.4**
 
-  - [ ]* 4.7 Write property test for the serialization round trip
+  - [x]* 4.7 Write property test for the serialization round trip
     - **Property 9: Serialization round trip**
     - Use `serialize(Workspace.restore(deserialize(JSON round trip)))`. Include a run through `LocalStorageRepository` backed by an in-memory `Storage`.
     - **Validates: Requirements 5.2, 4.2**
 
-  - [ ]* 4.8 Write unit tests for `WorkspaceSerializer`
+  - [x]* 4.8 Write unit tests for `WorkspaceSerializer`
     - Unknown `schemaVersion`, malformed shape and dangling link endpoints are rejected.
     - _Requirements: 5.2, 5.5_
 
-  - [ ]* 4.9 Write unit tests for `LocalStorageRepository`
+  - [x]* 4.9 Write unit tests for `LocalStorageRepository`
     - A fake `Storage` that throws on `setItem`, and malformed stored JSON.
     - _Requirements: 5.2, 5.3, 5.5_
 
-  - [ ]* 4.10 Write unit tests for `AutoSaver`
+  - [x]* 4.10 Write unit tests for `AutoSaver`
     - With a fake `Scheduler`: first save within 1 s of a change, bursts coalesce, the maximum wait holds, and `flush` runs on `pagehide`. With a failing `Repository`: the message is posted, then cleared after a later success.
     - _Requirements: 5.1, 5.3_
 
-  - [ ]* 4.11 Write unit tests for `Notifier`
+  - [x]* 4.11 Write unit tests for `Notifier`
     - With a fake `Scheduler`: post, clear, replace by key, a transient message auto-clears after the timeout, replacing it restarts the timer, and a persistent message never auto-clears.
     - _Requirements: 3.4, 5.3_
 
-  - [ ]* 4.12 Write unit tests for `WorkspaceLoader`
+  - [x]* 4.12 Write unit tests for `WorkspaceLoader`
     - Nothing stored gives an empty Workspace. Readable data is restored. Unreadable data gives an empty Workspace, `canSave: false`, a `load` message, and no write to the Repository.
     - _Requirements: 5.2, 5.5_
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Implement the React view and composition root
-  - [ ] 6.1 Implement `useStore` and `AppProvider`
+- [x] 6. Implement the React view and composition root
+  - [x] 6.1 Implement `useStore` and `AppProvider`
     - `useStore` wraps `useSyncExternalStore`. `AppProvider` supplies `Workspace`, `Navigator` and `Notifier`.
     - _Requirements: 1.2, 2.1, 2.2, 3.4, 5.3, 5.5 (view refresh)_
 
-  - [ ] 6.2 Implement `DiagramProjector`
+  - [x] 6.2 Implement `DiagramProjector`
     - `toNodes` and `toEdges`: one node per Component and one edge per Link, with the same ids.
     - _Requirements: 1.1, 3.1, 3.3_
 
-  - [ ] 6.3 Implement `recordViewport`
+  - [x] 6.3 Implement `recordViewport`
     - A pure function `recordViewport(diagram, viewport)` with no React imports. It copies `{x, y, zoom}` from the React Flow viewport into `diagram.setViewport`.
     - _Requirements: 4.1, 4.2_
 
-  - [ ] 6.4 Implement `DeleteFlow` and `ConfirmDialog`
+  - [x] 6.4 Implement `DeleteFlow` and `ConfirmDialog`
     - For a Component, read `deletionImpact`. Confirm first when `contents + links > 0`, then call `removeComponent`. Links delete directly.
     - _Requirements: 1.4, 1.5, 3.3_
 
-  - [ ] 6.5 Implement `Breadcrumb`, `NotificationBar` and `Toolbar`
+  - [x] 6.5 Implement `Breadcrumb`, `NotificationBar` and `Toolbar`
     - `Breadcrumb` renders a Root label plus `navigator.trail()` names, subscribes to both `Navigator` and `Workspace` so renames show at once, and calls `navigateTo`. `NotificationBar` renders `Notifier` messages with a dismiss button on transient ones that calls `clear`. `Toolbar` adds a Component at the canvas center.
     - _Requirements: 1.1, 2.2, 2.3, 3.4, 5.3, 5.5_
 
-  - [ ] 6.6 Implement `CanvasView`
+  - [x] 6.6 Implement `CanvasView`
     - Host `ReactFlow` for `navigator.current`, keyed by Diagram id with `defaultViewport`. Wire `onNodeDragStop` to `setPosition`, `onMoveEnd` to `recordViewport(navigator.current, viewport)`, `onConnect` to `addLink` (catch `DomainError` and post the reason to `Notifier` as a transient message under key `link`), double-click to `navigator.open`, and the Delete key to `DeleteFlow`.
     - _Requirements: 1.3, 2.1, 3.1, 3.4, 4.1, 4.2_
 
-  - [ ] 6.7 Implement `Inspector`
+  - [x] 6.7 Implement `Inspector`
     - Edit name, description and notes of the selected `Describable` through `details.patch`, and expose Delete through `DeleteFlow`.
     - _Requirements: 1.2, 1.4, 3.2, 3.3_
 
-  - [ ] 6.8 Implement `App` and the `main.tsx` composition root
+  - [x] 6.8 Implement `App` and the `main.tsx` composition root
     - Build `WorkspaceLoader` and call `load()`. Start `AutoSaver` only when `canSave` is true, so unreadable stored data is never overwritten. Compose `App` from `Breadcrumb`, `CanvasView`, `Inspector`, `Toolbar`, `ConfirmDialog` and `NotificationBar`.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-  - [ ]* 6.9 Write unit tests for `DiagramProjector`
+  - [x]* 6.9 Write unit tests for `DiagramProjector`
     - One node per Component and one edge per Link, with matching ids.
     - _Requirements: 1.1, 3.1_
 
-  - [ ]* 6.10 Write unit tests for `DeleteFlow`
+  - [x]* 6.10 Write unit tests for `DeleteFlow`
     - The dialog appears only when `contents + links > 0`, and deletion happens only after confirm. Cancel leaves the model unchanged.
     - _Requirements: 1.4, 1.5_
 
-  - [ ]* 6.11 Write unit tests for `recordViewport`
+  - [x]* 6.11 Write unit tests for `recordViewport`
     - Given a Diagram and a viewport, the Diagram's viewport equals the given `x`, `y` and `zoom`. React Flow's own pan and zoom is not re-tested.
     - _Requirements: 4.1, 4.2_
 
-- [ ] 7. Checkpoint - Ensure all tests pass
+- [x] 7. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Update the diagrams in `docs/diagrams/`
+- [x] 8. Update the diagrams in `docs/diagrams/`
   - Bring `system-architecture.mmd`, `domain-model.mmd` and `startup-and-save.mmd` in line with the built code, and keep `README.md` current.
   - _Design: Architecture, Data Models, Startup sequence_
 
-- [ ] 9. Final checkpoint - Run build, test and lint
+- [x] 9. Final checkpoint - Run build, test and lint
   - Run build, test and lint. Ensure all pass, ask the user if questions arise.
 
 ## Notes

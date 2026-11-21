@@ -1,17 +1,111 @@
 classDiagram
-    class ObservableStore { <<interface>> subscribe() getVersion() }
-    class Workspace { root: Diagram; empty(); restore(snapshot) }
-    class Navigator { path: ids; trail(); current: Diagram; open(); navigateTo() }
-    class Diagram { id; viewport; addComponent(); removeComponent(); addLink(); removeLink(); deletionImpact() }
-    class Component { id; position; details; diagram }
-    class Link { id; sourceId; targetId; details }
-    class Details { name; description; notes; patch() }
-    class Describable { <<interface>> id; details }
-    class Notifier { post(key, text, kind); clear(key); messages }
-    class Scheduler { <<interface>> set(); cancel() }
+    class ObservableStore {
+        <<interface>>
+        subscribe(listener)
+        getVersion()
+    }
+    class ChangeSignal {
+        subscribe(listener)
+        getVersion()
+        notify()
+    }
+    class Workspace {
+        root: Diagram
+        empty(ids)$
+        restore(snapshot, ids)$
+    }
+    class DiagramContext {
+        <<type>>
+        ids: IdGenerator
+        onChange()
+    }
+    class Navigator {
+        path: string[]
+        current: Diagram
+        trail()
+        open(componentId)
+        navigateTo(index)
+    }
+    class Diagram {
+        id
+        viewport
+        components
+        links
+        component(id)
+        setViewport(v)
+        addComponent(position)
+        removeComponent(id)
+        deletionImpact(id)
+        addLink(sourceId, targetId)
+        removeLink(id)
+    }
+    class Component {
+        id
+        position
+        details
+        diagram
+        setPosition(p)
+    }
+    class Link {
+        id
+        sourceId
+        targetId
+        details
+    }
+    class Details {
+        name
+        description
+        notes
+        patch(partial)
+        toJSON()
+    }
+    class Describable {
+        <<interface>>
+        id
+        details
+    }
+    class Notifier {
+        messages
+        post(key, text, kind)
+        clear(key)
+    }
+    class Scheduler {
+        <<interface>>
+        set(fn, ms)
+        cancel(handle)
+    }
+    class TimerScheduler
+    class IdGenerator {
+        <<interface>>
+        next()
+    }
+    class UuidGenerator
+    class DomainError {
+        code: SELF_LINK or NOT_IN_DIAGRAM
+    }
+    class Viewport {
+        x
+        y
+        zoom
+    }
+    class WorkspaceSnapshot {
+        <<plain data>>
+        schemaVersion
+        root: DiagramDto
+    }
+    ChangeSignal ..|> ObservableStore
     Workspace ..|> ObservableStore
     Navigator ..|> ObservableStore
     Notifier ..|> ObservableStore
+    Workspace --> ChangeSignal
+    Navigator --> ChangeSignal
+    Notifier --> ChangeSignal
+    Workspace ..> DiagramContext : builds one shared context
+    Workspace ..> WorkspaceSnapshot : restore reads
+    Diagram --> DiagramContext
+    DiagramContext --> IdGenerator
+    Diagram --> DomainError : throws
+    Diagram *-- Viewport
     Workspace *-- Diagram : root
     Diagram *-- Component
     Diagram *-- Link
@@ -20,5 +114,7 @@ classDiagram
     Link *-- Details
     Component ..|> Describable
     Link ..|> Describable
-    Navigator --> Workspace
+    Navigator --> Workspace : reads root
     Notifier --> Scheduler
+    TimerScheduler ..|> Scheduler
+    UuidGenerator ..|> IdGenerator
