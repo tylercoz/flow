@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import type { Details } from '../domain/Details'
 import { useApp } from './AppProvider'
@@ -28,12 +28,13 @@ export function ComponentNode({ id, selected }: NodeProps) {
   useStore(controller)
   const details = navigator.current.component(id)?.details
 
-  // React Flow selects on pointerdown, before click, so only here is the previous Focus still visible.
+  // React Flow selects a node on click. Capturing `selected` at pointerdown is still correct because
+  // pointerdown precedes click, so the previous Focus is still visible.
   const press = useRef({ wasFocused: false, x: 0, y: 0 })
   const onPointerDown = (e: PointerEvent) => {
     press.current = { wasFocused: !!selected, x: e.clientX, y: e.clientY }
   }
-  const onClick = (e: { detail: number; clientX: number; clientY: number }) => {
+  const onClick = (e: MouseEvent) => {
     const { wasFocused, x, y } = press.current
     const dragged = Math.hypot(e.clientX - x, e.clientY - y) > DRAG_THRESHOLD_PX
     // detail > 1 belongs to a double-click.

@@ -15,7 +15,6 @@ flowchart TD
         Level[Level, inside CanvasView]
         RenameContext
         RenameController
-        recordViewport
         createAtPoint["createAtPoint: isEmptyCanvas, createComponentAt"]
         useStore
     end
@@ -50,7 +49,7 @@ flowchart TD
     App -->|passes deleteFlow| Inspector
     ConfirmDialog -->|reads pending| DeleteFlow
     CanvasView --> DiagramProjector
-    CanvasView --> recordViewport
+    CanvasView -->|onMoveEnd: setViewport| Diagram
     CanvasView -->|keyed by Diagram id| Level
     Level -->|owns one, built from AppServices.scheduler| RenameController
     Level -->|provides it through| RenameContext

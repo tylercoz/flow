@@ -1,0 +1,254 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Fix the selection-timing comment above `press`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232049993
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232057720
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232095343
+      }
+    ],
+    "1.2 Type the `onClick` handler as React `MouseEvent`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050050
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232129196
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232186400
+      }
+    ],
+    "2.1 Emit `data: {}` in `src/view/DiagramProjector.ts`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050066
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232058068
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232097374
+      }
+    ],
+    "2.2 Update `src/view/DiagramProjector.test.ts`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050121
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232130233
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232187406
+      }
+    ],
+    "3.1 Call `diagram.setViewport(viewport)` directly in `onMoveEnd`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050140
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232062970
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232097826
+      }
+    ],
+    "3.2 Delete `src/view/recordViewport.ts` and `src/view/recordViewport.test.ts`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050156
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232131272
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232188411
+      }
+    ],
+    "3.3 Use `MouseEvent` from `react` and fix JSX indentation in `CanvasView.tsx`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050172
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232132186
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232189438
+      }
+    ],
+    "4. Delete `src/smoke.test.ts`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050208
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232063041
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232094384
+      }
+    ],
+    "5.1 `src/view/RenameController.ts`: use `subscribe = this.signal.subscribe` and `getVersion = this.signal.getVersion`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050241
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232063068
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232096342
+      }
+    ],
+    "5.2 `src/domain/Workspace.ts`: add a one-line comment on `subscribe` and `getVersion`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050256
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232105346
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232125008
+      }
+    ],
+    "5.3 `src/domain/Scheduler.ts`: update the comment": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050272
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232105397
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232125542
+      }
+    ],
+    "6. Update docs and diagrams": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050300
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232132534
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232189852
+      }
+    ],
+    "7. Final checkpoint - Run the quality gate": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232050349
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232192796
+      },
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232212862
+      }
+    ],
+    "5. Subscription wiring and comments": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232125580
+      }
+    ],
+    "1. Clean up `src/view/ComponentNode.tsx`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232186436
+      }
+    ],
+    "2. Remove the unused node label": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232187430
+      }
+    ],
+    "3. Inline viewport recording in `src/view/CanvasView.tsx`": [
+      {
+        "executionId": "4bedccc1-3759-475d-a71c-d5e873efc9f9",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795232189482
+      }
+    ]
+  }
+}

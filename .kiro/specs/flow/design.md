@@ -195,16 +195,12 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 - Behavior (in `Level`):
   - Nodes and edges come from DiagramProjector. React Flow keeps local state for drags and selection, and `Level` rebuilds it from the Diagram on each Workspace version, carrying the `selected` flags over so a rename keeps the selection.
   - `onNodeDragStop` calls `component.setPosition` (1.3).
-  - `onMoveEnd` calls `recordViewport(diagram, viewport)` (4.1, 4.2).
+  - `onMoveEnd` calls `diagram.setViewport(viewport)` (4.1, 4.2).
   - `onConnect` calls `diagram.addLink`. It catches `DomainError` and posts the reason to the Notifier as a transient message under key `link` (3.4).
   - Double-click on a node calls `navigator.open` (2.1). `zoomOnDoubleClick` is disabled so it does not also zoom.
   - Delete key: `onBeforeDelete` calls `DeleteFlow.request` for each Component, and for each Link not attached to a deleted Component, then returns `false` so React Flow never deletes by itself.
   - `onSelectionChange` reports exactly one selected Component or Link, otherwise `null`. The selection itself is kept in App, which resolves the live item each render and drops a stale one.
-- Collaborators: Navigator, DiagramProjector, Notifier, DeleteFlow, recordViewport.
-
-**recordViewport(diagram, viewport)**
-- Responsibility: the pan/zoom handler, extracted from CanvasView so it is testable without React or a DOM. A pure function in the view layer with no React imports. It copies `{x, y, zoom}` from the React Flow viewport into `diagram.setViewport`.
-- Serves 4.1, 4.2.
+- Collaborators: Navigator, DiagramProjector, Notifier, DeleteFlow.
 
 **Inspector**
 - Edits name, description, and notes of the selected `Describable` (Component or Link) through `details.patch` (1.2, 3.2). It also exposes Delete for the selection.
@@ -378,9 +374,8 @@ Property-based testing applies to the domain and serializer, which are pure in-m
 - `DiagramProjector` returns one node per Component and one edge per Link with matching ids.
 - `DeleteFlow` shows the dialog only when `contents + links > 0` and deletes only after confirm (1.5).
 - `Notifier` with a fake `Scheduler`: post, clear, replace by key, a transient message auto-clears after the timeout, replacing it restarts the timer, a persistent message never auto-clears.
-- `recordViewport` copies x, y and zoom into the Diagram's viewport (4.1, 4.2).
 
-**Not tested here**: React Flow's own pan and zoom behavior (4.1). We test only our handler, `recordViewport`. Playwright and DOM-based tests are deferred until after the MVP.
+**Not tested here**: React Flow's own pan and zoom behavior (4.1). Playwright and DOM-based tests are deferred until after the MVP.
 
 **Lint**: ESLint with typescript-eslint, strict TypeScript, and a rule that blocks imports from `react` and `@xyflow/react` inside `src/domain` and `src/persistence`.
 
@@ -401,8 +396,8 @@ Property-based testing applies to the domain and serializer, which are pure in-m
 | 3.2 Edit Link | Details, Describable, Inspector |
 | 3.3 Delete Link | Diagram, DeleteFlow |
 | 3.4 Reject Link | Diagram, DomainError, Notifier, NotificationBar |
-| 4.1 Pan and zoom | CanvasView, recordViewport, Viewport |
-| 4.2 Restore view | Viewport, Diagram, CanvasView (keyed remount), recordViewport, WorkspaceSerializer |
+| 4.1 Pan and zoom | CanvasView, Viewport |
+| 4.2 Restore view | Viewport, Diagram, CanvasView (keyed remount), WorkspaceSerializer |
 | 5.1 Save within 1 s | AutoSaver, Scheduler, ChangeSignal, Workspace, Repository |
 | 5.2 Restore on open | Repository, LocalStorageRepository, WorkspaceSerializer, Workspace.restore, WorkspaceLoader, main.tsx |
 | 5.3 Save failure notice | AutoSaver, Notifier, NotificationBar |

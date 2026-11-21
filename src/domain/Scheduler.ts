@@ -1,6 +1,6 @@
 export type TimerHandle = ReturnType<typeof setTimeout>
 
-// Lets Notifier and AutoSaver run against a fake clock in tests.
+// Lets Notifier, AutoSaver and RenameController run against a fake clock in tests.
 export interface Scheduler {
   set(fn: () => void, ms: number): TimerHandle
   cancel(handle: TimerHandle): void

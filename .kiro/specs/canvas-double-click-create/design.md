@@ -56,17 +56,17 @@ React Flow positions a node by its top-left corner, and the node's size is only 
 
 Add `start(componentId)`: cancels any pending start, sets `editingId`, notifies. The existing timer callback in `schedule` calls `start`, so the "set editing and notify" logic has one home.
 
-`cancel()` is unchanged and only drops a pending start. The selection change caused by creation calls `rename.cancel()` in `Level`, and that call leaves an active Rename alone (Requirement 2.3).
+`cancel()` is unchanged and only drops a pending start. `onSelectionChange` in `Level` calls `rename.cancel()` only when the selection actually changes, and that cancel leaves an active Rename alone (Requirement 2.3).
 
 Reused by: Requirements 2.2, 2.3.
 
 ### `Level` in `CanvasView.tsx` (extend)
 
 - Wrap `<ReactFlow>` in a `<div>` filling the parent (`width: 100%; height: 100%`) with `onDoubleClick`. The handler returns unless `isEmptyCanvas(e.target)`. Otherwise it converts `clientX/Y` with `useReactFlow().screenToFlowPosition`, calls `createComponentAt`, and stores the new id in state (the lint rule `react-hooks/refs` forbids ref access during render, where the sync runs).
-- The existing model-to-React-Flow sync block marks that id as `selected` (replacing the prior selection) and clears it. React Flow then fires `onSelectionChange`, so `App` focuses the new Component and shows the Inspector (Requirement 2.1) with no change to `App`.
+- The existing model-to-React-Flow sync block marks that id as `selected` (replacing the prior selection) and clears it in the same pass, so the pending focus is consumed once per model change. React Flow then fires `onSelectionChange`, so `App` focuses the new Component and shows the Inspector (Requirement 2.1) with no change to `App`.
 - `zoomOnDoubleClick={false}` is already set, and the new code never touches the viewport (Requirement 1.3).
 
-`Toolbar.tsx`, `App.tsx`, `ComponentNode.tsx` and `Navigator.ts` are unchanged. `ComponentNode` already renders `RenameInput` when `editingId` matches, and the input already focuses and selects its text on mount (Requirement 2.2). Commit and cancel keep their current behavior (Requirement 2.4). `Navigator.open` stays tied to `onNodeDoubleClick`, which fires only for nodes, so creation and opening do not collide.
+`Toolbar.tsx`, `App.tsx`, `ComponentNode.tsx` and `Navigator.ts` are unchanged. `ComponentNode` already renders `RenameInput` when `editingId` matches, and the input already retries focus per frame until it sticks, then selects its text, so focus is not single-shot on mount (Requirement 2.2). Commit and cancel keep their current behavior (Requirement 2.4). `Navigator.open` stays tied to `onNodeDoubleClick`, which fires only for nodes, so creation and opening do not collide.
 
 ## Data Models
 

@@ -16,8 +16,10 @@ export class Workspace implements ObservableStore {
     this.root = root
   }
 
+  // Arrow wrapper: field initializers run before the constructor assigns `signal`, so it can't be bound directly.
   subscribe = (listener: () => void): (() => void) => this.signal.subscribe(listener)
 
+  // Arrow wrapper: same reason as `subscribe`; `signal` is assigned after field initializers run.
   getVersion = (): number => this.signal.getVersion()
 
   static empty(ids: IdGenerator): Workspace {

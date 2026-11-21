@@ -16,9 +16,8 @@ export class RenameController implements ObservableStore {
     this.scheduler = scheduler
   }
 
-  subscribe = (listener: () => void): (() => void) => this.signal.subscribe(listener)
-
-  getVersion = (): number => this.signal.getVersion()
+  subscribe = this.signal.subscribe
+  getVersion = this.signal.getVersion
 
   get editingId(): string | undefined {
     return this.editing

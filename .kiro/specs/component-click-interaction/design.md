@@ -15,11 +15,11 @@ Findings from the existing code that shape the design:
 
 - `CanvasView.Level` already rebuilds nodes from the model on every Workspace version and carries `selected` over. It is keyed by Diagram id, so it unmounts on every Level change.
 - `Level` already uses `onNodeDoubleClick` to call `Navigator.open` and sets `zoomOnDoubleClick={false}`.
-- `DiagramProjector.toNodes` emits default nodes (`data.label`). They have no `type`, so React Flow renders its default node.
+- `DiagramProjector.toNodes` emits default nodes. They have no `type`, so React Flow renders its default node.
 - `Inspector` edits the name via `details.patch({ name })` and re-renders from `useStore(workspace)`. A rename that goes through the same call is therefore reflected there with no extra wiring (Requirement 2.5).
 - `Scheduler` (`src/domain/Scheduler.ts`) already abstracts timers so tests can use a fake clock (see `AutoSaver.test.ts`). The Rename Delay reuses it.
 
-React Flow selects a node on pointer down, before `onNodeClick` runs, so a click handler cannot tell whether the node was focused before the click. The node component can: its `selected` prop at pointer-down time still holds the previous value. `ComponentNode` captures that value on `pointerdown` and uses it in its click handler.
+React Flow selects a node on click. `ComponentNode` captures `selected` on `pointerdown` and uses it in its click handler. This is still correct because pointerdown precedes click, so the prop still holds the previous value.
 
 ```mermaid
 sequenceDiagram
@@ -37,7 +37,7 @@ sequenceDiagram
         R-->>N: editingId = componentId
         N->>D: details.patch({ name }) on Enter / blur
     else not focused
-        Note over N: nothing, selection already moved
+        Note over N: nothing, this click moves the selection
     end
     U->>N: dblclick
     N->>R: cancel()
@@ -50,7 +50,7 @@ sequenceDiagram
 | Decision | Rationale |
 | --- | --- |
 | Custom node type instead of overlay input | The input must sit inside the node, follow drags, and survive the model-driven node rebuild. A node component does this for free. |
-| `wasFocused` captured on `pointerdown` in the node | Only point where the pre-click focus is still observable. Avoids a parallel "previously focused" store (the spec forbids new Focus state). |
+| `wasFocused` captured on `pointerdown` in the node | Pointerdown precedes click, so the prop still holds the previous Focus there. Avoids a parallel "previously focused" store (the spec forbids new Focus state). |
 | `RenameController` as a class using `Scheduler` | Single responsibility, injectable clock, testable without React. Matches `Notifier`/`AutoSaver`. |
 | Pending Rename lives in the controller, not in a React ref | Cancellation comes from three places (double-click, selection change, Level unmount). One owner avoids stale closures. |
 | Draft text is local to the input; the name is written once on commit | The Inspector shows the saved name during Rename (Requirement 2.5) and Escape needs no rollback. |
@@ -90,7 +90,7 @@ Responsibility: render a Component on the canvas and translate pointer events in
 - `onPointerDown`: records `wasFocused = selected` in a ref.
 - `onClick`: if `event.detail === 1` and `wasFocused`, call `controller.schedule(id)`. Clicks with `detail > 1` are ignored (they belong to a double-click).
 - `onDoubleClick`: `controller.cancel()`. Opening is left to `Level.onNodeDoubleClick`.
-- Input: on mount, focus and select all text (Requirement 2.1). Enter or blur calls `details.patch({ name: draft })` then `controller.end()`. Escape calls `controller.end()` first, then discards the draft. The input's `onDoubleClick` calls `stopPropagation` so React Flow does not fire `onNodeDoubleClick` (Requirement 3.3). An empty draft is saved as is (Requirement 2.4).
+- Input: retries focus and select-all each frame (up to `MAX_FOCUS_FRAMES`) until the input holds focus, because React Flow keeps a new node `visibility: hidden` until it measures it. Focus is not single-shot on mount (Requirement 2.1). Enter or blur calls `details.patch({ name: draft })` then `controller.end()`. Escape calls `controller.end()` first, then discards the draft. The input's `onDoubleClick` calls `stopPropagation` so React Flow does not fire `onNodeDoubleClick` (Requirement 3.3). An empty draft is saved as is (Requirement 2.4).
 - Dragging: `Level.onNodeDragStart` calls `controller.cancel()`, and `ComponentNode` ignores the click that ends a drag (Requirement 1.3). React Flow does not emit `onNodeClick` after a drag, but the node tracks pointer movement of more than a few pixels between `pointerdown` and `click` as a guard. Verify this during implementation.
 
 Reads the Component through `useApp().navigator.current.component(id)` for `details`, subscribed with `useStore(workspace)`. The controller comes from `RenameContext` (below).
@@ -106,7 +106,7 @@ A React context holding the `RenameController`. `nodeTypes` must be a module-lev
 
 - Creates one `RenameController` per Level with `useState(() => new RenameController(scheduler))` and wraps `ReactFlow` in `RenameContext.Provider`.
 - Passes `nodeTypes={{ component: ComponentNode }}` (module-level constant).
-- In `onSelectionChange`, calls `controller.cancel()` (Requirement 2.6, focus change). An active Rename ends on its own through input blur.
+- In `onSelectionChange`, calls `controller.cancel()` only when the selection key changes (via `selectionKey`), not on every call, because React Flow re-reports an unchanged selection on each render (Requirement 2.6, focus change). An active Rename ends on its own through input blur.
 - `useEffect` cleanup calls `controller.cancel()` and `controller.end()` on unmount (Requirement 2.6, Level change). `Level` is keyed by Diagram id, so every Level change unmounts it.
 - Adds `onNodeDragStart={() => controller.cancel()}`.
 - Keeps `onNodeDoubleClick={(_, node) => navigator.open(node.id)}`. The double-click on an unfocused Component (Requirement 3.2) already selects and then opens.
@@ -114,7 +114,7 @@ A React context holding the `RenameController`. `nodeTypes` must be a module-lev
 
 ### DiagramProjector (changed)
 
-`toNodes` adds `type: 'component'`. `data.label` stays for compatibility with existing tests, though `ComponentNode` reads the live name from `Details`. `DiagramProjector.test.ts` is updated for the new field.
+`toNodes` adds `type: 'component'`. `data` is an empty object; `ComponentNode` reads the live name from `Details`. `DiagramProjector.test.ts` is updated for the new field.
 
 ### AppServices / main.tsx (changed)
 

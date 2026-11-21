@@ -9,7 +9,8 @@ export function toNodes(diagram: Diagram): Node[] {
     // Selects the custom ComponentNode registered in CanvasView's nodeTypes.
     type: 'component',
     position: { x: c.position.x, y: c.position.y },
-    data: { label: c.details.name },
+    // ComponentNode reads the live name from Details, so no label is copied here.
+    data: {},
   }))
 }
 

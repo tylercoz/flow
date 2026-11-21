@@ -14,7 +14,7 @@ describe('DiagramProjector', () => {
     expect(toEdges(diagram)).toEqual([])
   })
 
-  it('projects one node per Component with matching id, position and name', () => {
+  it('projects one node per Component with matching id and position, and no label', () => {
     const diagram = setup()
     const a = diagram.addComponent({ x: 1, y: 2 })
     const b = diagram.addComponent({ x: 3, y: 4 })
@@ -24,7 +24,7 @@ describe('DiagramProjector', () => {
     const nodes = toNodes(diagram)
     expect(nodes.map((x) => x.id)).toEqual([a.id, b.id])
     expect(nodes[0].position).toEqual({ x: 1, y: 2 })
-    expect(nodes[0].data).toEqual({ label: 'A' })
+    expect(nodes[0].data).toEqual({})
     expect(nodes.every((x) => x.type === 'component')).toBe(true)
     expect(nodes[0].parentId).toBeUndefined()
   })

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import {
   ReactFlow,
   useEdgesState,
@@ -17,7 +17,6 @@ import type { DeleteFlow, DeleteTarget } from './DeleteFlow'
 import { ComponentNode, RenameContext } from './ComponentNode'
 import { toEdges, toNodes } from './DiagramProjector'
 import { createComponentAt, isEmptyCanvas } from './createAtPoint'
-import { recordViewport } from './recordViewport'
 import { RenameController } from './RenameController'
 import { selectionKey } from './selectionKey'
 import { useStore } from './useStore'
@@ -102,7 +101,7 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
   }
 
   // React Flow has no pane double-click event; only the pane itself counts as empty canvas.
-  const onDoubleClick = (e: React.MouseEvent) => {
+  const onDoubleClick = (e: MouseEvent) => {
     if (!isEmptyCanvas(e.target)) return
     const point = screenToFlowPosition({ x: e.clientX, y: e.clientY })
     setPendingFocus(createComponentAt(diagram, point, rename).id)
@@ -110,34 +109,34 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
 
   return (
     <RenameContext.Provider value={rename}>
-    <div style={{ width: '100%', height: '100%' }} onDoubleClick={onDoubleClick}>
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      defaultViewport={{ ...diagram.viewport }}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeDragStart={() => rename.cancel()}
-      onNodeDragStop={(_, node) => diagram.component(node.id)?.setPosition(node.position)}
-      onMoveEnd={(_, viewport) => recordViewport(diagram, viewport)}
-      onConnect={onConnect}
-      onNodeDoubleClick={(_, node) => navigator.open(node.id)}
-      onBeforeDelete={onBeforeDelete}
-      onSelectionChange={({ nodes: n, edges: e }) => {
-        // React Flow re-reports the selection whenever this inline callback's identity changes (every render),
-        // so without this guard any re-render within the Rename Delay cancelled the pending Rename.
-        const key = selectionKey(n.map((x) => x.id), e.map((x) => x.id))
-        if (key === lastSelection.current) return
-        lastSelection.current = key
-        rename.cancel()
-        if (n.length + e.length !== 1) return onSelectionChange(null)
-        onSelectionChange(n.length ? { kind: 'component', id: n[0].id } : { kind: 'link', id: e[0].id })
-      }}
-      // Double-click opens a Component, so it must not also zoom.
-      zoomOnDoubleClick={false}
-    />
-    </div>
+      <div style={{ width: '100%', height: '100%' }} onDoubleClick={onDoubleClick}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          defaultViewport={{ ...diagram.viewport }}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeDragStart={() => rename.cancel()}
+          onNodeDragStop={(_, node) => diagram.component(node.id)?.setPosition(node.position)}
+          onMoveEnd={(_, viewport) => diagram.setViewport(viewport)}
+          onConnect={onConnect}
+          onNodeDoubleClick={(_, node) => navigator.open(node.id)}
+          onBeforeDelete={onBeforeDelete}
+          onSelectionChange={({ nodes: n, edges: e }) => {
+            // React Flow re-reports the selection whenever this inline callback's identity changes (every render),
+            // so without this guard any re-render within the Rename Delay cancelled the pending Rename.
+            const key = selectionKey(n.map((x) => x.id), e.map((x) => x.id))
+            if (key === lastSelection.current) return
+            lastSelection.current = key
+            rename.cancel()
+            if (n.length + e.length !== 1) return onSelectionChange(null)
+            onSelectionChange(n.length ? { kind: 'component', id: n[0].id } : { kind: 'link', id: e[0].id })
+          }}
+          // Double-click opens a Component, so it must not also zoom.
+          zoomOnDoubleClick={false}
+        />
+      </div>
     </RenameContext.Provider>
   )
 }
