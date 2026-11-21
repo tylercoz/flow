@@ -1,0 +1,37 @@
+sequenceDiagram
+    participant M as main.tsx
+    participant R as Repository
+    participant L as WorkspaceLoader
+    participant S as WorkspaceSerializer
+    participant W as Workspace
+    participant A as AutoSaver
+    participant N as Notifier
+    M->>L: load()
+    L->>R: load()
+    alt data found
+        R-->>L: raw
+        L->>S: deserialize(raw)
+        S-->>L: snapshot (plain data)
+        L->>W: Workspace.restore(snapshot)
+    else none
+        R-->>L: null
+        L->>W: Workspace.empty()
+    else unreadable
+        L->>N: post("load", persistent)
+        L->>W: Workspace.empty()
+    end
+    L-->>M: workspace, canSave
+    opt canSave
+        M->>A: start()
+    end
+    A->>W: subscribe
+    W-->>A: change
+    A->>A: debounce 500 ms, max wait 900 ms
+    A->>S: serialize(workspace)
+    A->>R: save(snapshot)
+    alt save fails
+        R-->>A: PersistenceError
+        A->>N: post("save", changes not saved)
+    else save succeeds
+        A->>N: clear("save")
+    end

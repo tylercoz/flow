@@ -1,0 +1,24 @@
+classDiagram
+    class ObservableStore { <<interface>> subscribe() getVersion() }
+    class Workspace { root: Diagram; empty(); restore(snapshot) }
+    class Navigator { path: ids; trail(); current: Diagram; open(); navigateTo() }
+    class Diagram { id; viewport; addComponent(); removeComponent(); addLink(); removeLink(); deletionImpact() }
+    class Component { id; position; details; diagram }
+    class Link { id; sourceId; targetId; details }
+    class Details { name; description; notes; patch() }
+    class Describable { <<interface>> id; details }
+    class Notifier { post(key, text, kind); clear(key); messages }
+    class Scheduler { <<interface>> set(); cancel() }
+    Workspace ..|> ObservableStore
+    Navigator ..|> ObservableStore
+    Notifier ..|> ObservableStore
+    Workspace *-- Diagram : root
+    Diagram *-- Component
+    Diagram *-- Link
+    Component *-- Diagram : child
+    Component *-- Details
+    Link *-- Details
+    Component ..|> Describable
+    Link ..|> Describable
+    Navigator --> Workspace
+    Notifier --> Scheduler

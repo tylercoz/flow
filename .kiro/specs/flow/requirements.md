@@ -67,6 +67,7 @@ Flow is a browser-based, local-first app for diagramming software. Every compone
 2. WHEN the user opens Flow, THE Flow SHALL restore the saved Root Diagram and all nested content.
 3. IF saving to browser storage fails, THEN THE Flow SHALL notify the user that changes are not saved.
 4. THE Flow SHALL operate without a backend or user account.
+5. IF the stored data cannot be read, THEN THE Flow SHALL start with an empty Root Diagram, notify the user, and not overwrite the stored data.
 
 ## Out of Scope
 
