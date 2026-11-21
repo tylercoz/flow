@@ -18,11 +18,12 @@ describe('Diagram links', () => {
         const target = diagram.components[(a + 1 + (b % (diagram.components.length - 1))) % diagram.components.length]
 
         const before = diagram.links.map((l) => l.id)
-        const link = diagram.addLink(source.id, target.id)
+        const link = diagram.addLink(source.id, target.id, 'right', 'left')
 
         expect(diagram.links).toHaveLength(before.length + 1)
         expect(diagram.links.filter((l) => !before.includes(l.id))).toEqual([link])
         expect([link.sourceId, link.targetId]).toEqual([source.id, target.id])
+        expect([link.sourceSide, link.targetSide]).toEqual(['right', 'left'])
 
         diagram.removeLink(link.id)
         expect(diagram.links.map((l) => l.id)).toEqual(before)

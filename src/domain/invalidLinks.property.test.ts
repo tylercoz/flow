@@ -19,7 +19,7 @@ function expectRejected(workspace: Workspace, diagram: Diagram, source: string, 
 
   let error: unknown
   try {
-    diagram.addLink(source, target)
+    diagram.addLink(source, target, 'bottom', 'top')
   } catch (e) {
     error = e
   } finally {

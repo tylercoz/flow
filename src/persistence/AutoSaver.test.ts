@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { History } from '../domain/History'
+import { Navigator } from '../domain/Navigator'
 import { Notifier } from '../domain/Notifier'
 import type { Scheduler, TimerHandle } from '../domain/Scheduler'
 import type { WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
@@ -188,6 +190,22 @@ describe('AutoSaver', () => {
     pageEvents.dispatchEvent(new Event('pagehide'))
     await settle()
     expect(repository.saves).toHaveLength(0)
+  })
+
+  it('saves the restored content after an undo', async () => {
+    const { workspace, scheduler, repository, edit } = setup()
+    const history = new History(workspace, new Navigator(workspace))
+    history.start()
+    edit()
+    scheduler.advance(500)
+    await settle()
+    expect(repository.saves.at(-1)?.root.components).toHaveLength(1)
+
+    history.undo()
+    scheduler.advance(500)
+    await settle()
+    expect(repository.saves).toHaveLength(2)
+    expect(repository.saves[1].root.components).toHaveLength(0)
   })
 
   it('stop() cancels pending timers and ignores later changes and pagehide', async () => {

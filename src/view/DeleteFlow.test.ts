@@ -27,22 +27,23 @@ describe('DeleteFlow', () => {
     expect(flow.pending).toMatchObject({ componentId: a.id, contents: 1, links: 0 })
   })
 
-  it('holds a Component with links as pending and leaves it in the model', () => {
+  it('deletes a Component with links but no contents immediately, along with its links', () => {
     const { diagram, flow } = setup()
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
-    diagram.addLink(a.id, b.id)
+    diagram.addLink(a.id, b.id, 'bottom', 'top')
     flow.request(diagram, { kind: 'component', id: a.id })
-    expect(diagram.components).toHaveLength(2)
-    expect(diagram.links).toHaveLength(1)
-    expect(flow.pending).toMatchObject({ componentId: a.id, contents: 0, links: 1 })
+    expect(diagram.components).toEqual([b])
+    expect(diagram.links).toHaveLength(0)
+    expect(flow.pending).toBeNull()
   })
 
   it('confirm deletes the Component with its links and clears pending', () => {
     const { diagram, flow } = setup()
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
-    diagram.addLink(a.id, b.id)
+    a.diagram.addComponent({ x: 0, y: 0 })
+    diagram.addLink(a.id, b.id, 'bottom', 'top')
     flow.request(diagram, { kind: 'component', id: a.id })
     flow.confirm()
     expect(diagram.components).toEqual([b])
@@ -65,7 +66,7 @@ describe('DeleteFlow', () => {
     const { diagram, flow } = setup()
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
-    const link = diagram.addLink(a.id, b.id)
+    const link = diagram.addLink(a.id, b.id, 'bottom', 'top')
     flow.request(diagram, { kind: 'link', id: link.id })
     expect(diagram.links).toHaveLength(0)
     expect(flow.pending).toBeNull()

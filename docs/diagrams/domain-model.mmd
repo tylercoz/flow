@@ -11,6 +11,13 @@ classDiagram
     }
     class Workspace {
         root: Diagram
+        types: list of DataType
+        addType(name)
+        renameType(id, name)
+        removeType(id)
+        toSnapshot(includeViewports)
+        capture()
+        replaceContent(snapshot)
         empty(ids)$
         restore(snapshot, ids)$
     }
@@ -25,6 +32,21 @@ classDiagram
         trail()
         open(componentId)
         navigateTo(index)
+        reconcile()
+    }
+    class History {
+        canUndo
+        canRedo
+        start()
+        beginGroup()
+        endGroup()
+        undo()
+        redo()
+    }
+    class Restorable {
+        <<interface>>
+        capture()
+        replaceContent(snapshot)
     }
     class Diagram {
         id
@@ -36,28 +58,43 @@ classDiagram
         addComponent(position)
         removeComponent(id)
         deletionImpact(id)
-        addLink(sourceId, targetId)
+        addLink(sourceId, targetId, sourceSide, targetSide)
         removeLink(id)
     }
     class Component {
         id
         position
+        size
         details
         diagram
         setPosition(p)
+        setBounds(p, size)
     }
     class Link {
         id
         sourceId
         targetId
+        sourceSide: top, right, bottom or left
+        targetSide: top, right, bottom or left
         details
     }
     class Details {
         name
-        description
+        inputs: list of Port
+        outputs: list of Port
         notes
         patch(partial)
         toJSON()
+    }
+    class Port {
+        <<type>>
+        name
+        typeId: DataType id or null
+    }
+    class DataType {
+        <<type>>
+        id
+        name
     }
     class Describable {
         <<interface>>
@@ -91,12 +128,19 @@ classDiagram
     class WorkspaceSnapshot {
         <<plain data>>
         schemaVersion
+        types: list of DataType
         root: DiagramDto
     }
     ChangeSignal ..|> ObservableStore
     Workspace ..|> ObservableStore
     Navigator ..|> ObservableStore
     Notifier ..|> ObservableStore
+    History ..|> ObservableStore
+    Restorable --|> ObservableStore
+    Workspace ..|> Restorable
+    History --> ChangeSignal
+    History --> Restorable : subscribes, capture, replaceContent
+    History --> Navigator : reconcile after restore
     Workspace --> ChangeSignal
     Navigator --> ChangeSignal
     Notifier --> ChangeSignal
@@ -110,6 +154,10 @@ classDiagram
     Diagram *-- Component
     Diagram *-- Link
     Component *-- Diagram : child
+    Workspace *-- DataType
+    Details *-- Port
+    Port ..> DataType : refers by id
+    Workspace --> DomainError : TYPE_IN_USE
     Component *-- Details
     Link *-- Details
     Component ..|> Describable

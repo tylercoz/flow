@@ -1,8 +1,101 @@
+:root {
+  color-scheme: light dark;
+  /* Gruvbox Material, light variant. */
+  --bg: #f2e5bc;
+  --surface: #fbf1c7;
+  --border: #d5c4a1;
+  --text: #654735;
+  --muted: #928374;
+  --accent: #b47109;
+  --on-accent: #fbf1c7;
+  --accent-soft: rgba(180, 113, 9, 0.2);
+  --danger: #c14a4a;
+  --shadow: 0 1px 2px rgba(101, 71, 53, 0.1), 0 4px 12px rgba(101, 71, 53, 0.1);
+  font-family: 'Roboto Mono Variable', ui-monospace, Menlo, monospace;
+  font-size: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Gruvbox Material, dark variant. */
+    --bg: #282828;
+    --surface: #32302f;
+    --border: #504945;
+    --text: #d4be98;
+    --muted: #928374;
+    --accent: #d8a657;
+    --on-accent: #282828;
+    --accent-soft: rgba(216, 166, 87, 0.25);
+    --danger: #ea6962;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+}
+/* React Flow ships its own greys; point them at the palette so edges, labels and the grid match. */
+.react-flow {
+  --xy-background-color: var(--bg);
+  --xy-background-pattern-color: var(--border);
+  --xy-edge-stroke: var(--muted);
+  --xy-edge-stroke-selected: var(--accent);
+  --xy-connectionline-stroke: var(--accent);
+  --xy-edge-label-color: var(--text);
+  --xy-edge-label-background-color: var(--surface);
+}
+/* React Flow's default 1px stroke is hard to see against the grid. The connection path is the line shown while dragging a new link. */
+.react-flow__edge-path,
+.react-flow__connection-path {
+  stroke-width: 3;
+}
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+button:disabled {
+  cursor: default;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+input,
+select,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .app {
@@ -10,22 +103,303 @@ body,
   flex-direction: column;
   height: 100%;
 }
-
 .app-header {
   display: flex;
   gap: 16px;
   align-items: center;
-  padding: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
-
+/* Pushes header actions to the right edge, away from the breadcrumb. */
+.header-action {
+  margin-left: auto;
+}
+.history-controls {
+  display: flex;
+  gap: 8px;
+}
+/* Block layout removes the inline baseline gap under the icon. */
+.history-controls button {
+  display: flex;
+}
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.breadcrumb li + li::before {
+  content: '/';
+  margin-right: 4px;
+  color: var(--muted);
+}
+.breadcrumb button {
+  padding: 4px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.breadcrumb button:hover:not(:disabled) {
+  background: var(--bg);
+}
+.breadcrumb button:disabled {
+  color: var(--text);
+  font-weight: 600;
+}
 .app-main {
   display: flex;
   flex: 1;
   min-height: 0;
 }
-
 /* React Flow renders at 100% of its parent, so the parent needs a definite size. */
 .app-canvas {
   flex: 1;
   min-width: 0;
+}
+
+/* Fills the React Flow node so a user-set size applies to the visible box, not just its wrapper. */
+.component-node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 6px 8px 24px;
+  text-align: center;
+  white-space: pre-wrap;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 0;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.component-node:hover {
+  border-color: var(--accent);
+}
+.react-flow__node.selected .component-node {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
+}
+/* The node's own selection ring already shows the editing state, so the input must not draw a second box. */
+.component-node textarea,
+.component-node textarea:focus {
+  display: block;
+  /* An editing textarea's default 20-column width, not the text, sized the box on creation. */
+  width: auto;
+  field-sizing: content;
+  padding: 0;
+  overflow: hidden;
+  resize: none;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* Empty square outline; a placeholder icon until the open control is designed. */
+.open-button {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  /* Centers on the node; the node reserves bottom padding so the text never sits under it. */
+  transform: translateX(-50%);
+  cursor: pointer;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-radius: 0;
+  opacity: 0.6;
+}
+.open-button:hover {
+  opacity: 1;
+}
+.react-flow__resize-control.line {
+  border-color: var(--accent);
+}
+.react-flow__resize-control.handle {
+  width: 8px;
+  height: 8px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 3px;
+}
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node.selected .react-flow__handle,
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto {
+  opacity: 1;
+}
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  flex: none;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+}
+/* FocusGroup wrapper: keeps the aside's column and gap for the fields it holds. */
+.inspector-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* FocusGroup wrapper inside the wrapping dialog: takes a full line like the rows it replaces. */
+.dialog-fields {
+  flex-basis: 100%;
+}
+/* Wider than the 1px visible line so it is easy to grab. */
+.sidebar-handle {
+  flex: none;
+  width: 6px;
+  margin: 0 -3px;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+}
+.sidebar-handle:hover,
+.sidebar-handle:focus-visible,
+.sidebar-handle:active {
+  background: var(--accent-soft);
+  outline: none;
+}
+.inspector label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.field-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.field-row input,
+.field-row select {
+  flex: 1;
+  min-width: 0;
+}
+/* The dialog wraps its children, so each row takes a full line. */
+.dialog .field-row {
+  flex-basis: 100%;
+  margin-bottom: 0;
+}
+.btn-danger {
+  align-self: flex-start;
+  color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+}
+
+.notifications {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+}
+.notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--danger);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.notification button {
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 17, 23, 0.5);
+}
+.dialog {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  box-sizing: border-box;
+  max-width: 420px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+.dialog p {
+  flex-basis: 100%;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+.dialog .btn-danger {
+  align-self: auto;
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-accent);
+}
+/* Labels are portalled outside the edge, where React Flow disables pointer events. */
+.link-label {
+  position: absolute;
+  pointer-events: all;
+  padding: 2px 6px;
+  background: var(--surface);
+  border-radius: 6px;
+  white-space: pre;
+}
+/* React Flow lifts a selected edge to z-index 1000, which would draw its line over the label while editing. */
+.link-label.selected {
+  z-index: 1001;
+}
+.link-label textarea,
+.link-label textarea:focus {
+  display: block;
+  width: auto;
+  field-sizing: content;
+  min-width: 4ch;
+  padding: 0;
+  overflow: hidden;
+  resize: none;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }

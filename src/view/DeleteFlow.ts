@@ -30,7 +30,8 @@ export class DeleteFlow implements ObservableStore {
       return
     }
     const { contents, links } = diagram.deletionImpact(target.id)
-    if (contents + links === 0) {
+    // Attached Links are cheap to redraw, so only losing nested work is worth an interruption.
+    if (contents === 0) {
       diagram.removeComponent(target.id)
       return
     }

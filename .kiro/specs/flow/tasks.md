@@ -149,7 +149,7 @@ Build bottom-up in TypeScript (strict). The framework-free domain comes first, t
     - _Requirements: 4.1, 4.2_
 
   - [x] 6.4 Implement `DeleteFlow` and `ConfirmDialog`
-    - For a Component, read `deletionImpact`. Confirm first when `contents + links > 0`, then call `removeComponent`. Links delete directly.
+    - For a Component, read `deletionImpact`. Confirm first when `contents > 0`, then call `removeComponent`. Links delete directly.
     - _Requirements: 1.4, 1.5, 3.3_
 
   - [x] 6.5 Implement `Breadcrumb`, `NotificationBar` and `Toolbar`
@@ -173,7 +173,7 @@ Build bottom-up in TypeScript (strict). The framework-free domain comes first, t
     - _Requirements: 1.1, 3.1_
 
   - [x]* 6.10 Write unit tests for `DeleteFlow`
-    - The dialog appears only when `contents + links > 0`, and deletion happens only after confirm. Cancel leaves the model unchanged.
+    - The dialog appears only when `contents > 0`, and deletion happens only after confirm. Cancel leaves the model unchanged.
     - _Requirements: 1.4, 1.5_
 
   - [x]* 6.11 Write unit tests for `recordViewport`

@@ -6,10 +6,10 @@ export function NotificationBar() {
   useStore(notifier)
 
   return (
-    <div aria-label="Notifications">
+    <div className="notifications" aria-label="Notifications">
       {notifier.messages.map((message) => (
         // Errors (save/load/link) need to be announced without moving focus.
-        <div key={message.key} role="alert">
+        <div key={message.key} className="notification" role="alert">
           <span>{message.text}</span>
           {message.kind === 'transient' && (
             <button type="button" aria-label={`Dismiss: ${message.text}`} onClick={() => notifier.clear(message.key)}>

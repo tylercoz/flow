@@ -13,7 +13,7 @@ describe('edits', () => {
         const root = workspace.root
         const a = root.addComponent({ x: 0, y: 0 })
         const b = root.addComponent({ x: 1, y: 1 })
-        root.addLink(a.id, b.id)
+        root.addLink(a.id, b.id, 'bottom', 'top')
 
         const targets: Describable[] = allDiagrams(workspace).flatMap((d) => [...d.components, ...d.links])
         const target = targets[pickIndex % targets.length]
@@ -22,7 +22,8 @@ describe('edits', () => {
         target.details.patch(patch)
         expect(target.details.toJSON()).toEqual({
           name: patch.name ?? before.name,
-          description: patch.description ?? before.description,
+          inputs: patch.inputs ?? before.inputs,
+          outputs: patch.outputs ?? before.outputs,
           notes: patch.notes ?? before.notes,
         })
 

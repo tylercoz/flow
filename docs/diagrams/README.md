@@ -14,5 +14,5 @@ Mermaid diagrams documenting the project. Each diagram lives in its own `.mmd` f
 | File | Type | Describes |
 | --- | --- | --- |
 | [system-architecture.mmd](system-architecture.mmd) | flowchart | Layers (view, domain, persistence), the `main.tsx` composition root, and how they connect |
-| [domain-model.mmd](domain-model.mmd) | classDiagram | Workspace, Diagram, Component, Link, Navigator, Notifier and shared contracts (`src/domain`) |
-| [startup-and-save.mmd](startup-and-save.mmd) | sequence | Load on startup (`WorkspaceLoader`), debounced autosave, `pagehide` flush, save-failure notice |
+| [domain-model.mmd](domain-model.mmd) | classDiagram | Workspace, Diagram, Component, Link, Navigator, Notifier, History (undo and redo) and shared contracts (`src/domain`) |
+| [startup-and-save.mmd](startup-and-save.mmd) | sequence | Load on startup (`WorkspaceLoader`), `History` start, debounced autosave (including restores), `pagehide` flush, save-failure notice |

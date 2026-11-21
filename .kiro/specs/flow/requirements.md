@@ -24,7 +24,7 @@ Flow is a browser-based, local-first app for diagramming software. Every compone
 2. WHEN the user edits a Component's name, description, or notes, THE Flow SHALL save the new values.
 3. WHEN the user moves a Component on the canvas, THE Flow SHALL keep its new position.
 4. WHEN the user deletes a Component, THE Flow SHALL delete its contents and every Link inside it or attached to it.
-5. WHEN the user requests deletion of a Component that has contents or Links, THE Flow SHALL ask for confirmation first.
+5. WHEN the user requests deletion of a Component that has contents, THE Flow SHALL ask for confirmation first. Attached Links alone do not require confirmation.
 
 ### Requirement 2: Nested diagrams
 
@@ -71,4 +71,4 @@ Flow is a browser-based, local-first app for diagramming software. Every compone
 
 ## Out of Scope
 
-Cross-level links, export/import, image export, user-defined types, tags, shapes, colors, undo/redo, multi-user collaboration.
+Cross-level links, export/import, image export, user-defined types, tags, shapes, colors, multi-user collaboration.

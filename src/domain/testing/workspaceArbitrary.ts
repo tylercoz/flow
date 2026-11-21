@@ -3,6 +3,7 @@ import type { Component } from '../Component'
 import type { DetailsDto } from '../Details'
 import type { Diagram } from '../Diagram'
 import type { IdGenerator } from '../IdGenerator'
+import { SIDES, type Side } from '../Link'
 import type { Viewport } from '../Viewport'
 import { Workspace } from '../Workspace'
 
@@ -24,18 +25,21 @@ export const viewportArb: fc.Arbitrary<Viewport> = fc.record({
   y: coordinate,
   zoom: fc.integer({ min: 1, max: 400 }).map((n) => n / 100),
 })
+// Generated workspaces have no ids to point at, so ports are untyped here; type references are covered by unit tests.
+const portArb = fc.record({ name: fc.string(), typeId: fc.constant(null) })
 export const detailsPatchArb: fc.Arbitrary<Partial<DetailsDto>> = fc.record(
-  { name: fc.string(), description: fc.string(), notes: fc.string() },
+  { name: fc.string(), inputs: fc.array(portArb), outputs: fc.array(portArb), notes: fc.string() },
   { requiredKeys: [] },
 )
 
 // Picks are raw numbers resolved modulo the live tree, so every command is valid for any workspace shape
 // and shrinking a sequence never invalidates the remaining commands.
 const pick = fc.nat({ max: 1000 })
+const sideArb = fc.constantFrom(...SIDES)
 
 export type Command =
   | { kind: 'addComponent'; diagram: number; position: { x: number; y: number } }
-  | { kind: 'addLink'; diagram: number; source: number; target: number }
+  | { kind: 'addLink'; diagram: number; source: number; target: number; sourceSide: Side; targetSide: Side }
   | { kind: 'removeComponent'; diagram: number; component: number }
   | { kind: 'removeLink'; diagram: number; link: number }
   | { kind: 'patchComponent'; diagram: number; component: number; patch: Partial<DetailsDto> }
@@ -45,7 +49,7 @@ export type Command =
 // Weighted toward additions so sequences build nested, non-trivial trees.
 export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addComponent' as const), diagram: pick, position: positionArb }), weight: 5 },
-  { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick, sourceSide: sideArb, targetSide: sideArb }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('removeComponent' as const), diagram: pick, component: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('removeLink' as const), diagram: pick, link: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('patchComponent' as const), diagram: pick, component: pick, patch: detailsPatchArb }), weight: 2 },
@@ -83,7 +87,7 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
     case 'addLink': {
       const source = at(d.components, cmd.source)
       const target = at(d.components, cmd.target)
-      if (source && target && source !== target) d.addLink(source.id, target.id)
+      if (source && target && source !== target) d.addLink(source.id, target.id, cmd.sourceSide, cmd.targetSide)
       return
     }
     case 'removeComponent': {

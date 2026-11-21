@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import {
+  Background,
+  ConnectionMode,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -11,10 +13,12 @@ import {
 import '@xyflow/react/dist/style.css'
 import type { Diagram } from '../domain/Diagram'
 import { DomainError } from '../domain/DomainError'
+import { isSide } from '../domain/Link'
 import type { Notifier } from '../domain/Notifier'
 import { useApp } from './AppProvider'
 import type { DeleteFlow, DeleteTarget } from './DeleteFlow'
 import { ComponentNode, RenameContext } from './ComponentNode'
+import { LinkEdge } from './LinkEdge'
 import { toEdges, toNodes } from './DiagramProjector'
 import { createComponentAt, isEmptyCanvas } from './createAtPoint'
 import { RenameController } from './RenameController'
@@ -23,6 +27,7 @@ import { useStore } from './useStore'
 
 // Must be module-level: a new object per render would make React Flow remount every node.
 const nodeTypes = { component: ComponentNode }
+const edgeTypes = { link: LinkEdge }
 
 /** The single selected Component or Link of the current Level, or null. */
 export type CanvasSelection = DeleteTarget | null
@@ -48,7 +53,7 @@ interface LevelProps extends CanvasViewProps {
 }
 
 function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps) {
-  const { workspace, navigator, scheduler } = useApp()
+  const { workspace, scheduler } = useApp()
   const [rename] = useState(() => new RenameController(scheduler))
   // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
   useEffect(
@@ -80,9 +85,11 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
     setEdges(toEdges(diagram).map((e) => ({ ...e, selected: selected.has(e.id) })))
   }
 
-  const onConnect = ({ source, target }: Connection) => {
+  const onConnect = ({ source, target, sourceHandle, targetHandle }: Connection) => {
+    // Only ComponentNode's side Handles exist, so any other id is a wiring bug.
+    if (!isSide(sourceHandle) || !isSide(targetHandle)) throw new Error('Connection used an unknown Handle')
     try {
-      diagram.addLink(source, target)
+      diagram.addLink(source, target, sourceHandle, targetHandle)
     } catch (e) {
       if (!(e instanceof DomainError)) throw e
       notifier.post('link', e.message, 'transient')
@@ -114,14 +121,17 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onEdgeDoubleClick={(_, edge) => rename.start(edge.id)}
           defaultViewport={{ ...diagram.viewport }}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStart={() => rename.cancel()}
           onNodeDragStop={(_, node) => diagram.component(node.id)?.setPosition(node.position)}
           onMoveEnd={(_, viewport) => diagram.setViewport(viewport)}
+          // Every Handle is a `source`, so loose mode lets a Link end on any side.
+          connectionMode={ConnectionMode.Loose}
           onConnect={onConnect}
-          onNodeDoubleClick={(_, node) => navigator.open(node.id)}
           onBeforeDelete={onBeforeDelete}
           onSelectionChange={({ nodes: n, edges: e }) => {
             // React Flow re-reports the selection whenever this inline callback's identity changes (every render),
@@ -133,9 +143,11 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
             if (n.length + e.length !== 1) return onSelectionChange(null)
             onSelectionChange(n.length ? { kind: 'component', id: n[0].id } : { kind: 'link', id: e[0].id })
           }}
-          // Double-click opens a Component, so it must not also zoom.
+          // Double-click renames a Component or Link, or creates a Component, so it must not also zoom.
           zoomOnDoubleClick={false}
-        />
+        >
+          <Background />
+        </ReactFlow>
       </div>
     </RenameContext.Provider>
   )

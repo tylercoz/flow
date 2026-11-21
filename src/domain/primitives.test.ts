@@ -23,9 +23,9 @@ describe('Details', () => {
   it('starts empty, patches only given fields and notifies', () => {
     const onChange = vi.fn()
     const details = new Details(onChange)
-    expect(details.toJSON()).toEqual({ name: '', description: '', notes: '' })
+    expect(details.toJSON()).toEqual({ name: '', inputs: [], outputs: [], notes: '' })
     details.patch({ name: 'A', notes: undefined })
-    expect(details.toJSON()).toEqual({ name: 'A', description: '', notes: '' })
+    expect(details.toJSON()).toEqual({ name: 'A', inputs: [], outputs: [], notes: '' })
     expect(onChange).toHaveBeenCalledTimes(1)
   })
 })

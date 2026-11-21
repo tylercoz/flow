@@ -10,6 +10,7 @@
 - React 19 as a thin view layer.
 - `@xyflow/react` 13 renders one diagram Level at a time.
 - IDs come from `crypto.randomUUID()`.
+- `@fontsource-variable/roboto-mono` bundles the UI font, so it works offline.
 
 ## Build & Tooling
 

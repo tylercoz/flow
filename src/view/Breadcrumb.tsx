@@ -12,12 +12,11 @@ export function Breadcrumb() {
   const labels = ['Root', ...trail.map((c) => c.details.name || 'Untitled')]
   return (
     <nav aria-label="Diagram path">
-      <ol style={{ display: 'flex', gap: 8, listStyle: 'none', margin: 0, padding: 0 }}>
+      <ol className="breadcrumb">
         {labels.map((label, index) => {
           const isCurrent = index === labels.length - 1
           return (
             <li key={index}>
-              {index > 0 && <span aria-hidden="true">/ </span>}
               <button type="button" aria-current={isCurrent ? 'page' : undefined} disabled={isCurrent} onClick={() => navigator.navigateTo(index)}>
                 {label}
               </button>

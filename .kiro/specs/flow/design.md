@@ -110,7 +110,7 @@ Layers depend downward only. The domain knows nothing about the view or storage.
   - `removeComponent`, `deletionImpact` and `removeLink` throw `DomainError('NOT_IN_DIAGRAM')` for an id that is not in this Diagram.
   - `addLink` throws `DomainError('SELF_LINK')` when `sourceId === targetId`, and `DomainError('NOT_IN_DIAGRAM')` when either id is not a Component of this Diagram.
   - `removeComponent` removes the Component (and with it, its child Diagram and everything inside) plus every Link of this Diagram whose endpoint is that Component.
-  - `deletionImpact` counts the descendants of the child Diagram (Components and Links, recursively) as `contents`, and the attached Links in this Diagram as `links`. The UI asks for confirmation when either is above zero.
+  - `deletionImpact` counts the descendants of the child Diagram (Components and Links, recursively) as `contents`, and the attached Links in this Diagram as `links`. The UI asks for confirmation only when `contents` is above zero.
 - Collaborators: Component, Link, IdGenerator, a change callback supplied by the Workspace.
 - Serves 1.1, 1.4, 1.5, 3.1, 3.3, 3.4, 4.2.
 
@@ -206,7 +206,7 @@ Layers depend downward only. The domain knows nothing about the view or storage.
 - Edits name, description, and notes of the selected `Describable` (Component or Link) through `details.patch` (1.2, 3.2). It also exposes Delete for the selection.
 
 **DeleteFlow** (implements ObservableStore, no React imports)
-- Responsibility: single path for deleting a Component or Link. For a Component, read `deletionImpact`. If `contents + links > 0`, hold a `pending` deletion for ConfirmDialog (1.5), then call `removeComponent` on confirm (1.4). Links delete directly (3.3).
+- Responsibility: single path for deleting a Component or Link. For a Component, read `deletionImpact`. If `contents > 0`, hold a `pending` deletion for ConfirmDialog (1.5), then call `removeComponent` on confirm (1.4). Links delete directly (3.3).
 - Interface: `request(diagram, { kind, id })`, `confirm()`, `cancel()`, `pending: PendingDelete | null`.
 - App owns one instance and passes it to CanvasView, Inspector and ConfirmDialog, so the Delete key and the Inspector share one pending confirmation.
 
@@ -352,7 +352,7 @@ The generator for these properties builds a random Workspace by applying random 
 | Saves under continuous editing | The debounce is 500 ms. AutoSaver also enforces a maximum wait: if a save has been pending for 900 ms, it saves immediately rather than waiting for a quiet period. | 5.1 |
 | Stored data is corrupt or has an unknown `schemaVersion` | `load`/`deserialize` throws `PersistenceError`. `WorkspaceLoader` returns an empty Workspace with `canSave: false` and posts a persistent `load` message. `main.tsx` does not start AutoSaver, so the unreadable stored data is not overwritten. | 5.5 |
 | Unknown ids passed to domain methods | Throw `DomainError('NOT_IN_DIAGRAM')`. These indicate programmer error and are not user-facing. | 3.4 |
-| Delete with contents or Links | `DeleteFlow` requires confirmation. Cancel leaves the model unchanged. | 1.5 |
+| Delete with contents | `DeleteFlow` requires confirmation. Cancel leaves the model unchanged. | 1.5 |
 
 ## Testing Strategy
 
@@ -372,7 +372,7 @@ Property-based testing applies to the domain and serializer, which are pure in-m
 - `WorkspaceLoader`: empty when nothing is stored, restored when readable, and for unreadable data an empty Workspace, `canSave: false` and a `load` message (5.5).
 - `Navigator.trail` resolves live names after a rename (2.2).
 - `DiagramProjector` returns one node per Component and one edge per Link with matching ids.
-- `DeleteFlow` shows the dialog only when `contents + links > 0` and deletes only after confirm (1.5).
+- `DeleteFlow` shows the dialog only when `contents > 0` and deletes only after confirm (1.5).
 - `Notifier` with a fake `Scheduler`: post, clear, replace by key, a transient message auto-clears after the timeout, replacing it restarts the timer, a persistent message never auto-clears.
 
 **Not tested here**: React Flow's own pan and zoom behavior (4.1). Playwright and DOM-based tests are deferred until after the MVP.

@@ -49,6 +49,53 @@ describe('Navigator', () => {
     expect(() => nav.navigateTo(-1)).toThrow(RangeError)
   })
 
+  describe('reconcile', () => {
+    // Swapping the root mimics Workspace.replaceContent building a new tree.
+    function swappable() {
+      const { root, a, b } = setup()
+      const workspace = { root }
+      return { workspace, a, b, nav: new Navigator(workspace) }
+    }
+
+    it('keeps a valid path and does not notify', () => {
+      const { workspace, a, b, nav } = swappable()
+      nav.open(a.id)
+      nav.open(b.id)
+      // Same id sequence as setup(), so the new tree has the same ids, as after a restore.
+      let n = 0
+      const rebuilt = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {} })
+      rebuilt.addComponent({ x: 0, y: 0 }).diagram.addComponent({ x: 0, y: 0 })
+      workspace.root = rebuilt
+      let calls = 0
+      nav.subscribe(() => calls++)
+      nav.reconcile()
+      expect(nav.path).toEqual([a.id, b.id])
+      expect(calls).toBe(0)
+      expect(() => nav.trail()).not.toThrow()
+    })
+
+    it('resets a stale path to the root and notifies once', () => {
+      const { workspace, a, nav } = swappable()
+      nav.open(a.id)
+      workspace.root = new Diagram('root', { ids: { next: () => 'y' }, onChange: () => {} })
+      let calls = 0
+      nav.subscribe(() => calls++)
+      nav.reconcile()
+      expect(nav.path).toEqual([])
+      expect(nav.current).toBe(workspace.root)
+      expect(calls).toBe(1)
+    })
+
+    it('does nothing at the root', () => {
+      const { nav } = swappable()
+      let calls = 0
+      nav.subscribe(() => calls++)
+      nav.reconcile()
+      expect(nav.path).toEqual([])
+      expect(calls).toBe(0)
+    })
+  })
+
   it('trail shows a renamed Component', () => {
     const { nav, a } = setup()
     nav.open(a.id)

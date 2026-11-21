@@ -30,7 +30,7 @@ describe('createComponentAt', () => {
     return { diagram, rename: new RenameController(scheduler) }
   }
 
-  it('creates the same Component as the toolbar add action, only positioned differently', () => {
+  it('creates the same Component as Diagram.addComponent, only positioned differently', () => {
     const toolbar = setup()
     const expected = toolbar.diagram.addComponent({ x: 0, y: 0 })
 

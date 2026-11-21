@@ -1,4 +1,6 @@
-import type { Diagram } from '../domain/Diagram'
+import type { DataType } from '../domain/DataType'
+import type { DetailsDto, Port } from '../domain/Details'
+import { isSide, type Side } from '../domain/Link'
 import type { Workspace } from '../domain/Workspace'
 import type { ComponentDto, DiagramDto, LinkDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
 import { PersistenceError } from './PersistenceError'
@@ -7,35 +9,20 @@ type Obj = Record<string, unknown>
 
 export class WorkspaceSerializer {
   serialize(workspace: Workspace): WorkspaceSnapshot {
-    return { schemaVersion: 1, root: diagramToDto(workspace.root) }
+    return workspace.toSnapshot()
   }
 
   // Validates and copies only known fields, so stored extras never reach the domain.
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
-    if (obj.schemaVersion !== 1) {
+    // No migrations while in development: data from any other version is rejected and must be cleared.
+    if (obj.schemaVersion !== 4) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
-    return { schemaVersion: 1, root: parseDiagram(obj.root, 'root') }
-  }
-}
-
-function diagramToDto(d: Diagram): DiagramDto {
-  return {
-    id: d.id,
-    viewport: { x: d.viewport.x, y: d.viewport.y, zoom: d.viewport.zoom },
-    components: d.components.map((c) => ({
-      id: c.id,
-      details: c.details.toJSON(),
-      position: { x: c.position.x, y: c.position.y },
-      diagram: diagramToDto(c.diagram),
-    })),
-    links: d.links.map((l) => ({
-      id: l.id,
-      details: l.details.toJSON(),
-      sourceId: l.sourceId,
-      targetId: l.targetId,
-    })),
+    const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
+    const root = parseDiagram(obj.root, 'root')
+    assertTypesExist(root, new Set(types.map((t) => t.id)))
+    return { schemaVersion: 4, types, root }
   }
 }
 
@@ -58,16 +45,46 @@ function asString(v: unknown, path: string): string {
   return v
 }
 
+function asSide(v: unknown, path: string): Side {
+  if (!isSide(v)) throw malformed(path)
+  return v
+}
+
 function asNumber(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v)) throw malformed(path)
   return v
 }
 
+function parseType(v: unknown, path: string): DataType {
+  const o = asObject(v, path)
+  return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`) }
+}
+function parsePort(v: unknown, path: string): Port {
+  const o = asObject(v, path)
+  return { name: asString(o.name, `${path}.name`), typeId: o.typeId === null ? null : asString(o.typeId, `${path}.typeId`) }
+}
+// A port naming a missing type could never be shown or fixed, so reject it at load.
+function assertTypesExist(d: DiagramDto, typeIds: ReadonlySet<string>): void {
+  const check = ({ details }: { details: DetailsDto }) => {
+    for (const p of [...details.inputs, ...details.outputs]) {
+      if (p.typeId !== null && !typeIds.has(p.typeId)) throw new PersistenceError(`Port uses unknown type ${p.typeId}`)
+    }
+  }
+  d.links.forEach(check)
+  d.components.forEach((c) => {
+    check(c)
+    assertTypesExist(c.diagram, typeIds)
+  })
+}
+function parsePorts(o: Obj, key: string, path: string): Port[] {
+  return asArray(o[key], `${path}.${key}`).map((p, i) => parsePort(p, `${path}.${key}[${i}]`))
+}
 function parseDetails(v: unknown, path: string) {
   const o = asObject(v, path)
   return {
     name: asString(o.name, `${path}.name`),
-    description: asString(o.description, `${path}.description`),
+    inputs: parsePorts(o, 'inputs', path),
+    outputs: parsePorts(o, 'outputs', path),
     notes: asString(o.notes, `${path}.notes`),
   }
 }
@@ -101,10 +118,12 @@ function parseDiagram(v: unknown, path: string): DiagramDto {
 function parseComponent(v: unknown, path: string): ComponentDto {
   const o = asObject(v, path)
   const pos = asObject(o.position, `${path}.position`)
+  const size = o.size === undefined ? undefined : asObject(o.size, `${path}.size`)
   return {
     id: asString(o.id, `${path}.id`),
     details: parseDetails(o.details, `${path}.details`),
     position: { x: asNumber(pos.x, `${path}.position.x`), y: asNumber(pos.y, `${path}.position.y`) },
+    ...(size && { size: { width: asNumber(size.width, `${path}.size.width`), height: asNumber(size.height, `${path}.size.height`) } }),
     diagram: parseDiagram(o.diagram, `${path}.diagram`),
   }
 }
@@ -116,5 +135,7 @@ function parseLink(v: unknown, path: string): LinkDto {
     details: parseDetails(o.details, `${path}.details`),
     sourceId: asString(o.sourceId, `${path}.sourceId`),
     targetId: asString(o.targetId, `${path}.targetId`),
+    sourceSide: asSide(o.sourceSide, `${path}.sourceSide`),
+    targetSide: asSide(o.targetSide, `${path}.targetSide`),
   }
 }

@@ -6,6 +6,7 @@ sequenceDiagram
     participant W as Workspace
     participant A as AutoSaver
     participant N as Notifier
+    participant H as History
     M->>L: load()
     L->>R: load()
     alt data found
@@ -22,11 +23,17 @@ sequenceDiagram
     end
     L-->>M: workspace, canSave
     M->>M: new Navigator(workspace)
+    M->>H: new History(workspace, navigator), start()
+    H->>W: subscribe, capture baseline
+    Note over H: stacks live in memory only and are never saved
     opt canSave
         M->>A: start()
         A->>W: subscribe
     end
+    W-->>H: change
+    Note over H: records a step unless a text-input group is open, closed on blur
     W-->>A: change
+    Note over H,A: undo and redo call W.replaceContent, which notifies once, so a restore is autosaved
     A->>A: debounce 500 ms, max wait 900 ms
     A->>S: serialize(workspace)
     A->>R: save(snapshot)

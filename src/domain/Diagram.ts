@@ -2,7 +2,7 @@ import { Component, type Position } from './Component'
 import { Details } from './Details'
 import { DomainError } from './DomainError'
 import type { IdGenerator } from './IdGenerator'
-import { Link } from './Link'
+import { Link, type Side } from './Link'
 import { DEFAULT_VIEWPORT, type Viewport } from './Viewport'
 
 // Supplied by the Workspace so every Diagram in the tree shares one id source and one change signal.
@@ -72,12 +72,12 @@ export class Diagram {
     }
   }
 
-  addLink(sourceId: string, targetId: string): Link {
+  addLink(sourceId: string, targetId: string, sourceSide: Side, targetSide: Side): Link {
     if (sourceId === targetId) throw new DomainError('SELF_LINK', 'A component cannot be linked to itself.')
     if (!this.component(sourceId) || !this.component(targetId)) {
       throw new DomainError('NOT_IN_DIAGRAM', 'Both components must be in the same diagram.')
     }
-    const link = new Link(this.ctx.ids.next(), new Details(this.ctx.onChange), sourceId, targetId)
+    const link = new Link(this.ctx.ids.next(), new Details(this.ctx.onChange), sourceId, targetId, sourceSide, targetSide)
     this._links.push(link)
     this.ctx.onChange()
     return link

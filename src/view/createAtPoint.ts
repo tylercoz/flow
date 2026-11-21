@@ -2,9 +2,9 @@ import type { Component, Position } from '../domain/Component'
 import type { Diagram } from '../domain/Diagram'
 import type { RenameController } from './RenameController'
 
-// Approximate rendered size of a default-named Component; React Flow positions nodes by top-left,
-// and the real size is unknown until render.
-export const NODE_SIZE = { width: 122, height: 40 }
+// A new Component's size and also its minimum size. An empty name's content is smaller than this,
+// so the minimum alone sizes a new node; React Flow positions nodes by top-left before it measures them.
+export const NODE_SIZE = { width: 80, height: 56 }
 
 // The pane is the only element that means "empty canvas"; nodes, edges, controls and inputs are other elements.
 // Checks classList structurally instead of `instanceof Element` so it also runs in the DOM-less test environment.

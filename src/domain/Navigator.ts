@@ -47,6 +47,21 @@ export class Navigator implements ObservableStore {
     this.signal.notify()
   }
 
+  // Called after the Workspace content is replaced. Walks the path without trail(),
+  // which throws on a stale path; falls back to the root if any id is gone.
+  reconcile(): void {
+    let diagram = this.workspace.root
+    for (const id of this._path) {
+      const component = diagram.component(id)
+      if (!component) {
+        this._path = []
+        this.signal.notify()
+        return
+      }
+      diagram = component.diagram
+    }
+  }
+
   // Index 0 is the root; index i keeps the first i path elements.
   navigateTo(index: number): void {
     if (!Number.isInteger(index) || index < 0 || index > this._path.length) {

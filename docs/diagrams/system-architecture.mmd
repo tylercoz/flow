@@ -4,24 +4,30 @@ flowchart TD
         AppProvider
         App
         DeleteFlow
-        Toolbar
         Breadcrumb
         CanvasView
         Inspector
         ConfirmDialog
+        TypesDialog
         NotificationBar
         DiagramProjector
         ComponentNode
+        LinkEdge
         Level[Level, inside CanvasView]
         RenameContext
         RenameController
         createAtPoint["createAtPoint: isEmptyCanvas, createComponentAt"]
         useStore
+        HistoryControls
+        FocusGroup
+        shortcutAction["shortcutAction, isTextInput"]
     end
     subgraph Domain[Domain, no React]
         Workspace --> Diagram --> Component --> Diagram
         Diagram --> Link
         Navigator --> Workspace
+        History -->|"subscribes; capture, replaceContent"| Workspace
+        History -->|reconcile after restore| Navigator
         Notifier --> Scheduler
         TimerScheduler -.implements.-> Scheduler
     end
@@ -29,22 +35,31 @@ flowchart TD
         WorkspaceLoader --> Repository
         WorkspaceLoader --> WorkspaceSerializer
         WorkspaceLoader -->|restore| Workspace
+        WorkspaceSerializer -->|toSnapshot| Workspace
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
     end
     Main -->|builds and starts| Persistence
     Main -->|creates| Domain
-    Main -->|"services: workspace, navigator, notifier, scheduler"| AppProvider
+    Main -->|"services: workspace, navigator, history, notifier, scheduler"| AppProvider
+    Main -->|creates and starts| History
     Main -->|shares one scheduler with| AutoSaver
     AppProvider --> App
     App -->|owns one instance| DeleteFlow
-    App --> Toolbar
     App --> Breadcrumb
     App --> CanvasView
     App --> Inspector
     App --> ConfirmDialog
+    App -->|Types button in header| TypesDialog
     App --> NotificationBar
+    App -->|Undo and Redo buttons in header| HistoryControls
+    HistoryControls -->|"undo, redo; useStore"| History
+    HistoryControls -->|classifies key events| shortcutAction
+    Inspector --> FocusGroup
+    TypesDialog --> FocusGroup
+    FocusGroup -->|"beginGroup on focus, endGroup on blur"| History
+    FocusGroup -->|filters targets| shortcutAction
     App -->|passes deleteFlow| CanvasView
     App -->|passes deleteFlow| Inspector
     ConfirmDialog -->|reads pending| DeleteFlow
@@ -57,6 +72,9 @@ flowchart TD
     createAtPoint -->|addComponent| Diagram
     createAtPoint -->|start| RenameController
     CanvasView -->|"nodeTypes (module-level)"| ComponentNode
+    CanvasView -->|"edgeTypes (module-level)"| LinkEdge
+    LinkEdge -->|start; reads controller from| RenameController
+    LinkEdge -->|reuses RenameInput| ComponentNode
     ComponentNode -->|reads controller from| RenameContext
     ComponentNode -->|schedule, cancel, end; useStore| RenameController
     ComponentNode -->|useApp for workspace, navigator| AppProvider
@@ -64,6 +82,8 @@ flowchart TD
     RenameController --> Scheduler
     CanvasView -->|request| DeleteFlow
     Inspector -->|request| DeleteFlow
+    TypesDialog -->|add, rename, remove types| Workspace
+    TypesDialog -->|remove refused| Notifier
     View -->|useStore| Domain
     View -->|commands| Domain
     AutoSaver -->|subscribes| Workspace

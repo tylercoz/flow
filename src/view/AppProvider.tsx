@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
+import type { History } from '../domain/History'
 import type { Navigator } from '../domain/Navigator'
 import type { Notifier } from '../domain/Notifier'
 import type { Scheduler } from '../domain/Scheduler'
@@ -7,6 +8,7 @@ import type { Workspace } from '../domain/Workspace'
 export interface AppServices {
   workspace: Workspace
   navigator: Navigator
+  history: History
   notifier: Notifier
   scheduler: Scheduler
 }
