@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Sync Steering, Diagrams and Comments on Write",
+      "trigger": "PostToolUse",
+      "matcher": "write",
+      "description": "After the agent writes or edits a file outside .kiro/, keep the steering docs, Mermaid diagrams and in-file comments accurate.",
+      "action": {
+        "type": "agent",
+        "prompt": "You just wrote or edited a file. If that file is under .kiro/ or docs/diagrams/, or is a scratch/temporary file, do nothing and reply 'skipped'. Otherwise do the following three checks, making minimal edits and only where something is actually out of date.\n\n1. Steering: check whether the documents in .kiro/steering/ (product.md, tech.md, structure.md, and any others) are still accurate given the changed file and the current project. If the change affects the product description, tech stack, commands, dependencies, directory layout, or conventions, update the relevant steering file.\n\n2. Diagrams: review the Mermaid diagrams in docs/diagrams/ (see docs/diagrams/README.md for conventions). If the change affects anything a diagram depicts (components, data flow, sequences, entities, states, or spec requirements/design), update the affected .mmd files and keep the syntax valid. If the change warrants a new diagram, create it and add it to the README index. Remove index entries for deleted diagrams.\n\n3. Comments: skip this check if the changed file is a format without comments (e.g. plain JSON, lockfiles). Otherwise re-read the changed file and fix comments, docstrings and header notes that are stale, misleading, or refer to removed or renamed things. Add a brief comment only where non-obvious logic was added without one. Do not touch code, do not reword accurate comments, and do not add comments that restate the code.\n\nBriefly report what you changed in each area, or state that it is current."
+      },
+      "enabled": true
+    }
+  ]
+}
