@@ -18,6 +18,9 @@ function useRenameController(): RenameController {
 // Pointer travel above this between press and release means the user dragged the node.
 const DRAG_THRESHOLD_PX = 4
 
+// Gives React Flow about a sixth of a second to measure a new node before we stop retrying focus.
+const MAX_FOCUS_FRAMES = 10
+
 export function ComponentNode({ id, selected }: NodeProps) {
   const { navigator, workspace } = useApp()
   useStore(workspace)
@@ -61,9 +64,20 @@ function RenameInput({ details, controller }: { details: Details; controller: Re
   // Unmounting a focused input can still deliver a blur; this keeps Escape from committing through it.
   const finished = useRef(false)
 
+  // React Flow keeps a new node `visibility: hidden` until it has measured it, and focus() on a hidden
+  // input is a no-op, so retry per frame until the focus sticks.
   useEffect(() => {
-    input.current?.focus()
-    input.current?.select()
+    let frame = 0
+    let attempts = 0
+    const tryFocus = () => {
+      const el = input.current
+      if (!el) return
+      el.focus()
+      el.select()
+      if (document.activeElement !== el && ++attempts < MAX_FOCUS_FRAMES) frame = requestAnimationFrame(tryFocus)
+    }
+    tryFocus()
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   const commit = () => {

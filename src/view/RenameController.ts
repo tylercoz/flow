@@ -26,11 +26,14 @@ export class RenameController implements ObservableStore {
 
   schedule(componentId: string): void {
     this.cancel()
-    this.pending = this.scheduler.set(() => {
-      this.pending = undefined
-      this.editing = componentId
-      this.signal.notify()
-    }, RENAME_DELAY_MS)
+    this.pending = this.scheduler.set(() => this.start(componentId), RENAME_DELAY_MS)
+  }
+
+  // Starts Rename immediately; dropping a pending start keeps a late timer from re-targeting the editor.
+  start(componentId: string): void {
+    this.cancel()
+    this.editing = componentId
+    this.signal.notify()
   }
 
   // Drops only the pending start; an active Rename ends through the input.

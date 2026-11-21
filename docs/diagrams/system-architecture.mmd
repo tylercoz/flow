@@ -16,6 +16,7 @@ flowchart TD
         RenameContext
         RenameController
         recordViewport
+        createAtPoint["createAtPoint: isEmptyCanvas, createComponentAt"]
         useStore
     end
     subgraph Domain[Domain, no React]
@@ -53,6 +54,9 @@ flowchart TD
     CanvasView -->|keyed by Diagram id| Level
     Level -->|owns one, built from AppServices.scheduler| RenameController
     Level -->|provides it through| RenameContext
+    Level -->|"double-click on pane: isEmptyCanvas, createComponentAt"| createAtPoint
+    createAtPoint -->|addComponent| Diagram
+    createAtPoint -->|start| RenameController
     CanvasView -->|"nodeTypes (module-level)"| ComponentNode
     ComponentNode -->|reads controller from| RenameContext
     ComponentNode -->|schedule, cancel, end; useStore| RenameController
