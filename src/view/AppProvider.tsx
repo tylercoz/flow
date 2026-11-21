@@ -1,12 +1,14 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import type { Navigator } from '../domain/Navigator'
 import type { Notifier } from '../domain/Notifier'
+import type { Scheduler } from '../domain/Scheduler'
 import type { Workspace } from '../domain/Workspace'
 
 export interface AppServices {
   workspace: Workspace
   navigator: Navigator
   notifier: Notifier
+  scheduler: Scheduler
 }
 
 const AppContext = createContext<AppServices | null>(null)

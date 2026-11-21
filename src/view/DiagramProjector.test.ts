@@ -25,6 +25,7 @@ describe('DiagramProjector', () => {
     expect(nodes.map((x) => x.id)).toEqual([a.id, b.id])
     expect(nodes[0].position).toEqual({ x: 1, y: 2 })
     expect(nodes[0].data).toEqual({ label: 'A' })
+    expect(nodes.every((x) => x.type === 'component')).toBe(true)
     expect(nodes[0].parentId).toBeUndefined()
   })
 

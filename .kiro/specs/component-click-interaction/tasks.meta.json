@@ -1,0 +1,183 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Implement `RenameController` in `src/view/RenameController.ts`": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983794
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229987434
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230015949
+      }
+    ],
+    "2.1 Add `type: 'component'` to nodes in `DiagramProjector.toNodes` and update `DiagramProjector.test.ts` for the new field": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983853
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229988242
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230016664
+      }
+    ],
+    "3.1 Add `scheduler: Scheduler` to `AppServices` in `src/view/AppProvider.tsx` and pass the existing `TimerScheduler` from `src/main.tsx`": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983880
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229988839
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230017251
+      }
+    ],
+    "4.1 Implement `ComponentNode` and `RenameContext` in `src/view/ComponentNode.tsx`": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983897
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230019335
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230061325
+      }
+    ],
+    "5.1 Update `CanvasView.Level` in `src/view/CanvasView.tsx`": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983915
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230063293
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230096990
+      }
+    ],
+    "6. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983930
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230126246
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230135385
+      }
+    ],
+    "7.1 Update `docs/diagrams/system-architecture.mmd`": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229983984
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230101383
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230124158
+      }
+    ],
+    "8. Final checkpoint - Run build, test and lint": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795229984006
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230137250
+      },
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230149427
+      }
+    ],
+    "1. Build RenameController": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230015973
+      }
+    ],
+    "2. Project Components as custom nodes": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230016725
+      }
+    ],
+    "3. Expose the Scheduler to the view": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230017275
+      }
+    ],
+    "4. Build ComponentNode": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230061390
+      }
+    ],
+    "5. Wire into the canvas": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230097014
+      }
+    ],
+    "7. Update documentation diagrams": [
+      {
+        "executionId": "d1864cbe-63a4-4e3f-b27c-697db9d80cb1",
+        "chatSessionId": "sess_936a7330-f61f-4241-94a5-a234e5389e2d",
+        "timestamp": 1795230124182
+      }
+    ]
+  }
+}

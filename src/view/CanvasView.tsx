@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ReactFlow,
   useEdgesState,
@@ -13,9 +13,14 @@ import { DomainError } from '../domain/DomainError'
 import type { Notifier } from '../domain/Notifier'
 import { useApp } from './AppProvider'
 import type { DeleteFlow, DeleteTarget } from './DeleteFlow'
+import { ComponentNode, RenameContext } from './ComponentNode'
 import { toEdges, toNodes } from './DiagramProjector'
 import { recordViewport } from './recordViewport'
+import { RenameController } from './RenameController'
 import { useStore } from './useStore'
+
+// Must be module-level: a new object per render would make React Flow remount every node.
+const nodeTypes = { component: ComponentNode }
 
 /** The single selected Component or Link of the current Level, or null. */
 export type CanvasSelection = DeleteTarget | null
@@ -41,7 +46,16 @@ interface LevelProps extends CanvasViewProps {
 }
 
 function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps) {
-  const { workspace, navigator } = useApp()
+  const { workspace, navigator, scheduler } = useApp()
+  const [rename] = useState(() => new RenameController(scheduler))
+  // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
+  useEffect(
+    () => () => {
+      rename.cancel()
+      rename.end()
+    },
+    [rename],
+  )
   const version = useStore(workspace).getVersion()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(toNodes(diagram))
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(toEdges(diagram))
@@ -77,23 +91,28 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
   }
 
   return (
+    <RenameContext.Provider value={rename}>
     <ReactFlow
       nodes={nodes}
       edges={edges}
+      nodeTypes={nodeTypes}
       defaultViewport={{ ...diagram.viewport }}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
+      onNodeDragStart={() => rename.cancel()}
       onNodeDragStop={(_, node) => diagram.component(node.id)?.setPosition(node.position)}
       onMoveEnd={(_, viewport) => recordViewport(diagram, viewport)}
       onConnect={onConnect}
       onNodeDoubleClick={(_, node) => navigator.open(node.id)}
       onBeforeDelete={onBeforeDelete}
       onSelectionChange={({ nodes: n, edges: e }) => {
+        rename.cancel()
         if (n.length + e.length !== 1) return onSelectionChange(null)
         onSelectionChange(n.length ? { kind: 'component', id: n[0].id } : { kind: 'link', id: e[0].id })
       }}
       // Double-click opens a Component, so it must not also zoom.
       zoomOnDoubleClick={false}
     />
+    </RenameContext.Provider>
   )
 }

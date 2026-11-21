@@ -26,7 +26,7 @@ async function main() {
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <AppProvider services={{ workspace, navigator, notifier }}>
+      <AppProvider services={{ workspace, navigator, notifier, scheduler }}>
         <App />
       </AppProvider>
     </StrictMode>,

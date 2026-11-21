@@ -11,6 +11,10 @@ flowchart TD
         ConfirmDialog
         NotificationBar
         DiagramProjector
+        ComponentNode
+        Level[Level, inside CanvasView]
+        RenameContext
+        RenameController
         recordViewport
         useStore
     end
@@ -19,6 +23,7 @@ flowchart TD
         Diagram --> Link
         Navigator --> Workspace
         Notifier --> Scheduler
+        TimerScheduler -.implements.-> Scheduler
     end
     subgraph Persistence
         WorkspaceLoader --> Repository
@@ -30,7 +35,8 @@ flowchart TD
     end
     Main -->|builds and starts| Persistence
     Main -->|creates| Domain
-    Main -->|services| AppProvider
+    Main -->|"services: workspace, navigator, notifier, scheduler"| AppProvider
+    Main -->|shares one scheduler with| AutoSaver
     AppProvider --> App
     App -->|owns one instance| DeleteFlow
     App --> Toolbar
@@ -44,6 +50,15 @@ flowchart TD
     ConfirmDialog -->|reads pending| DeleteFlow
     CanvasView --> DiagramProjector
     CanvasView --> recordViewport
+    CanvasView -->|keyed by Diagram id| Level
+    Level -->|owns one, built from AppServices.scheduler| RenameController
+    Level -->|provides it through| RenameContext
+    CanvasView -->|"nodeTypes (module-level)"| ComponentNode
+    ComponentNode -->|reads controller from| RenameContext
+    ComponentNode -->|schedule, cancel, end; useStore| RenameController
+    ComponentNode -->|useApp for workspace, navigator| AppProvider
+    RenameController -.implements.-> ObservableStore
+    RenameController --> Scheduler
     CanvasView -->|request| DeleteFlow
     Inspector -->|request| DeleteFlow
     View -->|useStore| Domain
