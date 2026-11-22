@@ -32,7 +32,7 @@ export class DeleteFlow implements ObservableStore {
         diagram.removeLink(target.id)
         return
       case 'placement':
-        // The Resource survives, so there is nothing to confirm.
+        // The Resource goes with its last Placement; the Placement is one node, so no confirmation.
         diagram.removePlacement(target.id)
         return
       case 'resource': {

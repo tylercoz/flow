@@ -9,7 +9,7 @@ const pick = fc.nat({ max: 1000 })
 // Feature: components-as-resources, Property 9: Resource deletion removes only its own scope
 describe('Property 9: Resource deletion removes only its own scope', () => {
   // **Validates: Requirements 6.3, 6.5**
-  it('removes the Resource, its Placements, their Links and its child Diagram, keeps every other Resource and is one undo step', () => {
+  it('removes the Resource, its Placements, their Links and its child Diagram, keeps every other Resource that is still placed and is one undo step', () => {
     fc.assert(
       fc.property(commandsArb, pick, (commands, resourcePick) => {
         const workspace = buildWorkspace(commands)
@@ -32,12 +32,16 @@ describe('Property 9: Resource deletion removes only its own scope', () => {
 
         workspace.removeResource(target.id)
 
-        expect(workspace.resources.all.map((r) => r.id)).toEqual(survivingResourceIds)
         const after = workspace.allDiagrams()
         if (doomedDiagram) expect(after).not.toContain(doomedDiagram)
-        expect(after.map((d) => d.id)).toEqual(survivingDiagrams.map((d) => d.id))
-        expect(after.map((d) => [d.id, d.placements.map((p) => p.id)])).toEqual(expectedPlacements)
-        expect(after.map((d) => [d.id, d.links.map((l) => l.id)])).toEqual(expectedLinks)
+        // Resources placed only inside the target's child Diagram lose their last Placement and go too, along with their own child Diagrams.
+        const remaining = workspace.resources.all.map((r) => r.id)
+        expect(survivingResourceIds).toEqual(expect.arrayContaining(remaining))
+        expect(remaining.every((id) => after.some((d) => d.placements.some((p) => p.resourceId === id)))).toBe(true)
+        const survivingIds = survivingDiagrams.map((d) => d.id)
+        expect(after.every((d) => survivingIds.includes(d.id))).toBe(true)
+        expect(after.map((d) => [d.id, d.placements.map((p) => p.id)])).toEqual(expectedPlacements.filter(([id]) => after.some((d) => d.id === id)))
+        expect(after.map((d) => [d.id, d.links.map((l) => l.id)])).toEqual(expectedLinks.filter(([id]) => after.some((d) => d.id === id)))
         for (const d of after) {
           for (const p of d.placements) expect(workspace.resources.get(p.resourceId)).toBeDefined()
           for (const l of d.links) {

@@ -23,7 +23,7 @@ import { buildDiagram, buildLink, buildResource, diagramToDto, resourceToDto, wi
 export type ResourceImpact = {
   placements: number
   links: number
-  // Only for a component: what its child Diagram holds. Nested Resources are not counted as removed.
+  // Only for a component: what its child Diagram holds. Nested Resources placed nowhere else are deleted too.
   contents?: { nodes: number; links: number }
 }
 
@@ -50,6 +50,7 @@ export class Workspace implements ObservableStore {
       onChange: () => this.signal.notify(),
       resources: this._resources,
       wouldCreateCycle: (target, resourceId) => this.wouldCreateCycle(target, resourceId),
+      pruneOrphans: () => this.pruneOrphans(),
     }
     this.loadResources(resources)
     this._root = makeRoot(this.ctx)
@@ -221,7 +222,17 @@ export class Workspace implements ObservableStore {
     if (!this._resources.get(id)) throw new DomainError('MISSING_RESOURCE', 'The resource no longer exists.')
     this.allDiagrams().forEach((d) => d.dropPlacementsOf(id))
     this._resources.remove(id)
+    this.pruneOrphans()
     this.signal.notify()
+  }
+  // Repeats because removing a component also removes its child Diagram, which can orphan the Resources placed in it.
+  private pruneOrphans(): void {
+    for (;;) {
+      const placed = new Set(this.allDiagrams().flatMap((d) => d.placements.map((p) => p.resourceId)))
+      const orphans = this._resources.all.filter((r) => !placed.has(r.id))
+      if (orphans.length === 0) return
+      orphans.forEach((r) => this._resources.remove(r.id))
+    }
   }
   private requireType(typeId: string): void {
     if (!this._types.has(typeId)) throw new DomainError('UNKNOWN_TYPE', 'The data type does not exist.')

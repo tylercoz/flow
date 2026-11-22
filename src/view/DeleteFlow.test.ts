@@ -13,7 +13,7 @@ function setup() {
 }
 
 describe('DeleteFlow', () => {
-  it('deletes a Placement at once, keeping its Resource and removing attached Links', () => {
+  it('deletes a Placement at once, deleting its last-instance Resource and removing attached Links', () => {
     const { workspace, diagram, place, flow } = setup()
     const a = place('component', 'A')
     const b = place('component', 'B', 1)
@@ -21,7 +21,7 @@ describe('DeleteFlow', () => {
     flow.request(diagram, { kind: 'placement', id: a.id })
     expect(diagram.placements.map((p) => p.id)).toEqual([b.id])
     expect(diagram.links).toHaveLength(0)
-    expect(workspace.resources.get(a.resourceId)).toBeDefined()
+    expect(workspace.resources.get(a.resourceId)).toBeUndefined()
     expect(flow.pending).toBeNull()
   })
 
@@ -67,12 +67,12 @@ describe('DeleteFlow', () => {
       expect(JSON.stringify(workspace.toSnapshot())).toBe(before)
     })
 
-    it('confirm removes the Resource and its Placements but keeps Resources placed inside it', () => {
+    it('confirm removes the Resource and its Placements and Resources placed only inside it', () => {
       const { workspace, diagram, flow, a, b, inner } = resourceSetup()
       flow.request(diagram, { kind: 'resource', id: a.resourceId })
       flow.confirm()
       expect(workspace.resources.get(a.resourceId)).toBeUndefined()
-      expect(workspace.resources.get(inner.resourceId)).toBeDefined()
+      expect(workspace.resources.get(inner.resourceId)).toBeUndefined()
       expect(diagram.placements.map((p) => p.id)).not.toContain(a.id)
       expect(diagram.placements.map((p) => p.id)).toContain(b.id)
       expect(diagram.links).toHaveLength(0)

@@ -208,9 +208,9 @@ describe('resources properties', () => {
     )
   })
 
-  // Feature: resource-nodes, Property 6: Placement deletion keeps the Resource
+  // Feature: resource-nodes, Property 6: Placement deletion removes the Resource only with its last Placement
   // **Validates: Requirements 5.1**
-  it('removePlacement drops that Placement and its Links and keeps the Resource and everything else', () => {
+  it('removePlacement drops that Placement and its Links, and its Resource when none is left', () => {
     fc.assert(
       fc.property(commandsArb, fc.nat({ max: 1000 }), (commands, pick) => {
         const workspace = buildWorkspace(commands)
@@ -220,17 +220,18 @@ describe('resources properties', () => {
 
         const nodeIds = () => workspace.allDiagrams().flatMap((d) => d.placements.map((p) => p.id))
         const linkIds = () => workspace.allDiagrams().flatMap((d) => d.links.map((l) => l.id))
-        const resourcesBefore = JSON.stringify(workspace.resources.all.map((r) => [r.id, r.kind, r.name, r.typeId]))
-        const nodesBefore = nodeIds()
+        const resourceIds = () => workspace.resources.all.map((r) => r.id)
+        const resourcesBefore = resourceIds()
+        const lastOne = owned.filter((o) => o.placement.resourceId === placement.resourceId).length === 1
         const attached = diagram.links.filter((l) => l.sourceId === placement.id || l.targetId === placement.id).map((l) => l.id)
-        const linksBefore = linkIds()
 
         diagram.removePlacement(placement.id)
 
-        expect(workspace.resources.get(placement.resourceId)).toBeDefined()
-        expect(JSON.stringify(workspace.resources.all.map((r) => [r.id, r.kind, r.name, r.typeId]))).toBe(resourcesBefore)
-        expect(nodeIds()).toEqual(nodesBefore.filter((id) => id !== placement.id))
-        expect(linkIds()).toEqual(linksBefore.filter((id) => !attached.includes(id)))
+        expect(workspace.resources.get(placement.resourceId) === undefined).toBe(lastOne)
+        // A deleted component also takes its child Diagram's contents, so only the removed Placement is certain to be gone.
+        if (!lastOne) expect(resourceIds()).toEqual(resourcesBefore)
+        expect(nodeIds()).not.toContain(placement.id)
+        expect(linkIds().every((id) => !attached.includes(id))).toBe(true)
       }),
       { numRuns: 100 },
     )
@@ -395,8 +396,11 @@ describe('resources properties', () => {
         const survivors = () => workspace.allDiagrams().filter((d) => d !== child)
         const doomed = () =>
           workspace.allDiagrams().flatMap((d) => d.placements.filter((p) => p.resourceId === target.id).map((p) => ({ d, id: p.id })))
-        const nodeIds = () => survivors().flatMap((d) => d.placements.map((p) => p.id))
-        const linkIds = () => survivors().flatMap((d) => d.links.map((l) => l.id))
+        // Resources placed only inside the deleted component go too, with their own child Diagrams, so compare only Diagrams that remain.
+        const diagramsBefore = survivors()
+        const remaining = () => diagramsBefore.filter((d) => workspace.allDiagrams().includes(d))
+        const nodeIds = () => remaining().flatMap((d) => d.placements.map((p) => p.id))
+        const linkIds = () => remaining().flatMap((d) => d.links.map((l) => l.id))
 
         const impact = workspace.resourceImpact(target.id)
         const placementsGone = doomed()
@@ -404,8 +408,8 @@ describe('resources properties', () => {
         const linksGone = survivors().flatMap((d) =>
           d.links.filter((l) => doomedIds.has(l.sourceId) || doomedIds.has(l.targetId)).map((l) => l.id),
         )
-        const nodesBefore = nodeIds()
-        const linksBefore = linkIds()
+        const nodesByDiagram = new Map(diagramsBefore.map((d) => [d, d.placements.map((p) => p.id)]))
+        const linksByDiagram = new Map(diagramsBefore.map((d) => [d, d.links.map((l) => l.id)]))
         const contents = child ? { nodes: child.placements.length, links: child.links.length } : undefined
         const otherResources = workspace.resources.all.filter((r) => r.id !== target.id).map((r) => r.id)
 
@@ -415,11 +419,11 @@ describe('resources properties', () => {
         unsubscribe()
 
         expect(impact).toEqual({ placements: placementsGone.length, links: linksGone.length, contents })
-        expect(nodeIds()).toEqual(nodesBefore.filter((id) => !doomedIds.has(id)))
-        expect(linkIds()).toEqual(linksBefore.filter((id) => !linksGone.includes(id)))
+        expect(nodeIds()).toEqual(remaining().flatMap((d) => nodesByDiagram.get(d)!.filter((id) => !doomedIds.has(id))))
+        expect(linkIds()).toEqual(remaining().flatMap((d) => linksByDiagram.get(d)!.filter((id) => !linksGone.includes(id))))
         expect(doomed()).toEqual([])
         expect(workspace.resources.get(target.id)).toBeUndefined()
-        expect(workspace.resources.all.map((r) => r.id)).toEqual(otherResources)
+        expect(otherResources).toEqual(expect.arrayContaining(workspace.resources.all.map((r) => r.id)))
         expect(notifications).toBe(1)
       }),
       { numRuns: 100 },

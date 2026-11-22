@@ -14,6 +14,8 @@ export type DiagramContext = {
   onChange: () => void
   resources: ResourceLookup
   wouldCreateCycle: (target: Diagram, resourceId: string) => boolean
+  // Deletes Resources that no Diagram places any more; called after Placements are removed.
+  pruneOrphans: () => void
 }
 
 export class Diagram {
@@ -73,10 +75,11 @@ export class Diagram {
     return placement
   }
 
-  // Keeps the Resource; only the Placement and the Links attached to it go.
+  // The Placement and its Links go; the Resource goes too when this was its last Placement.
   removePlacement(id: string): void {
     if (!this.placement(id)) throw new DomainError('NOT_IN_DIAGRAM', 'Placement is not in this diagram.')
     this.dropNode(id)
+    this.ctx.pruneOrphans()
     this.ctx.onChange()
   }
 

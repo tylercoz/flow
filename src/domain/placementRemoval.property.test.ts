@@ -10,9 +10,9 @@ const shape = (d: Diagram) => ({
 })
 
 describe('Placement removal', () => {
-  // Feature: components-as-resources, Property 7: Removing a Placement keeps its Resource
+  // Feature: components-as-resources, Property 7: Removing a Placement deletes its Resource only with the last one
   // **Validates: Requirements 6.1, 7.2**
-  it('Property 7: removePlacement drops the Placement and its Links, and leaves the registry and other Diagrams unchanged', () => {
+  it('Property 7: removePlacement drops the Placement and its Links, and deletes the Resource only with its last Placement', () => {
     fc.assert(
       fc.property(workspaceArb, fc.nat({ max: 1000 }), fc.nat({ max: 1000 }), ({ workspace }, dPick, pPick) => {
         const withPlacements = workspace.allDiagrams().filter((d) => d.placements.length > 0)
@@ -21,7 +21,9 @@ describe('Placement removal', () => {
         const placement = diagram.placements[pPick % diagram.placements.length]
 
         const resourceIds = workspace.resources.all.map((r) => r.id)
-        const othersBefore = workspace.allDiagrams().filter((d) => d !== diagram).map(shape)
+        const lastOne = workspace.allDiagrams().flatMap((d) => d.placements).filter((p) => p.resourceId === placement.resourceId).length === 1
+        const others = workspace.allDiagrams().filter((d) => d !== diagram)
+        const othersBefore = others.map(shape)
         const before = shape(diagram)
 
         diagram.removePlacement(placement.id)
@@ -29,9 +31,12 @@ describe('Placement removal', () => {
         const after = shape(diagram)
         expect(after.placements).toEqual(before.placements.filter((p) => p.id !== placement.id))
         expect(after.links).toEqual(before.links.filter((l) => l[1] !== placement.id && l[2] !== placement.id))
-        expect(workspace.resources.all.map((r) => r.id)).toEqual(resourceIds)
-        expect(workspace.resources.get(placement.resourceId)).toBeDefined()
-        expect(workspace.allDiagrams().filter((d) => d !== diagram).map(shape)).toEqual(othersBefore)
+        expect(workspace.resources.get(placement.resourceId) === undefined).toBe(lastOne)
+        // A deleted component takes its child Diagram and the Resources placed only there, so those are exempt.
+        if (!lastOne) {
+          expect(workspace.resources.all.map((r) => r.id)).toEqual(resourceIds)
+          expect(workspace.allDiagrams().filter((d) => d !== diagram).map(shape)).toEqual(othersBefore)
+        }
       }),
     )
   })

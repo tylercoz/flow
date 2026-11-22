@@ -50,7 +50,7 @@ describe('Diagram', () => {
     expect(diagram.links).toHaveLength(0)
   })
 
-  it('removes a Placement with its attached Links and keeps its Resource', () => {
+  it('removes a Placement with its attached Links and deletes its Resource with the last Placement', () => {
     const { workspace, diagram, component } = setup()
     const a = component()
     const b = component({ x: 1, y: 1 })
@@ -58,8 +58,30 @@ describe('Diagram', () => {
     diagram.removePlacement(a.id)
     expect(diagram.placements).toEqual([b])
     expect(diagram.links).toHaveLength(0)
-    expect(workspace.resources.get(a.resourceId)).toBeDefined()
+    expect(workspace.resources.get(a.resourceId)).toBeUndefined()
+    expect(workspace.resources.get(b.resourceId)).toBeDefined()
     expect(code(() => diagram.removePlacement(a.id))).toBe('NOT_IN_DIAGRAM')
+  })
+
+  it('keeps a Resource while another Placement of it remains', () => {
+    const { workspace, diagram, place } = setup()
+    const first = place('user', 'Ann')
+    const second = workspace.createPlacedResource(diagram, { kind: 'user', name: 'Bo' }, { x: 1, y: 1 })
+    const copy = diagram.addPlacement(first.resourceId, { x: 2, y: 2 })
+    diagram.removePlacement(first.id)
+    expect(workspace.resources.get(first.resourceId)).toBeDefined()
+    diagram.removePlacement(copy.id)
+    expect(workspace.resources.get(first.resourceId)).toBeUndefined()
+    expect(workspace.resources.get(second.resourceId)).toBeDefined()
+  })
+
+  it('deletes Resources placed only inside a component when the component goes', () => {
+    const { workspace, diagram, component, childOf } = setup()
+    const outer = component()
+    const inner = workspace.createPlacedResource(childOf(outer), { kind: 'user', name: 'Ann' }, { x: 0, y: 0 })
+    diagram.removePlacement(outer.id)
+    expect(workspace.resources.all).toEqual([])
+    expect(workspace.resources.get(inner.resourceId)).toBeUndefined()
   })
 
   it('only links an output of the source to an input of the target', () => {

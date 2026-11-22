@@ -13,7 +13,7 @@ export function ConfirmDialog({ deleteFlow }: { deleteFlow: DeleteFlow }) {
         <p id="confirm-delete-title">
           {`Deleting this resource also deletes ${plural(counts.placements, 'placement')} in all diagrams and ${plural(counts.links, 'attached link')}.`}
           {counts.contents &&
-            ` Its diagram holds ${plural(counts.contents.nodes, 'node')} and ${plural(counts.contents.links, 'link')}, which are deleted too. Resources placed there stay in the registry.`}
+            ` Its diagram holds ${plural(counts.contents.nodes, 'node')} and ${plural(counts.contents.links, 'link')}, which are deleted too.`}
           {' Continue?'}
         </p>
         <button type="button" onClick={() => deleteFlow.cancel()}>

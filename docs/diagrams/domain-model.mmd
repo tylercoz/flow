@@ -49,6 +49,7 @@ classDiagram
         onChange()
         resources: ResourceLookup
         wouldCreateCycle(target, resourceId)
+        pruneOrphans()
     }
     class Navigator {
         path: string[]  %% Placement ids
