@@ -32,29 +32,26 @@ describe('checkLink', () => {
     expect(checkLink(sourceOf(kind), 'write', targetOf('component'), 'in1')?.code).toBe('INVALID_PORT')
   })
 
-  it('accepts database read as source and write as target', () => {
-    expect(checkLink(sourceOf('database'), 'read', targetOf('component'), 'in1')).toBeNull()
-    expect(checkLink(sourceOf('component'), 'out1', targetOf('database'), 'write')).toBeNull()
+  it('accepts database read and write in either role', () => {
+    for (const handle of ['read', 'write']) {
+      expect(checkLink(sourceOf('database'), handle, targetOf('component'), 'in1')).toBeNull()
+      expect(checkLink(sourceOf('component'), 'out1', targetOf('database'), handle)).toBeNull()
+    }
   })
-
-  it('rejects database write as source, read as target, and side ids', () => {
-    expect(checkLink(sourceOf('database'), 'write', targetOf('component'), 'in1')?.code).toBe('INVALID_PORT')
-    expect(checkLink(sourceOf('component'), 'out1', targetOf('database'), 'read')?.code).toBe('INVALID_PORT')
+  it('rejects database side ids', () => {
     expect(checkLink(sourceOf('database'), 'top', targetOf('component'), 'in1')?.code).toBe('INVALID_PORT')
     expect(checkLink(sourceOf('component'), 'out1', targetOf('database'), 'left')?.code).toBe('INVALID_PORT')
   })
-
-  it('accepts Placement to Placement for every kind pair with valid handles', () => {
+  it('accepts Placement to Placement for every kind pair, using the first and last handle of each', () => {
     const kinds: ResourceKind[] = ['database', 'artifact', 'user', 'input-object']
     for (const a of kinds) {
       for (const b of kinds) {
-        const src = a === 'database' ? 'read' : 'top'
-        const tgt = b === 'database' ? 'write' : 'bottom'
-        expect(checkLink(sourceOf(a), src, targetOf(b), tgt)).toBeNull()
+        const [s, t] = [sourceOf(a), targetOf(b)]
+        expect(checkLink(s, s[0], t, t[0])).toBeNull()
+        expect(checkLink(s, s.at(-1)!, t, t.at(-1)!)).toBeNull()
       }
     }
   })
-
   it('reports which end is invalid', () => {
     expect(checkLink(sourceOf('component'), 'bad', targetOf('component'), 'in1')?.message).toMatch(/source/)
     expect(checkLink(sourceOf('component'), 'out1', targetOf('component'), 'bad')?.message).toMatch(/target/)

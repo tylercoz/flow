@@ -78,7 +78,7 @@ describe('DiagramProjector', () => {
 
   // PlacementNode renders its Handles from these same constants, so this pins the ids it exposes per kind.
   it.each([
-    ['database', ['read'], ['write']],
+    ['database', ['read', 'write'], ['read', 'write']],
     ['user', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
     ['artifact', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
     ['input-object', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],

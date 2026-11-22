@@ -15,9 +15,9 @@ describe('ResourceKinds', () => {
     expect(KINDS.filter((k) => RESOURCE_KINDS[k].typed)).toEqual(['artifact', 'input-object'])
   })
 
-  it('gives a database read as source and write as target, others the four sides', () => {
-    expect(handleIds('database', null, 'source')).toEqual([DATABASE_PORTS.read])
-    expect(handleIds('database', null, 'target')).toEqual([DATABASE_PORTS.write])
+  it('gives a database read and write in both roles, others the four sides', () => {
+    expect(handleIds('database', null, 'source')).toEqual([DATABASE_PORTS.read, DATABASE_PORTS.write])
+    expect(handleIds('database', null, 'target')).toEqual([DATABASE_PORTS.read, DATABASE_PORTS.write])
     for (const kind of ['artifact', 'user', 'input-object'] as const) {
       expect(handleIds(kind, null, 'source')).toEqual(SIDE_PORTS)
       expect(handleIds(kind, null, 'target')).toEqual(SIDE_PORTS)

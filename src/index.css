@@ -223,6 +223,25 @@ textarea:focus {
   border: solid var(--border);
   border-width: 0 1.5px;
 }
+/* A one-letter label needs no 40px minimum; the columns shrink to the letter. */
+.component-node.database-node {
+  grid-template-columns: auto 1fr auto;
+}
+/* No open button to clear, so the padding is as tight as a plain Resource's. */
+.database-body {
+  gap: 8px;
+  padding: 8px 12px;
+}
+/* Untinted and compact; centered so the label lines up with the name when the box is taller. */
+.database-ports {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* Doubled class so this wins over `.component-ports li`, which comes later in the file. */
+.component-ports.database-ports li {
+  padding: 2px 6px;
+}
 .component-ports {
   margin: 0;
   padding: 0;

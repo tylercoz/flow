@@ -214,9 +214,9 @@ describe('WorkspaceSerializer', () => {
       expect(() => serializer.deserialize(raw)).toThrow(PersistenceError)
 
       const base = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
-      for (const bad of [{ sourcePortId: 'write' }, { sourcePortId: 'top' }, { targetPortId: 'read' }, { targetPortId: 'middle' }]) {
+      for (const bad of [{ sourcePortId: 'top' }, { targetPortId: 'middle' }]) {
         const ps = [placement('p1', 'r1'), placement('p2', 'r2')]
-        // p1 is a database (read/write only), p2 is four-sided.
+        // p1 is a database (read/write only), p2 is four-sided; p1's top and p2's middle are not handles.
         expect(() => serializer.deserialize(withResources(diagram('r', ps, [{ ...base, ...bad }])))).toThrow(PersistenceError)
       }
     })

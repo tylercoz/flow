@@ -127,7 +127,7 @@ classDiagram
     class ResourceKinds {
         <<module>>
         RESOURCE_KINDS: typed per kind
-        FIXED_HANDLES: source and target ids per non-component kind
+        FIXED_HANDLES: source and target ids per non-component kind (database read and write work in both roles)
         DATABASE_PORTS
         SIDE_PORTS
         handleIds(kind, ports, role)  %% a component's ids come from the given ports

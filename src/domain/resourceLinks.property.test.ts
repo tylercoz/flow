@@ -24,7 +24,7 @@ function assertEndId(diagram: Diagram, nodeId: string, portId: string, role: 'so
     expect(ports.map((p) => p.id)).toContain(portId)
     return
   }
-  if (resource.kind === 'database') expect(portId).toBe(role === 'source' ? 'read' : 'write')
+  if (resource.kind === 'database') expect(['read', 'write']).toContain(portId)
   else expect(SIDES).toContain(portId)
   expect(resource.handleIds(role)).toContain(portId)
 }
@@ -34,7 +34,7 @@ function endAllows(diagram: Diagram, nodeId: string, portId: string, role: 'sour
   const resource = diagram.resourceOf(nodeId)
   if (!resource) return false
   if (resource.definition) return (role === 'source' ? resource.definition.outputs : resource.definition.inputs).some((p) => p.id === portId)
-  if (resource.kind === 'database') return portId === (role === 'source' ? 'read' : 'write')
+  if (resource.kind === 'database') return portId === 'read' || portId === 'write'
   return SIDES.includes(portId)
 }
 
