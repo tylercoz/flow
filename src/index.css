@@ -277,6 +277,8 @@ textarea:focus {
   /* An editing textarea's default 20-column width, not the text, sized the box on creation. */
   width: auto;
   field-sizing: content;
+  /* An empty textarea sizes to zero width, which leaves the caret nowhere to draw. */
+  min-width: 1ch;
   padding: 0;
   overflow: hidden;
   resize: none;
