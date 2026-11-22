@@ -6,7 +6,9 @@ flowchart TD
         DeleteFlow
         Breadcrumb
         CanvasView
+        Sidebar["Sidebar: Details and Resources tabs"]
         Inspector
+        ResourcesPanel["ResourcesPanel: all resource names"]
         ConfirmDialog
         TypesDialog
         ExceptionsDialog
@@ -72,7 +74,10 @@ flowchart TD
     App --> Breadcrumb
     Breadcrumb -->|trail| Navigator
     App --> CanvasView
-    App --> Inspector
+    App --> Sidebar
+    Sidebar -->|Details tab| Inspector
+    Sidebar -->|Resources tab| ResourcesPanel
+    ResourcesPanel -->|resources.all| Workspace
     App --> ConfirmDialog
     App -->|Types button in header| TypesDialog
     App -->|Exceptions button in header| ExceptionsDialog
@@ -92,7 +97,8 @@ flowchart TD
     FocusGroup -->|"beginGroup on focus, endGroup on blur"| History
     FocusGroup -->|filters targets| shortcutAction
     App -->|passes deleteFlow| CanvasView
-    App -->|passes deleteFlow| Inspector
+    App -->|passes deleteFlow| Sidebar
+    Sidebar -->|passes deleteFlow| Inspector
     Inspector -->|setName, setResourceType, setPorts| Workspace
     ConfirmDialog -->|reads pending| DeleteFlow
     CanvasView --> DiagramProjector

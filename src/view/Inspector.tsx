@@ -11,10 +11,8 @@ import { IdListEditor } from './IdListEditor'
 import { useStore } from './useStore'
 
 interface InspectorProps {
-  /** The selected Placement. App renders an empty sidebar instead when nothing is selected. */
+  /** The selected Placement. Sidebar renders a placeholder instead when nothing is selected. */
   item: Placement
-  /** Sidebar width in px; owned by App so it survives selection changes. */
-  width: number
   /** The Diagram that contains `item`; DeleteFlow removes it from here. */
   diagram: Diagram
   deleteFlow: DeleteFlow
@@ -22,7 +20,7 @@ interface InspectorProps {
 
 type ListField = 'inputs' | 'outputs'
 
-export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) {
+export function Inspector({ item, diagram, deleteFlow }: InspectorProps) {
   // Re-render on every model change so the inputs always show the live values.
   const { workspace } = useApp()
   useStore(workspace)
@@ -63,7 +61,7 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
     )
   }
   return (
-    <aside className="inspector" style={{ width }} aria-label="Details">
+    <>
       <FocusGroup className="inspector-fields">
         <div>
           <label htmlFor={`${idPrefix}-name`}>Name</label>
@@ -123,6 +121,6 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
       <button type="button" className="btn-danger" onClick={() => deleteFlow.request(diagram, { kind: 'resource', id: resource.id })}>
         Delete resource
       </button>
-    </aside>
+    </>
   )
 }

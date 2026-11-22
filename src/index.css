@@ -373,6 +373,28 @@ textarea:focus {
   background: var(--surface);
   border-left: 1px solid var(--border);
 }
+.tab-list {
+  display: flex;
+  gap: 4px;
+}
+.tab[aria-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+/* The Inspector's fields and delete buttons are direct children, so the column and gap live here. */
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.resource-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.resource-list li {
+  padding: 4px 0;
+}
 .inspector-empty {
   margin: 0;
   color: var(--muted);

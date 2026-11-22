@@ -5,7 +5,7 @@ import { CanvasView } from './view/CanvasView'
 import { ConfirmDialog } from './view/ConfirmDialog'
 import { DeleteFlow } from './view/DeleteFlow'
 import { HistoryControls } from './view/HistoryControls'
-import { Inspector } from './view/Inspector'
+import { Sidebar } from './view/Sidebar'
 import { EnvironmentVariablesDialog } from './view/EnvironmentVariablesDialog'
 import { ExceptionsDialog } from './view/ExceptionsDialog'
 import { TypesDialog } from './view/TypesDialog'
@@ -100,13 +100,7 @@ function Layout() {
           onPointerCancel={endResize}
           onKeyDown={resizeByKey}
         />
-        {placement ? (
-          <Inspector key={placement.id} item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />
-        ) : (
-          <aside className="inspector" style={{ width: sidebarWidth }} aria-label="Details">
-            <p className="inspector-empty">Select an item to see its details.</p>
-          </aside>
-        )}
+        <Sidebar item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />
       </main>
       <ConfirmDialog deleteFlow={deleteFlow} />
       {typesOpen && <TypesDialog onClose={() => setTypesOpen(false)} />}
