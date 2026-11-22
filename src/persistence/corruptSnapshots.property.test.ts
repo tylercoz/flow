@@ -41,9 +41,9 @@ const snapshotArb = workspaceArb.map(({ workspace }) => JSON.parse(JSON.stringif
 
 describe('Feature: components-as-resources, Property 11: Corrupt snapshots are rejected', () => {
   // **Validates: Requirements 8.2**
-  it('rejects any schemaVersion other than 10', () => {
+  it('rejects any schemaVersion other than 11', () => {
     fc.assert(
-      fc.property(snapshotArb, fc.integer().filter((v) => v !== 10), (raw, version) => {
+      fc.property(snapshotArb, fc.integer().filter((v) => v !== 11), (raw, version) => {
         raw.schemaVersion = version
         reject(raw)
       }),

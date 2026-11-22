@@ -72,13 +72,13 @@ describe('DiagramProjector', () => {
     const { workspace, diagram } = setup()
     const db = workspace.createPlacedResource(diagram, { kind: 'database', name: 'D' }, { x: 0, y: 0 })
     const user = workspace.createPlacedResource(diagram, { kind: 'user', name: 'U' }, { x: 0, y: 0 })
-    const link = diagram.addLink(db.id, user.id, 'read', 'left')
-    expect(toEdges(diagram)[0]).toMatchObject({ id: link.id, sourceHandle: 'read', targetHandle: 'left' })
+    const link = diagram.addLink(db.id, user.id, 'right', 'left')
+    expect(toEdges(diagram)[0]).toMatchObject({ id: link.id, sourceHandle: 'right', targetHandle: 'left' })
   })
 
   // PlacementNode renders its Handles from these same constants, so this pins the ids it exposes per kind.
   it.each([
-    ['database', ['read', 'write'], ['read', 'write']],
+    ['database', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
     ['user', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
     ['artifact', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
     ['input-object', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],

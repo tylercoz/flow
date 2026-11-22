@@ -127,8 +127,7 @@ classDiagram
     class ResourceKinds {
         <<module>>
         RESOURCE_KINDS: typed per kind
-        FIXED_HANDLES: source and target ids per non-component kind (database read and write work in both roles)
-        DATABASE_PORTS
+        FIXED_HANDLES: source and target ids per non-component kind
         SIDE_PORTS
         handleIds(kind, ports, role)  %% a component's ids come from the given ports
         kindInvariantError(kind, typeId, hasDefinition)
@@ -222,7 +221,7 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 10
+        schemaVersion: 11
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable

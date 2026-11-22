@@ -36,7 +36,7 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 10,
+  schemaVersion: 11,
   types: [],
   exceptions: [],
   environmentVariables: [],

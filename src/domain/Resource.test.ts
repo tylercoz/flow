@@ -3,7 +3,7 @@ import { DomainError } from './DomainError'
 import { Resource } from './Resource'
 import { ResourceRegistry } from './ResourceRegistry'
 import { Workspace } from './Workspace'
-import { DATABASE_PORTS, RESOURCE_KINDS, SIDE_PORTS, handleIds, isResourceKind, kindInvariantError, type ResourceKind } from './ResourceKinds'
+import { RESOURCE_KINDS, SIDE_PORTS, handleIds, isResourceKind, kindInvariantError, type ResourceKind } from './ResourceKinds'
 
 const KINDS: ResourceKind[] = ['database', 'artifact', 'user', 'input-object', 'component']
 const make = (id: string, kind: ResourceKind, onChange = () => {}) =>
@@ -15,10 +15,8 @@ describe('ResourceKinds', () => {
     expect(KINDS.filter((k) => RESOURCE_KINDS[k].typed)).toEqual(['artifact', 'input-object'])
   })
 
-  it('gives a database read and write in both roles, others the four sides', () => {
-    expect(handleIds('database', null, 'source')).toEqual([DATABASE_PORTS.read, DATABASE_PORTS.write])
-    expect(handleIds('database', null, 'target')).toEqual([DATABASE_PORTS.read, DATABASE_PORTS.write])
-    for (const kind of ['artifact', 'user', 'input-object'] as const) {
+  it('gives every non-component kind the four sides in both roles', () => {
+    for (const kind of ['database', 'artifact', 'user', 'input-object'] as const) {
       expect(handleIds(kind, null, 'source')).toEqual(SIDE_PORTS)
       expect(handleIds(kind, null, 'target')).toEqual(SIDE_PORTS)
     }

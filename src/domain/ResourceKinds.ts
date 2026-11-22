@@ -2,7 +2,6 @@ export type ResourceKind = 'database' | 'artifact' | 'user' | 'input-object' | '
 export type FixedHandleKind = Exclude<ResourceKind, 'component'>
 export type HandleRole = 'source' | 'target'
 
-export const DATABASE_PORTS = { read: 'read', write: 'write' } as const
 export const SIDE_PORTS = ['top', 'right', 'bottom', 'left'] as const
 
 export const RESOURCE_KINDS: Record<ResourceKind, { readonly typed: boolean }> = {
@@ -15,8 +14,7 @@ export const RESOURCE_KINDS: Record<ResourceKind, { readonly typed: boolean }> =
 
 // A component has no entry: its handles are its ports, which the caller supplies.
 export const FIXED_HANDLES: Record<FixedHandleKind, { readonly source: readonly string[]; readonly target: readonly string[] }> = {
-  // Both handles work in either role so a database can link to or from any Resource.
-  database: { source: Object.values(DATABASE_PORTS), target: Object.values(DATABASE_PORTS) },
+  database: { source: SIDE_PORTS, target: SIDE_PORTS },
   artifact: { source: SIDE_PORTS, target: SIDE_PORTS },
   user: { source: SIDE_PORTS, target: SIDE_PORTS },
   'input-object': { source: SIDE_PORTS, target: SIDE_PORTS },

@@ -50,7 +50,7 @@ export type DiagramDto = {
 }
 
 export type WorkspaceSnapshot = {
-  schemaVersion: 10
+  schemaVersion: 11
   types: DataType[]
   exceptions: ExceptionType[]
   environmentVariables: EnvironmentVariable[]

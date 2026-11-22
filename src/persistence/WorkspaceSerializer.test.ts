@@ -22,7 +22,7 @@ const componentResource = (id: string, over: Record<string, unknown> = {}, child
 })
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 10,
+  schemaVersion: 11,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -47,7 +47,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(10)
+    expect(serializer.serialize(ws).schemaVersion).toBe(11)
     expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -96,14 +96,14 @@ describe('WorkspaceSerializer', () => {
     expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['ghost'] })]))).toThrow(PersistenceError)
   })
 
-  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [11], [undefined], ['10']])('rejects schemaVersion %s', (schemaVersion) => {
+  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [undefined], ['11']])('rejects schemaVersion %s', (schemaVersion) => {
     expect(() => serializer.deserialize({ ...valid(), schemaVersion })).toThrow(PersistenceError)
   })
 
   it.each([
     ['null', null],
     ['array', []],
-    ['missing root', { schemaVersion: 10 }],
+    ['missing root', { schemaVersion: 11 }],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],
     ['non-array placements', valid({ ...diagram('r'), placements: {} } as never)],
@@ -186,14 +186,14 @@ describe('WorkspaceSerializer', () => {
 
     it('round-trips resources, placements with a size, and a link between placements', () => {
       const out = componentResource('c', { outputs: [port('o')] })
-      const link = { id: 'l', name: '', sourceId: 'pc', targetId: 'p1', sourcePortId: 'o', targetPortId: 'write' }
+      const link = { id: 'l', name: '', sourceId: 'pc', targetId: 'p1', sourcePortId: 'o', targetPortId: 'left' }
       const sized = { ...placement('p1', 'r1'), size: { width: 90, height: 40 } }
       const raw = withResources(diagram('r', [placement('pc', 'c'), sized, placement('p2', 'r2')], [link]), { resources: [...resources, out] })
       expect(serializer.deserialize(JSON.parse(JSON.stringify(raw)))).toEqual(raw)
     })
 
     it('accepts a link between two placements using side ids', () => {
-      const link = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
+      const link = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'right', targetPortId: 'left' }
       expect(() => serializer.deserialize(withResources(diagram('r', [placement('p1', 'r1'), placement('p2', 'r2')], [link])))).not.toThrow()
     })
 
@@ -209,14 +209,14 @@ describe('WorkspaceSerializer', () => {
 
     it('rejects a link end in another diagram, or with a handle the placement lacks', () => {
       const inner = componentResource('c', {}, diagram('c-d', [placement('inner', 'r1')]))
-      const outside = { id: 'l', name: '', sourceId: 'p1', targetId: 'inner', sourcePortId: 'read', targetPortId: 'write' }
+      const outside = { id: 'l', name: '', sourceId: 'p1', targetId: 'inner', sourcePortId: 'right', targetPortId: 'left' }
       const raw = withResources(diagram('r', [placement('p1', 'r1')], [outside]), { resources: [...resources, inner] })
       expect(() => serializer.deserialize(raw)).toThrow(PersistenceError)
 
-      const base = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
-      for (const bad of [{ sourcePortId: 'top' }, { targetPortId: 'middle' }]) {
+      const base = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'right', targetPortId: 'left' }
+      for (const bad of [{ sourcePortId: 'read' }, { targetPortId: 'write' }, { targetPortId: 'middle' }]) {
         const ps = [placement('p1', 'r1'), placement('p2', 'r2')]
-        // p1 is a database (read/write only), p2 is four-sided; p1's top and p2's middle are not handles.
+        // Both placements are four-sided; the retired database ids and unknown ids are not handles.
         expect(() => serializer.deserialize(withResources(diagram('r', ps, [{ ...base, ...bad }])))).toThrow(PersistenceError)
       }
     })

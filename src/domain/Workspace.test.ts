@@ -16,7 +16,7 @@ const componentDto = (id: string, name: string, diagram: DiagramDto): ResourceDt
 })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 10,
+  schemaVersion: 11,
   types: [],
   exceptions: [],
   environmentVariables: [],

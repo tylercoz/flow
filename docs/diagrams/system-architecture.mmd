@@ -59,7 +59,7 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
         WorkspaceSerializer -->|checkLink, handleIds, kindInvariantError| Domain
-        WorkspaceSerializer -->|"schemaVersion 10; findCycle rejects Reference_Cycle"| DiagramGraph
+        WorkspaceSerializer -->|"schemaVersion 11; findCycle rejects Reference_Cycle"| DiagramGraph
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository

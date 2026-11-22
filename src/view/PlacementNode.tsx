@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type RefObject } from 'react'
 import { NodeResizer, Handle, Position, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
 import type { Resource } from '../domain/Resource'
-import { DATABASE_PORTS, SIDE_PORTS } from '../domain/ResourceKinds'
+import { SIDE_PORTS } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
 import { NODE_SIZE } from './nodeSize'
 import { PortList } from './PortList'
@@ -12,7 +12,7 @@ import { useStore } from './useStore'
 // Pointer travel above this between press and release means the user dragged the node.
 const DRAG_THRESHOLD_PX = 4
 
-// Smaller than a component's box: a non-component Resource has no editable port lists to fit.
+// Smaller than a component's box: a non-component Resource has no port lists to fit.
 const MIN_SIZE = { width: 120, height: 48 }
 
 const SIDE_POSITIONS: Record<(typeof SIDE_PORTS)[number], Position> = {
@@ -29,8 +29,6 @@ export function PlacementNode({ id, selected, width, height }: NodeProps) {
   const placement = diagram.placement(id)
   const resource = diagram.resourceOf(id)
   const isComponent = !!resource?.definition
-  // A database lists its read and write ports like a component, so it also needs a content-based minimum.
-  const hasPortColumns = isComponent || resource?.kind === 'database'
   const base = isComponent ? NODE_SIZE : MIN_SIZE
 
   // The node has a width and height only while NodeResizer drags it, so the box follows the drag and
@@ -43,10 +41,10 @@ export function PlacementNode({ id, selected, width, height }: NodeProps) {
   // The smallest box that still fits the ports and name. Measured when a resize starts, because ports and
   // the name change between resizes and a fixed minimum let the user shrink the box past its content.
   const box = useRef<HTMLDivElement>(null)
-  const [measured, setMeasured] = useState(base)
-  const minSize = hasPortColumns ? measured : MIN_SIZE
+  const [measured, setMeasured] = useState(NODE_SIZE)
+  const minSize = isComponent ? measured : MIN_SIZE
   const onResizeStart = () => {
-    if (hasPortColumns && box.current) setMeasured(measureMinSize(box.current, base))
+    if (isComponent && box.current) setMeasured(measureMinSize(box.current))
   }
   const onResizeEnd = (_: unknown, { x, y, width, height }: ResizeParams) =>
     navigator.current.placement(id)?.setBounds({ x, y }, { width, height })
@@ -64,7 +62,7 @@ export function PlacementNode({ id, selected, width, height }: NodeProps) {
       {resource?.definition ? (
         <ComponentBody id={id} selected={!!selected} resource={resource} box={box} style={floor} />
       ) : (
-        resource && <ResourceBody id={id} resource={resource} box={box} style={floor} />
+        resource && <ResourceBody id={id} resource={resource} style={floor} />
       )}
     </>
   )
@@ -72,20 +70,13 @@ export function PlacementNode({ id, selected, width, height }: NodeProps) {
 
 type BodyStyle = { minWidth: number; minHeight: number }
 
-interface ResourceBodyProps {
-  id: string
-  resource: Resource
-  box: RefObject<HTMLDivElement | null>
-  style: BodyStyle
-}
-
-function ResourceBody({ id, resource, box, style }: ResourceBodyProps) {
+function ResourceBody({ id, resource, style }: { id: string; resource: Resource; style: BodyStyle }) {
   const { workspace } = useApp()
   const controller = useRenameController()
   useStore(controller)
   const typeName = resource.typeId ? workspace.types.find((t) => t.id === resource.typeId)?.name : undefined
-  const content = (
-    <>
+  return (
+    <div style={style} className="placement-node" onDoubleClick={() => controller.start(id)}>
       <ResourceIcon kind={resource.kind} />
       <div className="placement-text">
         {controller.editingId === id ? (
@@ -95,23 +86,6 @@ function ResourceBody({ id, resource, box, style }: ResourceBodyProps) {
         )}
         {typeName && <span className="placement-type">{typeName}</span>}
       </div>
-    </>
-  )
-
-  if (resource.kind === 'database') {
-    return (
-      <div ref={box} style={style} className="component-node database-node">
-        <DatabasePort name={DATABASE_PORTS.write} side="left" />
-        <div className="component-body database-body" onDoubleClick={() => controller.start(id)}>
-          {content}
-        </div>
-        <DatabasePort name={DATABASE_PORTS.read} side="right" />
-      </div>
-    )
-  }
-  return (
-    <div style={style} className="placement-node" onDoubleClick={() => controller.start(id)}>
-      {content}
       {SIDE_PORTS.map((side) => (
         <span key={side}>
           {/* Same id and side for both roles; loose connection mode lets either start or end a Link. */}
@@ -120,22 +94,6 @@ function ResourceBody({ id, resource, box, style }: ResourceBodyProps) {
         </span>
       ))}
     </div>
-  )
-}
-
-// Styled as a component's port column. The name is the handle id, which is fixed, so it is not editable.
-function DatabasePort({ name, side }: { name: string; side: 'left' | 'right' }) {
-  const position = side === 'left' ? Position.Left : Position.Right
-  return (
-    <ul className="component-ports database-ports" aria-label={name}>
-      {/* The title spells out the initial shown, so the short label stays discoverable. */}
-      <li title={name}>
-        {/* Same id and side for both roles; loose connection mode lets either start or end a Link. */}
-        <Handle id={name} type="source" position={position} />
-        <Handle id={name} type="target" position={position} />
-        {name[0]}
-      </li>
-    </ul>
   )
 }
 
@@ -203,10 +161,10 @@ function ComponentBody({ id, selected, resource, box, style }: ComponentBodyProp
 // Lays the box out at its min-content size, reads it, and restores it in the same task, so nothing is painted.
 // offsetWidth/offsetHeight ignore the viewport's zoom transform, so the result is already in flow units.
 // The stored-size floor is lifted too, or the result would be the current size rather than the content's.
-function measureMinSize(el: HTMLElement, floor: { width: number; height: number }): { width: number; height: number } {
+function measureMinSize(el: HTMLElement): { width: number; height: number } {
   const { flex, width, height, minWidth, minHeight } = el.style
   Object.assign(el.style, { flex: 'none', width: 'min-content', height: 'min-content', minWidth: '0', minHeight: '0' })
-  const size = { width: Math.max(floor.width, el.offsetWidth), height: Math.max(floor.height, el.offsetHeight) }
+  const size = { width: Math.max(NODE_SIZE.width, el.offsetWidth), height: Math.max(NODE_SIZE.height, el.offsetHeight) }
   Object.assign(el.style, { flex, width, height, minWidth, minHeight })
   return size
 }

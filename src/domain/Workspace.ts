@@ -66,7 +66,7 @@ export class Workspace implements ObservableStore {
   toSnapshot(includeViewports = true): WorkspaceSnapshot {
     const entries = (c: Catalog) => c.all.map((e) => ({ id: e.id, name: e.name }))
     return {
-      schemaVersion: 10,
+      schemaVersion: 11,
       types: entries(this._types),
       exceptions: entries(this._exceptions),
       environmentVariables: entries(this._environmentVariables),

@@ -72,12 +72,12 @@ describe('Workspace copy and paste', () => {
     workspace.setPorts(a.resourceId, 'inputs', [{ name: 'in', typeId: null }])
     const p = workspace.createPlacedResource(root, { kind: 'database', name: 'db' }, { x: 50, y: 0 })
     const input = workspace.resources.get(a.resourceId)!.definition!.inputs[0]
-    const link = root.addLink(p.id, a.id, 'read', input.id)
+    const link = root.addLink(p.id, a.id, 'right', input.id)
     const fragment = workspace.copy(root, new Set([a.id, p.id]))
     expect(fragment.links).toHaveLength(1)
     const pasted = workspace.paste(root, fragment, { x: 24, y: 24 })
     expect(pasted.links[0].id).not.toBe(link.id)
-    expect(pasted.links[0].sourcePortId).toBe('read')
+    expect(pasted.links[0].sourcePortId).toBe('right')
     expect(pasted.links[0].targetPortId).toBe(link.targetPortId)
   })
 
