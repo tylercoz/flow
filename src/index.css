@@ -422,6 +422,10 @@ textarea:focus {
   flex-basis: 100%;
   margin-bottom: 0;
 }
+/* .dialog .field-row zeroes its margin, which leaves the picker's submit button touching the field above. */
+form.dialog-fields button[type='submit'] {
+  margin-top: 8px;
+}
 .btn-danger {
   align-self: flex-start;
   color: var(--danger);
