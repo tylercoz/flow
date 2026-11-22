@@ -88,9 +88,11 @@ function ResourceBody({ id, resource, style }: { id: string; resource: Resource;
       </div>
       {SIDE_PORTS.map((side) => (
         <span key={side}>
-          {/* Same id and side for both roles; loose connection mode lets either start or end a Link. */}
-          <Handle id={side} type="source" position={SIDE_POSITIONS[side]} />
+          {/* Same id and side for both roles; loose connection mode lets either start or end a Link.
+              The two Handles overlap and the later one in the DOM receives the press, so the source goes last:
+              a drag starts from the source and the Link points at the node it ends on. */}
           <Handle id={side} type="target" position={SIDE_POSITIONS[side]} />
+          <Handle id={side} type="source" position={SIDE_POSITIONS[side]} />
         </span>
       ))}
     </div>
