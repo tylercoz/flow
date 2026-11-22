@@ -21,6 +21,15 @@ const ICONS: Record<ResourceKind, ReactElement> = {
       <path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" />
     </svg>
   ),
+  // Git branch: a main line with a second branch forking off and merging back.
+  repository: (
+    <svg {...SVG_PROPS}>
+      <circle cx="6" cy="5" r="2.5" />
+      <circle cx="6" cy="19" r="2.5" />
+      <circle cx="18" cy="8" r="2.5" />
+      <path d="M6 7.5v9M18 10.5c0 4-12 2-12 6" />
+    </svg>
+  ),
   artifact: (
     <svg {...SVG_PROPS}>
       <path d="M6 3h8l4 4v14H6zM14 3v4h4" />

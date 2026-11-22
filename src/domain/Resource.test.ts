@@ -5,7 +5,7 @@ import { ResourceRegistry } from './ResourceRegistry'
 import { Workspace } from './Workspace'
 import { RESOURCE_KINDS, SIDE_PORTS, handleIds, isResourceKind, kindInvariantError, type ResourceKind } from './ResourceKinds'
 
-const KINDS: ResourceKind[] = ['database', 'artifact', 'user', 'input-object', 'component']
+const KINDS: ResourceKind[] = ['database', 'repository', 'artifact', 'user', 'input-object', 'component']
 const make = (id: string, kind: ResourceKind, onChange = () => {}) =>
   new Resource(id, kind, id, RESOURCE_KINDS[kind].typed ? 't1' : null, null, onChange)
 

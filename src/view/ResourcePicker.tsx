@@ -9,6 +9,7 @@ import { useStore } from './useStore'
 
 export const KIND_LABELS: Record<ResourceKind, string> = {
   database: 'Database',
+  repository: 'Repository',
   artifact: 'Artifact',
   user: 'User',
   'input-object': 'Input object',
