@@ -46,6 +46,9 @@ export type Command =
   | { kind: 'addException'; name: string }
   | { kind: 'toggleException'; diagram: number; component: number; exception: number }
   | { kind: 'removeException'; exception: number }
+  | { kind: 'addEnvironmentVariable'; name: string }
+  | { kind: 'toggleEnvironmentVariable'; diagram: number; component: number; variable: number }
+  | { kind: 'removeEnvironmentVariable'; variable: number }
 
 // Weighted toward additions so sequences build nested, non-trivial trees.
 export const commandArb: fc.Arbitrary<Command> = fc.oneof(
@@ -59,6 +62,9 @@ export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addException' as const), name: fc.string() }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('toggleException' as const), diagram: pick, component: pick, exception: pick }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('removeException' as const), exception: pick }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('addEnvironmentVariable' as const), name: fc.string() }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('toggleEnvironmentVariable' as const), diagram: pick, component: pick, variable: pick }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('removeEnvironmentVariable' as const), variable: pick }), weight: 1 },
 )
 
 export const commandsArb = fc.array(commandArb, { maxLength: 40 })
@@ -90,6 +96,15 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
   if (cmd.kind === 'removeException') {
     const e = at(workspace.exceptions, cmd.exception)
     if (e) workspace.removeException(e.id)
+    return
+  }
+  if (cmd.kind === 'addEnvironmentVariable') {
+    workspace.addEnvironmentVariable(cmd.name)
+    return
+  }
+  if (cmd.kind === 'removeEnvironmentVariable') {
+    const v = at(workspace.environmentVariables, cmd.variable)
+    if (v) workspace.removeEnvironmentVariable(v.id)
     return
   }
   const diagrams = allDiagrams(workspace)
@@ -133,6 +148,15 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
     case 'setViewport':
       d.setViewport(cmd.viewport)
       return
+    case 'toggleEnvironmentVariable': {
+      const c = at(d.components, cmd.component)
+      const v = at(workspace.environmentVariables, cmd.variable)
+      if (!c || !v) return
+      c.setEnvironmentVariables(
+        c.environmentVariableIds.includes(v.id) ? c.environmentVariableIds.filter((id) => id !== v.id) : [...c.environmentVariableIds, v.id],
+      )
+      return
+    }
     case 'toggleException': {
       const c = at(d.components, cmd.component)
       const e = at(workspace.exceptions, cmd.exception)

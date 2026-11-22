@@ -10,17 +10,18 @@ const viewport = { x: 0, y: 0, zoom: 1 }
 const emptyDiagram = (id: string): DiagramDto => ({ id, viewport, components: [], links: [] })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 6,
+  schemaVersion: 7,
   types: [],
   exceptions: [],
+  environmentVariables: [],
   root: {
     id: 'r',
     viewport,
     components: [
-      { id: 'a', details: details('A'), position: { x: 1, y: 2 }, exceptionIds: [], diagram: {
+      { id: 'a', details: details('A'), position: { x: 1, y: 2 }, exceptionIds: [], environmentVariableIds: [], diagram: {
         id: 'ad',
         viewport,
-        components: [{ id: 'b', details: details('B'), position: { x: 3, y: 4 }, exceptionIds: [], diagram: emptyDiagram('bd') }],
+        components: [{ id: 'b', details: details('B'), position: { x: 3, y: 4 }, exceptionIds: [], environmentVariableIds: [], diagram: emptyDiagram('bd') }],
         links: [],
       } },
     ],
@@ -145,6 +146,54 @@ describe('Workspace snapshots', () => {
   })
 })
 
+describe('Workspace environment variables', () => {
+  const setup = () => {
+    let n = 0
+    const workspace = Workspace.empty({ next: () => `x${++n}` })
+    const outer = workspace.root.addComponent({ x: 0, y: 0 })
+    const other = workspace.root.addComponent({ x: 1, y: 1 })
+    const inner = outer.diagram.addComponent({ x: 2, y: 2 })
+    return { workspace, outer, other, inner }
+  }
+  it('adds and renames catalog entries', () => {
+    const { workspace } = setup()
+    const v = workspace.addEnvironmentVariable('DATABASE_URL')
+    workspace.renameEnvironmentVariable(v.id, 'DB_URL')
+    expect(workspace.environmentVariables).toEqual([{ id: v.id, name: 'DB_URL' }])
+  })
+  it('stores each variable once per Component and notifies once', () => {
+    const { workspace, outer } = setup()
+    const v = workspace.addEnvironmentVariable('API_KEY')
+    const before = workspace.getVersion()
+    outer.setEnvironmentVariables([v.id, v.id])
+    expect(outer.environmentVariableIds).toEqual([v.id])
+    expect(workspace.getVersion()).toBe(before + 1)
+  })
+  it('counts and removes uses at every nesting level', () => {
+    const { workspace, outer, other, inner } = setup()
+    const v = workspace.addEnvironmentVariable('API_KEY')
+    const keep = workspace.addEnvironmentVariable('KEEP')
+    ;[outer, other, inner].forEach((c) => c.setEnvironmentVariables([v.id, keep.id]))
+    expect(workspace.environmentVariableUsage(v.id)).toBe(3)
+    workspace.removeEnvironmentVariable(v.id)
+    expect(workspace.environmentVariableUsage(v.id)).toBe(0)
+    expect(workspace.environmentVariables.map((x) => x.id)).toEqual([keep.id])
+    expect([outer, other, inner].map((c) => c.environmentVariableIds)).toEqual([[keep.id], [keep.id], [keep.id]])
+  })
+  it('removes a variable from many Components as one undo step', () => {
+    const { workspace, outer, other, inner } = setup()
+    const v = workspace.addEnvironmentVariable('API_KEY')
+    ;[outer, other, inner].forEach((c) => c.setEnvironmentVariables([v.id]))
+    const history = new History(workspace, { reconcile: () => {} })
+    history.start()
+    workspace.removeEnvironmentVariable(v.id)
+    history.undo()
+    // History started after the setup, so an empty stack means the removal was exactly one step.
+    expect(history.canUndo).toBe(false)
+    expect(workspace.environmentVariables).toEqual([v])
+    expect(workspace.environmentVariableUsage(v.id)).toBe(3)
+  })
+})
 describe('Workspace exceptions', () => {
   const setup = () => {
     let n = 0

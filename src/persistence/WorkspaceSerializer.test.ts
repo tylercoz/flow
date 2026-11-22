@@ -12,8 +12,8 @@ const diagram = (id: string, components: unknown[] = [], links: unknown[] = []) 
   components,
   links,
 })
-const component = (id: string, child = diagram(`${id}-d`)) => ({ id, details, position: { x: 1, y: 2 }, exceptionIds: [], diagram: child })
-const valid = (root = diagram('root')) => ({ schemaVersion: 6, types: [], exceptions: [], root })
+const component = (id: string, child = diagram(`${id}-d`)) => ({ id, details, position: { x: 1, y: 2 }, exceptionIds: [], environmentVariableIds: [], diagram: child })
+const valid = (root = diagram('root')) => ({ schemaVersion: 7, types: [], exceptions: [], environmentVariables: [], root })
 
 describe('WorkspaceSerializer', () => {
   it('round-trips a serialized Workspace through deserialize', () => {
@@ -31,7 +31,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.root.addComponent({ x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(6)
+    expect(serializer.serialize(ws).schemaVersion).toBe(7)
     expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -62,15 +62,27 @@ describe('WorkspaceSerializer', () => {
     const ghost = { ...component('inner'), exceptionIds: ['ghost'] }
     expect(() => serializer.deserialize(valid(diagram('r', [component('a', diagram('d', [ghost]))])))).toThrow(PersistenceError)
   })
-  it.each([[1], [2], [3], [4], [5], [undefined], ['6']])('rejects schemaVersion %s', (schemaVersion) => {
+  it('keeps environment variables and the variable ids of Components', () => {
+    const raw = {
+      ...valid(diagram('r', [{ ...component('a'), environmentVariableIds: ['v1'] }])),
+      environmentVariables: [{ id: 'v1', name: 'DATABASE_URL' }],
+    }
+    expect(serializer.deserialize(raw)).toEqual(raw)
+  })
+  it('rejects a Component, at any depth, that names a missing environment variable', () => {
+    const ghost = { ...component('inner'), environmentVariableIds: ['ghost'] }
+    expect(() => serializer.deserialize(valid(diagram('r', [component('a', diagram('d', [ghost]))])))).toThrow(PersistenceError)
+  })
+  it.each([[1], [2], [3], [4], [5], [6], [undefined], ['7']])('rejects schemaVersion %s', (schemaVersion) => {
     expect(() => serializer.deserialize({ ...valid(), schemaVersion })).toThrow(PersistenceError)
   })
 
   it.each([
     ['null', null],
     ['array', []],
-    ['missing root', { schemaVersion: 6 }],
+    ['missing root', { schemaVersion: 7 }],
     ['missing exceptionIds', valid(diagram('r', [{ ...component('c'), exceptionIds: undefined }]))],
+    ['missing environmentVariableIds', valid(diagram('r', [{ ...component('c'), environmentVariableIds: undefined }]))],
     ['non-array components', valid({ ...diagram('r'), components: {} } as never)],
     ['missing details field', valid(diagram('r', [{ ...component('c'), details: { name: 'x' } }]))],
     ['non-finite position', valid(diagram('r', [{ ...component('c'), position: { x: Infinity, y: 0 } }]))],

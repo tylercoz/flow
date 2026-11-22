@@ -20,6 +20,11 @@ classDiagram
         renameException(id, name)
         exceptionUsage(id)
         removeException(id)
+        environmentVariables: list of EnvironmentVariable
+        addEnvironmentVariable(name)
+        renameEnvironmentVariable(id, name)
+        environmentVariableUsage(id)
+        removeEnvironmentVariable(id)
         copy(diagram, componentIds)
         paste(diagram, fragment, offset)
         toSnapshot(includeViewports)
@@ -75,12 +80,15 @@ classDiagram
         position
         size
         exceptionIds: ExceptionType ids
+        environmentVariableIds: EnvironmentVariable ids
         details
         diagram
         setPosition(p)
         setBounds(p, size)
         setExceptions(ids)
         dropException(id)
+        setEnvironmentVariables(ids)
+        dropEnvironmentVariable(id)
     }
     class Link {
         id
@@ -110,6 +118,11 @@ classDiagram
         name
     }
     class ExceptionType {
+        <<type>>
+        id
+        name
+    }
+    class EnvironmentVariable {
         <<type>>
         id
         name
@@ -148,6 +161,7 @@ classDiagram
         schemaVersion
         types: list of DataType
         exceptions: list of ExceptionType
+        environmentVariables: list of EnvironmentVariable
         root: DiagramDto
     }
     class Fragment {
@@ -183,6 +197,8 @@ classDiagram
     Workspace *-- DataType
     Workspace *-- ExceptionType
     Component ..> ExceptionType : can return, by id
+    Workspace *-- EnvironmentVariable
+    Component ..> EnvironmentVariable : relies on, by id
     Details *-- Port
     Link ..> Port : joins an output to an input, by id
     Port ..> DataType : refers by id

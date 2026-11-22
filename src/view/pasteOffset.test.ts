@@ -9,6 +9,7 @@ const component = (x: number, y: number, size?: { width: number; height: number 
   position: { x, y },
   size,
   exceptionIds: [],
+  environmentVariableIds: [],
   diagram: { id: 'd', viewport: { x: 0, y: 0, zoom: 1 }, components: [], links: [] },
 })
 

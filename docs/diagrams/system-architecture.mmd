@@ -11,6 +11,8 @@ flowchart TD
         TypesDialog
         ExceptionsDialog
         exceptionEdit["exceptionEdit: availableExceptions"]
+        EnvironmentVariablesDialog
+        environmentVariableEdit["environmentVariableEdit: availableEnvironmentVariables"]
         NotificationBar
         DiagramProjector
         ComponentNode
@@ -59,6 +61,7 @@ flowchart TD
     App --> ConfirmDialog
     App -->|Types button in header| TypesDialog
     App -->|Exceptions button in header| ExceptionsDialog
+    App -->|Environment variables button in header| EnvironmentVariablesDialog
     App --> NotificationBar
     App -->|Undo and Redo buttons in header| HistoryControls
     HistoryControls -->|"undo, redo; useStore"| History
@@ -66,6 +69,7 @@ flowchart TD
     Inspector --> FocusGroup
     TypesDialog --> FocusGroup
     ExceptionsDialog --> FocusGroup
+    EnvironmentVariablesDialog --> FocusGroup
     FocusGroup -->|"beginGroup on focus, endGroup on blur"| History
     FocusGroup -->|filters targets| shortcutAction
     App -->|passes deleteFlow| CanvasView
@@ -104,6 +108,9 @@ flowchart TD
     ExceptionsDialog -->|"add, rename, exceptionUsage, removeException (after confirmation)"| Workspace
     Inspector -->|"setExceptions; offers availableExceptions"| exceptionEdit
     Inspector -->|setExceptions| Component
+    EnvironmentVariablesDialog -->|"add, rename, environmentVariableUsage, removeEnvironmentVariable (after confirmation)"| Workspace
+    Inspector -->|"setEnvironmentVariables; offers availableEnvironmentVariables"| environmentVariableEdit
+    Inspector -->|setEnvironmentVariables| Component
     View -->|useStore| Domain
     View -->|commands| Domain
     AutoSaver -->|subscribes| Workspace

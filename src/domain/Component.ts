@@ -14,6 +14,8 @@ export class Component implements Describable {
   private _size: Size | undefined
   // Ids into Workspace.exceptions; kept off Details because Links share Details and have no exceptions.
   private _exceptionIds: string[]
+  // Ids into Workspace.environmentVariables; off Details for the same reason as exceptions.
+  private _environmentVariableIds: string[]
   private readonly onChange: () => void
   constructor(
     id: string,
@@ -23,6 +25,7 @@ export class Component implements Describable {
     onChange: () => void,
     size?: Size,
     exceptionIds: readonly string[] = [],
+    environmentVariableIds: readonly string[] = [],
   ) {
     this.id = id
     this.details = details
@@ -30,7 +33,19 @@ export class Component implements Describable {
     this._position = { ...position }
     this._size = size && { ...size }
     this._exceptionIds = [...exceptionIds]
+    this._environmentVariableIds = [...environmentVariableIds]
     this.onChange = onChange
+  }
+  get environmentVariableIds(): readonly string[] {
+    return this._environmentVariableIds
+  }
+  setEnvironmentVariables(ids: readonly string[]): void {
+    this._environmentVariableIds = [...new Set(ids)]
+    this.onChange()
+  }
+  // Does not notify, for the same reason as dropException.
+  dropEnvironmentVariable(id: string): void {
+    this._environmentVariableIds = this._environmentVariableIds.filter((v) => v !== id)
   }
   get exceptionIds(): readonly string[] {
     return this._exceptionIds

@@ -1,5 +1,6 @@
 import type { DataType } from '../domain/DataType'
 import type { DetailsDto, Port } from '../domain/Details'
+import type { EnvironmentVariable } from '../domain/EnvironmentVariable'
 import type { ExceptionType } from '../domain/ExceptionType'
 import type { Workspace } from '../domain/Workspace'
 import type { ComponentDto, DiagramDto, LinkDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
@@ -16,15 +17,19 @@ export class WorkspaceSerializer {
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
     // No migrations while in development: data from any other version is rejected and must be cleared.
-    if (obj.schemaVersion !== 6) {
+    if (obj.schemaVersion !== 7) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
     const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
     const exceptions = asArray(obj.exceptions, 'exceptions').map((e, i) => parseType(e, `exceptions[${i}]`))
+    const environmentVariables = asArray(obj.environmentVariables, 'environmentVariables').map((v, i) =>
+      parseType(v, `environmentVariables[${i}]`),
+    )
     const root = parseDiagram(obj.root, 'root')
     assertTypesExist(root, new Set(types.map((t) => t.id)))
     assertExceptionsExist(root, new Set(exceptions.map((e) => e.id)))
-    return { schemaVersion: 6, types, exceptions, root }
+    assertEnvironmentVariablesExist(root, new Set(environmentVariables.map((v) => v.id)))
+    return { schemaVersion: 7, types, exceptions, environmentVariables, root }
   }
 }
 
@@ -52,8 +57,8 @@ function asNumber(v: unknown, path: string): number {
   return v
 }
 
-// DataType and ExceptionType have the same shape.
-function parseType(v: unknown, path: string): DataType & ExceptionType {
+// DataType, ExceptionType and EnvironmentVariable have the same shape.
+function parseType(v: unknown, path: string): DataType & ExceptionType & EnvironmentVariable {
   const o = asObject(v, path)
   return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`) }
 }
@@ -80,6 +85,14 @@ function assertExceptionsExist(d: DiagramDto, exceptionIds: ReadonlySet<string>)
     const missing = c.exceptionIds.find((id) => !exceptionIds.has(id))
     if (missing !== undefined) throw new PersistenceError(`Component uses unknown exception ${missing}`)
     assertExceptionsExist(c.diagram, exceptionIds)
+  })
+}
+// Same reasoning again: a dangling environment variable id could never be shown or fixed.
+function assertEnvironmentVariablesExist(d: DiagramDto, variableIds: ReadonlySet<string>): void {
+  d.components.forEach((c) => {
+    const missing = c.environmentVariableIds.find((id) => !variableIds.has(id))
+    if (missing !== undefined) throw new PersistenceError(`Component uses unknown environment variable ${missing}`)
+    assertEnvironmentVariablesExist(c.diagram, variableIds)
   })
 }
 function parsePorts(o: Obj, key: string, path: string): Port[] {
@@ -137,6 +150,9 @@ function parseComponent(v: unknown, path: string): ComponentDto {
     position: { x: asNumber(pos.x, `${path}.position.x`), y: asNumber(pos.y, `${path}.position.y`) },
     ...(size && { size: { width: asNumber(size.width, `${path}.size.width`), height: asNumber(size.height, `${path}.size.height`) } }),
     exceptionIds: asArray(o.exceptionIds, `${path}.exceptionIds`).map((id, i) => asString(id, `${path}.exceptionIds[${i}]`)),
+    environmentVariableIds: asArray(o.environmentVariableIds, `${path}.environmentVariableIds`).map((id, i) =>
+      asString(id, `${path}.environmentVariableIds[${i}]`),
+    ),
     diagram: parseDiagram(o.diagram, `${path}.diagram`),
   }
 }

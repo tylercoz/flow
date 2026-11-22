@@ -1,6 +1,7 @@
 import type { Position, Size } from './Component'
 import type { DataType } from './DataType'
 import type { DetailsDto } from './Details'
+import type { EnvironmentVariable } from './EnvironmentVariable'
 import type { ExceptionType } from './ExceptionType'
 import type { Viewport } from './Viewport'
 
@@ -21,6 +22,7 @@ export type ComponentDto = {
   position: Position
   size?: Size
   exceptionIds: string[]
+  environmentVariableIds: string[]
   diagram: DiagramDto
 }
 
@@ -31,6 +33,12 @@ export type DiagramDto = {
   links: LinkDto[]
 }
 
-export type WorkspaceSnapshot = { schemaVersion: 6; types: DataType[]; exceptions: ExceptionType[]; root: DiagramDto }
+export type WorkspaceSnapshot = {
+  schemaVersion: 7
+  types: DataType[]
+  exceptions: ExceptionType[]
+  environmentVariables: EnvironmentVariable[]
+  root: DiagramDto
+}
 // Detached copy of Components and the Links between them, as produced by Workspace.copy.
 export type Fragment = { components: ComponentDto[]; links: LinkDto[] }

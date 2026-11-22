@@ -3,6 +3,7 @@ import type { NewPort, Port } from '../domain/Details'
 import type { Diagram } from '../domain/Diagram'
 import { useApp } from './AppProvider'
 import type { DeleteFlow } from './DeleteFlow'
+import { availableEnvironmentVariables } from './environmentVariableEdit'
 import { availableExceptions } from './exceptionEdit'
 import { FocusGroup } from './FocusGroup'
 import { useStore } from './useStore'
@@ -106,6 +107,41 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
       </div>
     )
   }
+  const environmentVariables = () => {
+    const names = new Map(workspace.environmentVariables.map((v) => [v.id, v.name]))
+    const available = availableEnvironmentVariables(workspace.environmentVariables, item.environmentVariableIds)
+    return (
+      <div>
+        <label htmlFor={`${idPrefix}-add-environment-variable`}>Environment variables</label>
+        {item.environmentVariableIds.map((id, i) => (
+          <div className="field-row" key={id}>
+            <span>{names.get(id) || 'Unnamed environment variable'}</span>
+            <button
+              type="button"
+              aria-label={`Remove environment variable ${i + 1}`}
+              onClick={() => item.setEnvironmentVariables(item.environmentVariableIds.filter((v) => v !== id))}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {/* Controlled at '' so choosing an entry adds it and the select returns to its prompt. */}
+        <select
+          id={`${idPrefix}-add-environment-variable`}
+          value=""
+          disabled={available.length === 0}
+          onChange={(e) => item.setEnvironmentVariables([...item.environmentVariableIds, e.target.value])}
+        >
+          <option value="">Add environment variable</option>
+          {available.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name || 'Unnamed environment variable'}
+            </option>
+          ))}
+        </select>
+      </div>
+    )
+  }
   return (
     <aside className="inspector" style={{ width }} aria-label="Component details">
       <FocusGroup className="inspector-fields">
@@ -113,6 +149,7 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
         {list('inputs', 'Inputs', 'input')}
         {list('outputs', 'Outputs', 'output')}
         {exceptions()}
+        {environmentVariables()}
         {input('notes', 'Notes', true)}
       </FocusGroup>
       <button type="button" className="btn-danger" onClick={() => deleteFlow.request(diagram, { kind: 'component', id: item.id })}>

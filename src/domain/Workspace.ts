@@ -4,6 +4,7 @@ import type { DataType } from './DataType'
 import { Details } from './Details'
 import { Diagram, type DiagramContext } from './Diagram'
 import { DomainError } from './DomainError'
+import type { EnvironmentVariable } from './EnvironmentVariable'
 import type { ExceptionType } from './ExceptionType'
 import type { IdGenerator } from './IdGenerator'
 import { Link } from './Link'
@@ -18,17 +19,20 @@ export class Workspace implements ObservableStore {
   private _root: Diagram
   private _types: DataType[]
   private _exceptions: ExceptionType[]
+  private _environmentVariables: EnvironmentVariable[]
 
   private constructor(
     ids: IdGenerator,
     types: readonly DataType[],
     exceptions: readonly ExceptionType[],
+    environmentVariables: readonly EnvironmentVariable[],
     makeRoot: (ctx: DiagramContext) => Diagram,
   ) {
     this.ctx = { ids, onChange: () => this.signal.notify() }
     this._root = makeRoot(this.ctx)
     this._types = types.map((t) => ({ ...t }))
     this._exceptions = exceptions.map((e) => ({ ...e }))
+    this._environmentVariables = environmentVariables.map((v) => ({ ...v }))
   }
 
   // A getter because replaceContent swaps the tree; readers must not hold the old root.
@@ -37,9 +41,10 @@ export class Workspace implements ObservableStore {
   }
   toSnapshot(includeViewports = true): WorkspaceSnapshot {
     return {
-      schemaVersion: 6,
+      schemaVersion: 7,
       types: this._types.map((t) => ({ id: t.id, name: t.name })),
       exceptions: this._exceptions.map((e) => ({ id: e.id, name: e.name })),
+      environmentVariables: this._environmentVariables.map((v) => ({ id: v.id, name: v.name })),
       root: diagramToDto(this._root, includeViewports),
     }
   }
@@ -59,6 +64,7 @@ export class Workspace implements ObservableStore {
     this._root = buildDiagram(parsed.root, this.ctx, viewports)
     this._types = parsed.types.map((t) => ({ ...t }))
     this._exceptions = parsed.exceptions.map((e) => ({ ...e }))
+    this._environmentVariables = parsed.environmentVariables.map((v) => ({ ...v }))
     this.signal.notify()
   }
   // Copies the chosen Components with everything nested in them, and the Links between them.
@@ -128,6 +134,29 @@ export class Workspace implements ObservableStore {
     this._exceptions = this._exceptions.filter((e) => e.id !== id)
     this.signal.notify()
   }
+  get environmentVariables(): readonly EnvironmentVariable[] {
+    return this._environmentVariables
+  }
+  addEnvironmentVariable(name: string): EnvironmentVariable {
+    const variable = { id: this.ctx.ids.next(), name }
+    this._environmentVariables = [...this._environmentVariables, variable]
+    this.signal.notify()
+    return variable
+  }
+  renameEnvironmentVariable(id: string, name: string): void {
+    this._environmentVariables = this._environmentVariables.map((v) => (v.id === id ? { ...v, name } : v))
+    this.signal.notify()
+  }
+  // How many Components rely on this variable, so the UI can warn before removal.
+  environmentVariableUsage(id: string): number {
+    return this.allComponents().filter((c) => c.environmentVariableIds.includes(id)).length
+  }
+  // Removes the variable from every Component in one notification, so History records a single undo step.
+  removeEnvironmentVariable(id: string): void {
+    this.allComponents().forEach((c) => c.dropEnvironmentVariable(id))
+    this._environmentVariables = this._environmentVariables.filter((v) => v.id !== id)
+    this.signal.notify()
+  }
   private allComponents(): Component[] {
     const visit = (d: Diagram): Component[] => d.components.flatMap((c) => [c, ...visit(c.diagram)])
     return visit(this._root)
@@ -138,12 +167,12 @@ export class Workspace implements ObservableStore {
 
   static empty(ids: IdGenerator): Workspace {
     const defaults = ['number', 'string', 'boolean'].map((name) => ({ id: ids.next(), name }))
-    return new Workspace(ids, defaults, [], (ctx) => new Diagram(ids.next(), ctx))
+    return new Workspace(ids, defaults, [], [], (ctx) => new Diagram(ids.next(), ctx))
   }
 
   // Expects a snapshot already validated by WorkspaceSerializer.
   static restore(snapshot: WorkspaceSnapshot, ids: IdGenerator): Workspace {
-    return new Workspace(ids, snapshot.types, snapshot.exceptions, (ctx) => buildDiagram(snapshot.root, ctx))
+    return new Workspace(ids, snapshot.types, snapshot.exceptions, snapshot.environmentVariables, (ctx) => buildDiagram(snapshot.root, ctx))
   }
 }
 
@@ -158,6 +187,7 @@ function diagramToDto(d: Diagram, includeViewports: boolean): DiagramDto {
       position: { x: c.position.x, y: c.position.y },
       size: c.size && { width: c.size.width, height: c.size.height },
       exceptionIds: [...c.exceptionIds],
+      environmentVariableIds: [...c.environmentVariableIds],
       diagram: diagramToDto(c.diagram, includeViewports),
     })),
     links: d.links.map((l) => ({
@@ -178,7 +208,7 @@ function buildDiagram(dto: DiagramDto, ctx: DiagramContext, viewports?: Readonly
   return new Diagram(dto.id, ctx, viewports?.get(dto.id) ?? dto.viewport, components, links)
 }
 function buildComponent(c: ComponentDto, ctx: DiagramContext, viewports?: ReadonlyMap<string, Viewport>): Component {
-  return new Component(c.id, new Details(ctx.onChange, c.details), c.position, buildDiagram(c.diagram, ctx, viewports), ctx.onChange, c.size, c.exceptionIds)
+  return new Component(c.id, new Details(ctx.onChange, c.details), c.position, buildDiagram(c.diagram, ctx, viewports), ctx.onChange, c.size, c.exceptionIds, c.environmentVariableIds)
 }
 function buildLink(l: LinkDto, ctx: DiagramContext): Link {
   return new Link(l.id, new Details(ctx.onChange, l.details), l.sourceId, l.targetId, l.sourcePortId, l.targetPortId)
