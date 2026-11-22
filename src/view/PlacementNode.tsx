@@ -3,7 +3,7 @@ import { NodeResizer, Handle, Position, useUpdateNodeInternals, type NodeProps, 
 import type { Resource } from '../domain/Resource'
 import { DATABASE_PORTS, SIDE_PORTS } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
-import { NODE_SIZE } from './createAtPoint'
+import { NODE_SIZE } from './nodeSize'
 import { PortList } from './PortList'
 import { RenameInput, useRenameController } from './RenameInput'
 import { ResourceIcon } from './resourceIcons'

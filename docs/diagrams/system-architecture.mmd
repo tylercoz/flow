@@ -25,7 +25,6 @@ flowchart TD
         portEdit["portEdit: applyPortName"]
         Level[Level, inside CanvasView]
         RenameController
-        createAtPoint["createAtPoint: isEmptyCanvas, createComponentAt"]
         useStore
         HistoryControls
         FocusGroup
@@ -105,11 +104,8 @@ flowchart TD
     Level -->|classifies key events| clipboardShortcut
     Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
     Level -->|"Cmd/Ctrl+C, V, D: copy, paste, duplicate (copy then paste, skipping the copied Fragment)"| Workspace
-    Level -->|"double-click on pane: isEmptyCanvas, createComponentAt"| createAtPoint
-    createAtPoint -->|createPlacedResource| Workspace
-    createAtPoint -->|start| RenameController
     CanvasView -->|"nodeTypes 'placement' (module-level), the only node type"| PlacementNode
-    CanvasView -->|"pane context menu: pick a kind, component included"| ResourcePicker
+    CanvasView -->|"click on empty pane (not one that deselects) or right-click: pick a kind, component included"| ResourcePicker
     ResourcePicker -->|addPlacement| Diagram
     ResourcePicker -->|"createPlacedResource; lists resources.byKind without cyclic ones (wouldCreateCycle)"| Workspace
     ResourcePicker --> resourceIcons

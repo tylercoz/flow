@@ -1,6 +1,6 @@
 import type { Position, Size } from '../domain/NodeBounds'
 import type { Fragment } from '../domain/WorkspaceSnapshot'
-import { NODE_SIZE } from './createAtPoint'
+import { NODE_SIZE } from './nodeSize'
 
 // The shift that moves the centre of the fragment's bounding box onto `target`.
 // `measured` holds the sizes React Flow rendered, keyed by Placement id. A box grows with its name and

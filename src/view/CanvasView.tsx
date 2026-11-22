@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import {
   Background,
   ConnectionMode,
@@ -25,7 +25,6 @@ import { KIND_LABELS, ResourcePicker } from './ResourcePicker'
 import { ResourceIcon } from './resourceIcons'
 import { RESOURCE_KINDS, type ResourceKind } from '../domain/ResourceKinds'
 import { toEdges, toNodes } from './DiagramProjector'
-import { createComponentAt, isEmptyCanvas } from './createAtPoint'
 import { RenameController } from './RenameController'
 import { DUPLICATE_OFFSET, clipboardAction } from './clipboardShortcut'
 import { offsetToCenter } from './pasteOffset'
@@ -98,7 +97,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   // Where the pane context menu was opened (screen) and the flow point a new Placement will take.
   const [menu, setMenu] = useState<{ screen: { x: number; y: number }; point: { x: number; y: number } } | null>(null)
   const [picking, setPicking] = useState<{ kind: ResourceKind; point: { x: number; y: number } } | null>(null)
-  // Ids of elements just created by double-click or paste; selected on the next model sync (state, not a ref, because the sync runs during render).
+  // Ids of elements just created by paste; selected on the next model sync (state, not a ref, because the sync runs during render).
   const [pendingFocus, setPendingFocus] = useState<ReadonlySet<string> | null>(null)
 
   // React Flow needs local state to animate drags and selection, so rebuild it from the model
@@ -134,12 +133,8 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
     return false
   }
 
-  // React Flow has no pane double-click event; only the pane itself counts as empty canvas.
-  const onDoubleClick = (e: MouseEvent) => {
-    if (!isEmptyCanvas(e.target)) return
-    const point = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    setPendingFocus(new Set([createComponentAt(workspace, diagram, point, rename).id]))
-  }
+  const openMenu = (e: { clientX: number; clientY: number }) =>
+    setMenu({ screen: { x: e.clientX, y: e.clientY }, point: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
 
   // Keyboard events carry no pointer position, so the last one seen over the canvas is kept for paste.
   const cursor = useRef<{ x: number; y: number } | null>(null)
@@ -198,7 +193,6 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
       <div
         ref={canvas}
         style={{ width: '100%', height: '100%' }}
-        onDoubleClick={onDoubleClick}
         onPointerMove={(e) => {
           cursor.current = { x: e.clientX, y: e.clientY }
         }}
@@ -221,9 +215,15 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
           connectionMode={ConnectionMode.Loose}
           onPaneContextMenu={(e) => {
             e.preventDefault()
-            setMenu({ screen: { x: e.clientX, y: e.clientY }, point: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
+            openMenu(e)
           }}
-          onPaneClick={() => setMenu(null)}
+          // A click that only clears a selection or dismisses the open menu must not open another one. React Flow
+          // clears the selection after this handler runs, so `nodes` and `edges` still show what the click deselects.
+          onPaneClick={(e) => {
+            const deselects = nodes.some((n) => n.selected) || edges.some((x) => x.selected)
+            if (menu || deselects) setMenu(null)
+            else openMenu(e)
+          }}
           onMoveStart={() => setMenu(null)}
           // Left-drag on empty canvas draws a selection box; pan moves to middle/right mouse (and scroll/trackpad).
           selectionOnDrag
@@ -244,7 +244,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
               n.length ? { kind: 'placement', id: n[0].id } : { kind: 'link', id: e[0].id },
             )
           }}
-          // Double-click renames a Placement or Link, or creates a Component, so it must not also zoom.
+          // Double-click renames a Placement or Link, so it must not also zoom.
           zoomOnDoubleClick={false}
         >
           <Background />

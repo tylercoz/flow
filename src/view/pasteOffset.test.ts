@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PlacementDto } from '../domain/WorkspaceSnapshot'
-import { NODE_SIZE } from './createAtPoint'
+import { NODE_SIZE } from './nodeSize'
 import { offsetToCenter } from './pasteOffset'
 
 const placement = (x: number, y: number, size?: { width: number; height: number }, id = 'p'): PlacementDto => ({
