@@ -8,6 +8,7 @@ export class Resource {
   readonly definition: ComponentDefinition | null
   private _name: string
   private _typeId: string | null
+  private _remote: string | null
   private readonly onChange: () => void
 
   constructor(
@@ -17,6 +18,7 @@ export class Resource {
     typeId: string | null,
     definition: ComponentDefinition | null,
     onChange: () => void,
+    remote: string | null = null,
   ) {
     const invalid = kindInvariantError(kind, typeId, definition !== null)
     if (invalid) throw new DomainError('INVALID_RESOURCE', invalid)
@@ -25,6 +27,8 @@ export class Resource {
     this._name = name
     this._typeId = typeId
     this.definition = definition
+    // Only a repository has a remote; a new one starts empty rather than null so the field shows in the Inspector.
+    this._remote = kind === 'repository' ? (remote ?? '') : null
     this.onChange = onChange
   }
   get name(): string {
@@ -33,12 +37,23 @@ export class Resource {
   get typeId(): string | null {
     return this._typeId
   }
+  get remote(): string | null {
+    return this._remote
+  }
   // Read live from the definition, so a port edit shows in every Diagram with no copying.
   handleIds(role: HandleRole): readonly string[] {
     return handleIds(this.kind, this.definition, role)
   }
   setName(name: string): void {
     this._name = name
+    this.onChange()
+  }
+  // Stored as typed, like the name: the Inspector edits it per keystroke, so a half-typed URL must be accepted.
+  setRemote(remote: string): void {
+    if (this.kind !== 'repository') {
+      throw new DomainError('INVALID_RESOURCE', `A ${this.kind} resource cannot have a remote.`)
+    }
+    this._remote = remote
     this.onChange()
   }
   // Workspace.setResourceType checks the id against the catalog; this class only guards the kind.

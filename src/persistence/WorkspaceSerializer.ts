@@ -44,6 +44,7 @@ export class WorkspaceSerializer {
       kind: h.kind,
       name: h.name,
       typeId: h.typeId,
+      ...(h.remote !== undefined && { remote: h.remote }),
       component: h.component && {
         inputs: h.component.inputs,
         outputs: h.component.outputs,
@@ -157,6 +158,9 @@ function parseHeader(v: unknown, path: string, typeIds: ReadonlySet<string>): Re
   const invalid = kindInvariantError(kind, typeId, o.component !== null)
   if (invalid) throw new PersistenceError(`Resource ${id}: ${invalid}`)
   if (typeId !== null && !typeIds.has(typeId)) throw new PersistenceError(`Resource uses unknown type ${typeId}`)
+  // A remote on any other kind would be silently dropped on load, so refuse it.
+  if (o.remote !== undefined && kind !== 'repository') throw new PersistenceError(`Resource ${id}: A ${kind} resource cannot have a remote.`)
+  const remote = o.remote === undefined ? undefined : asString(o.remote, `${path}.remote`)
   let component: ResourceHeader['component'] = null
   if (o.component !== null) {
     const c = asObject(o.component, `${path}.component`)
@@ -171,7 +175,7 @@ function parseHeader(v: unknown, path: string, typeIds: ReadonlySet<string>): Re
       rawDiagram: c.diagram,
     }
   }
-  return { id, kind, name: asString(o.name, `${path}.name`), typeId, component }
+  return { id, kind, name: asString(o.name, `${path}.name`), typeId, ...(remote !== undefined && { remote }), component }
 }
 
 function parsePlacement(v: unknown, path: string, shapes: ReadonlyMap<string, End>): PlacementDto {

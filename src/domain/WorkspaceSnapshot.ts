@@ -41,6 +41,8 @@ export type ResourceDto = {
   kind: ResourceKind
   name: string
   typeId: string | null
+  // Only a repository has one. Optional so data saved before it existed still loads.
+  remote?: string
   component: ComponentDto | null
 }
 

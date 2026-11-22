@@ -207,6 +207,13 @@ describe('WorkspaceSerializer', () => {
     ]
     const withResources = (root: unknown, overrides: Record<string, unknown> = {}) => ({ ...valid(), types, resources, root, ...overrides })
 
+    it('round-trips a repository remote and rejects a remote on another kind', () => {
+      const repo = { id: 'r3', kind: 'repository', name: 'Code', typeId: null, remote: 'https://example.com/a.git', component: null }
+      const raw = withResources(diagram('r'), { resources: [repo] })
+      expect(serializer.deserialize(JSON.parse(JSON.stringify(raw)))).toEqual(raw)
+      const bad = withResources(diagram('r'), { resources: [{ ...repo, kind: 'database' }] })
+      expect(() => serializer.deserialize(bad)).toThrow(PersistenceError)
+    })
     it('round-trips resources, placements with a size, and a link between placements', () => {
       const out = componentResource('c', { outputs: [port('o')] })
       const link = { id: 'l', name: '', sourceId: 'pc', targetId: 'p1', sourcePortId: 'o', targetPortId: 'left' }

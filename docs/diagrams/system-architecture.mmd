@@ -8,6 +8,7 @@ flowchart TD
         CanvasView
         Sidebar["Sidebar: Details and Resources tabs"]
         Inspector
+        RemoteField["RemoteField: link when not editing"]
         ResourcesPanel["ResourcesPanel: all resource names"]
         ConfirmDialog
         TypesDialog
@@ -101,6 +102,8 @@ flowchart TD
     App -->|passes deleteFlow| Sidebar
     Sidebar -->|passes deleteFlow| Inspector
     Inspector -->|setName, setResourceType, setPorts| Workspace
+    Inspector --> RemoteField
+    RemoteField -->|setRemote| Resource
     ConfirmDialog -->|reads pending| DeleteFlow
     CanvasView --> DiagramProjector
     CanvasView -->|onMoveEnd: setViewport| Diagram

@@ -142,9 +142,11 @@ classDiagram
         kind: ResourceKind
         name
         typeId: DataType id or null
+        remote: web link, non-null only for repository
         definition: ComponentDefinition, non-null only for component
         setName(name)
         setType(typeId)
+        setRemote(remote)
         handleIds(role)
     }
     class ResourceKind {

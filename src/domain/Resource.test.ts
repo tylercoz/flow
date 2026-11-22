@@ -53,6 +53,17 @@ describe('Resource', () => {
     expect(() => new Resource('r', 'user', 'A', null, null, onChange)).not.toThrow()
   })
 
+  it('only a repository has a remote, which starts empty and can be set', () => {
+    const onChange = vi.fn()
+    const repo = new Resource('r', 'repository', 'R', null, null, onChange)
+    expect(repo.remote).toBe('')
+    repo.setRemote('https://example.com/a.git')
+    expect(repo.remote).toBe('https://example.com/a.git')
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const db = new Resource('d', 'database', 'D', null, null, onChange)
+    expect(db.remote).toBeNull()
+    expect(() => db.setRemote('https://example.com')).toThrow(DomainError)
+  })
   it('setName and setType update the value and call onChange', () => {
     const onChange = vi.fn()
     const r = make('a', 'artifact', onChange)

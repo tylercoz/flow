@@ -4,6 +4,7 @@ import type { Diagram } from '../domain/Diagram'
 import type { Placement } from '../domain/Placement'
 import type { Resource } from '../domain/Resource'
 import { RESOURCE_KINDS } from '../domain/ResourceKinds'
+import { RemoteField } from './RemoteField'
 import { useApp } from './AppProvider'
 import type { DeleteFlow } from './DeleteFlow'
 import { FocusGroup } from './FocusGroup'
@@ -67,6 +68,12 @@ export function Inspector({ item, diagram, deleteFlow }: InspectorProps) {
           <label htmlFor={`${idPrefix}-name`}>Name</label>
           <input id={`${idPrefix}-name`} type="text" value={resource.name} onChange={(e) => resource.setName(e.target.value)} />
         </div>
+        {resource.remote !== null && (
+          <div>
+            <label htmlFor={`${idPrefix}-remote`}>Remote</label>
+            <RemoteField resource={resource} id={`${idPrefix}-remote`} />
+          </div>
+        )}
         {RESOURCE_KINDS[resource.kind].typed && (
           <div>
             <label htmlFor={`${idPrefix}-type`}>Data Type</label>

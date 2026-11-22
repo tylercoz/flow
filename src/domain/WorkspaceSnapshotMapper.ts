@@ -48,6 +48,7 @@ export function resourceToDto(r: Resource, includeViewports: boolean): ResourceD
     kind: r.kind,
     name: r.name,
     typeId: r.typeId,
+    ...(r.remote !== null && { remote: r.remote }),
     component: d && {
       inputs: d.inputs.map((p) => ({ ...p })),
       outputs: d.outputs.map((p) => ({ ...p })),
@@ -62,7 +63,7 @@ export function resourceToDto(r: Resource, includeViewports: boolean): ResourceD
 export function buildResource(dto: ResourceDto, ctx: DiagramContext, viewports?: ReadonlyMap<string, Viewport>): Resource {
   const c = dto.component
   const definition = c && new ComponentDefinition(buildDiagram(c.diagram, ctx, viewports), ctx.onChange, c)
-  return new Resource(dto.id, dto.kind, dto.name, dto.typeId, definition, ctx.onChange)
+  return new Resource(dto.id, dto.kind, dto.name, dto.typeId, definition, ctx.onChange, dto.remote ?? null)
 }
 
 // Port ids are kept: they belong to the Resource and stay valid in any Diagram holding a Placement of it.

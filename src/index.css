@@ -424,6 +424,20 @@ textarea:focus {
   color: var(--muted);
 }
 /* FocusGroup wrapper: keeps the aside's column and gap for the fields it holds. */
+.remote-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.remote-link a,
+.remote-link a:visited {
+  color: var(--accent);
+}
+.remote-link a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .inspector-fields {
   display: flex;
   flex-direction: column;
