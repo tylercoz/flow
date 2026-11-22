@@ -353,6 +353,45 @@ describe('History properties', () => {
     )
   })
 
+  // Feature: resource-nodes, Property 10: Undo and redo restore Resources, Placements and Links
+  // **Validates: Requirements 3.3, 9.1, 9.2, 9.3**
+  it('Resource Property 10: each command records at most one step and undo/redo restore the captured content', () => {
+    fc.assert(
+      fc.property(commandsArb, (commands) => {
+        const workspace = buildWorkspace([])
+        const { history } = historyFor(workspace, commands.length + 1)
+        const contents = [workspace.capture()]
+
+        for (const cmd of commands) {
+          const before = workspace.capture()
+          applyCommand(workspace, cmd)
+          const after = workspace.capture()
+          if (after === before) continue
+          contents.push(after)
+          // Undo then redo of the newest step: one step means undo lands exactly on the previous content.
+          history.undo()
+          expect(workspace.capture()).toBe(before)
+          history.redo()
+          expect(workspace.capture()).toBe(after)
+        }
+
+        // The undo depth equals the number of content-changing commands, so none recorded two steps.
+        for (let i = contents.length - 1; i > 0; i--) {
+          expect(history.canUndo).toBe(true)
+          history.undo()
+          expect(workspace.capture()).toBe(contents[i - 1])
+        }
+        expect(history.canUndo).toBe(false)
+        for (let i = 1; i < contents.length; i++) {
+          history.redo()
+          expect(workspace.capture()).toBe(contents[i])
+        }
+        expect(history.canRedo).toBe(false)
+      }),
+      RUNS,
+    )
+  })
+
   // Feature: undo-redo-buttons, Property 11: Closing a group is safe and implied by undo and redo
   // **Validates: Requirements 2.5**
   it('Property 11: endGroup is idempotent, undo and redo close an open group first, and later edits record their own step', () => {

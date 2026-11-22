@@ -4,7 +4,7 @@ import type { Diagram } from '../domain/Diagram'
 // Ids are shared with the domain so React Flow events map straight back to model objects.
 // Nodes are flat (no parentId): a Component's contents live on its own Level.
 export function toNodes(diagram: Diagram): Node[] {
-  return diagram.components.map((c) => ({
+  const components: Node[] = diagram.components.map((c) => ({
     id: c.id,
     // Selects the custom ComponentNode registered in CanvasView's nodeTypes.
     type: 'component',
@@ -14,6 +14,14 @@ export function toNodes(diagram: Diagram): Node[] {
     // ComponentNode reads the live name from Details, so no label is copied here.
     data: {},
   }))
+  // PlacementNode looks the live name and type up through resourceId, so nothing else is copied here.
+  const placements: Node[] = diagram.placements.map((p) => ({
+    id: p.id,
+    type: 'resource',
+    position: { x: p.position.x, y: p.position.y },
+    data: { resourceId: p.resourceId },
+  }))
+  return [...components, ...placements]
 }
 
 export function toEdges(diagram: Diagram): Edge[] {
@@ -21,7 +29,7 @@ export function toEdges(diagram: Diagram): Edge[] {
     id: l.id,
     source: l.sourceId,
     target: l.targetId,
-    // Port ids double as the Handle ids rendered by PortList.
+    // Port ids double as the Handle ids rendered by PortList and PlacementNode (including side ids like 'top').
     sourceHandle: l.sourcePortId,
     targetHandle: l.targetPortId,
     // Selects LinkEdge, which reads the live name from Details so it can edit it in place.

@@ -3,10 +3,15 @@ import { Details, type NewPort } from './Details'
 import { DomainError } from './DomainError'
 import type { IdGenerator } from './IdGenerator'
 import { Link } from './Link'
+import { checkLink, type EndShape } from './LinkRules'
+import type { Positioned } from './NodeBounds'
+import { Placement } from './Placement'
+import type { Resource } from './Resource'
 import { DEFAULT_VIEWPORT, type Viewport } from './Viewport'
 
 // Supplied by the Workspace so every Diagram in the tree shares one id source and one change signal.
-export type DiagramContext = { ids: IdGenerator; onChange: () => void }
+export type ResourceLookup = { get(id: string): Resource | undefined }
+export type DiagramContext = { ids: IdGenerator; onChange: () => void; resources: ResourceLookup }
 
 export class Diagram {
   readonly id: string
@@ -14,6 +19,7 @@ export class Diagram {
   private _viewport: Viewport
   private _components: Component[]
   private _links: Link[]
+  private _placements: Placement[]
 
   // Initial content lets Workspace.restore rebuild a stored tree without generating new ids.
   constructor(
@@ -22,12 +28,14 @@ export class Diagram {
     viewport: Viewport = DEFAULT_VIEWPORT,
     components: readonly Component[] = [],
     links: readonly Link[] = [],
+    placements: readonly Placement[] = [],
   ) {
     this.id = id
     this.ctx = ctx
     this._viewport = { ...viewport }
     this._components = [...components]
     this._links = [...links]
+    this._placements = [...placements]
   }
 
   get viewport(): Readonly<Viewport> {
@@ -39,9 +47,21 @@ export class Diagram {
   get links(): readonly Link[] {
     return this._links
   }
+  get placements(): readonly Placement[] {
+    return this._placements
+  }
 
   component(id: string): Component | undefined {
     return this._components.find((c) => c.id === id)
+  }
+
+  placement(id: string): Placement | undefined {
+    return this._placements.find((p) => p.id === id)
+  }
+
+  // Component or Placement, for drag and resize.
+  positioned(id: string): Positioned | undefined {
+    return this.component(id) ?? this.placement(id)
   }
 
   setViewport(v: Viewport): void {
@@ -57,9 +77,34 @@ export class Diagram {
     return component
   }
 
+  addPlacement(resourceId: string, position: Position): Placement {
+    if (!this.ctx.resources.get(resourceId)) throw new DomainError('MISSING_RESOURCE', 'The resource no longer exists.')
+    const placement = new Placement(this.ctx.ids.next(), resourceId, position, this.ctx.onChange)
+    this._placements.push(placement)
+    this.ctx.onChange()
+    return placement
+  }
+
+  removePlacement(id: string): void {
+    if (!this.placement(id)) throw new DomainError('NOT_IN_DIAGRAM', 'Placement is not in this diagram.')
+    this.dropNode(id)
+    this.ctx.onChange()
+  }
+
+  // No notification: Workspace.removeResource visits every Diagram and notifies once.
+  dropPlacementsOf(resourceId: string): void {
+    for (const p of this._placements.filter((p) => p.resourceId === resourceId)) this.dropNode(p.id)
+  }
+
+  countPlacementsOf(resourceId: string): { placements: number; links: number } {
+    const ids = this._placements.filter((p) => p.resourceId === resourceId).map((p) => p.id)
+    return { placements: ids.length, links: this._links.filter((l) => ids.some((id) => touches(l, id))).length }
+  }
+
   // One change for the whole batch, so a paste is a single undo step.
-  addAll(components: readonly Component[], links: readonly Link[]): void {
+  addAll(components: readonly Component[], placements: readonly Placement[], links: readonly Link[]): void {
     this._components.push(...components)
+    this._placements.push(...placements)
     this._links.push(...links)
     this.ctx.onChange()
   }
@@ -93,12 +138,11 @@ export class Diagram {
 
   addLink(sourceId: string, targetId: string, sourcePortId: string, targetPortId: string): Link {
     if (sourceId === targetId) throw new DomainError('SELF_LINK', 'A component cannot be linked to itself.')
-    const source = this.component(sourceId)
-    const target = this.component(targetId)
-    if (!source || !target) throw new DomainError('NOT_IN_DIAGRAM', 'Both components must be in the same diagram.')
-    if (!source.details.outputs.some((p) => p.id === sourcePortId) || !target.details.inputs.some((p) => p.id === targetPortId)) {
-      throw new DomainError('INVALID_PORT', 'A link must go from an output to an input.')
-    }
+    const source = this.endShape(sourceId)
+    const target = this.endShape(targetId)
+    if (!source || !target) throw new DomainError('NOT_IN_DIAGRAM', 'Both nodes must be in the same diagram.')
+    const failure = checkLink(source, sourcePortId, target, targetPortId)
+    if (failure) throw new DomainError(failure.code, failure.message)
     const link = new Link(this.ctx.ids.next(), new Details(this.ctx.onChange), sourceId, targetId, sourcePortId, targetPortId)
     this._links.push(link)
     this.ctx.onChange()
@@ -111,6 +155,26 @@ export class Diagram {
     this.ctx.onChange()
   }
 
+  private endShape(id: string): EndShape | undefined {
+    const component = this.component(id)
+    if (component) {
+      return {
+        kind: 'component',
+        inputIds: component.details.inputs.map((p) => p.id),
+        outputIds: component.details.outputs.map((p) => p.id),
+      }
+    }
+    const placement = this.placement(id)
+    // A Placement's Resource is guaranteed by addPlacement and the serializer.
+    const resource = placement && this.ctx.resources.get(placement.resourceId)
+    return resource && { kind: 'placement', resource: resource.kind }
+  }
+
+  private dropNode(id: string): void {
+    this._placements = this._placements.filter((p) => p.id !== id)
+    this._links = this._links.filter((l) => !touches(l, id))
+  }
+
   private require(id: string): Component {
     const component = this.component(id)
     if (!component) throw new DomainError('NOT_IN_DIAGRAM', 'Component is not in this diagram.')
@@ -118,10 +182,10 @@ export class Diagram {
   }
 }
 
-function touches(link: Link, componentId: string): boolean {
-  return link.sourceId === componentId || link.targetId === componentId
+function touches(link: Link, nodeId: string): boolean {
+  return link.sourceId === nodeId || link.targetId === nodeId
 }
 
 function countDescendants(diagram: Diagram): number {
-  return diagram.components.reduce((n, c) => n + countDescendants(c.diagram), diagram.components.length + diagram.links.length)
+  return diagram.components.reduce((n, c) => n + countDescendants(c.diagram), diagram.components.length + diagram.placements.length + diagram.links.length)
 }

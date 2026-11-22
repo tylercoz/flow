@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import {
   Background,
+  ConnectionMode,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -19,6 +20,10 @@ import { useApp } from './AppProvider'
 import type { DeleteFlow, DeleteTarget } from './DeleteFlow'
 import { ComponentNode, RenameContext } from './ComponentNode'
 import { LinkEdge } from './LinkEdge'
+import { PlacementNode } from './PlacementNode'
+import { KIND_LABELS, ResourcePicker } from './ResourcePicker'
+import { ResourceIcon } from './resourceIcons'
+import { RESOURCE_KINDS, type ResourceKind } from '../domain/ResourceKinds'
 import { toEdges, toNodes } from './DiagramProjector'
 import { createComponentAt, isEmptyCanvas } from './createAtPoint'
 import { RenameController } from './RenameController'
@@ -36,10 +41,10 @@ function centreOf(el: HTMLElement | null): { x: number; y: number } | null {
 }
 
 // Must be module-level: a new object per render would make React Flow remount every node.
-const nodeTypes = { component: ComponentNode }
+const nodeTypes = { component: ComponentNode, resource: PlacementNode }
 const edgeTypes = { link: LinkEdge }
 
-/** The single selected Component or Link of the current Level, or null. */
+/** The single selected Component, Placement or Link of the current Level, or null. */
 type CanvasSelection = DeleteTarget | null
 
 interface CanvasViewProps {
@@ -90,6 +95,9 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(toEdges(diagram))
   const [syncedVersion, setSyncedVersion] = useState(version)
   const { screenToFlowPosition } = useReactFlow()
+  // Where the pane context menu was opened (screen) and the flow point a new Placement will take.
+  const [menu, setMenu] = useState<{ screen: { x: number; y: number }; point: { x: number; y: number } } | null>(null)
+  const [picking, setPicking] = useState<{ kind: ResourceKind; point: { x: number; y: number } } | null>(null)
   // Ids of elements just created by double-click or paste; selected on the next model sync (state, not a ref, because the sync runs during render).
   const [pendingFocus, setPendingFocus] = useState<ReadonlySet<string> | null>(null)
 
@@ -118,7 +126,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   // Deletion is routed through DeleteFlow (confirmation, cascade), so React Flow must not delete by itself.
   const onBeforeDelete = async ({ nodes: gone, edges: goneEdges }: { nodes: Node[]; edges: Edge[] }) => {
     const goneIds = new Set(gone.map((n) => n.id))
-    gone.forEach((n) => deleteFlow.request(diagram, { kind: 'component', id: n.id }))
+    gone.forEach((n) => deleteFlow.request(diagram, { kind: n.type === 'resource' ? 'placement' : 'component', id: n.id }))
     // Edges attached to a deleted node are handled by the cascade, and must survive a pending confirmation.
     goneEdges
       .filter((e) => !goneIds.has(e.source) && !goneIds.has(e.target))
@@ -143,8 +151,16 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
       if (document.querySelector('[aria-modal="true"]')) return
       const action = clipboardAction(e, isMac)
       if (!action) return
-      const select = (added: { components: { id: string }[]; links: { id: string }[] }) =>
-        setPendingFocus(new Set([...added.components, ...added.links].map((x) => x.id)))
+      // A rejected paste (MISSING_RESOURCE) changes nothing, so the reason is posted instead of thrown.
+      const paste = (fragment: Fragment, offset: { x: number; y: number }) => {
+        try {
+          const added = workspace.paste(diagram, fragment, offset)
+          setPendingFocus(new Set([...added.components, ...added.placements, ...added.links].map((x) => x.id)))
+        } catch (err) {
+          if (!(err instanceof DomainError)) throw err
+          notifier.post('paste', err.message, 'transient')
+        }
+      }
       if (action === 'paste') {
         const copied = clipboard.current
         if (!copied) return
@@ -154,7 +170,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
         const screen = cursor.current ?? centreOf(canvas.current)
         if (!screen) return
         const { fragment, sizes } = copied
-        select(workspace.paste(diagram, fragment, offsetToCenter(fragment, screenToFlowPosition(screen), sizes)))
+        paste(fragment, offsetToCenter(fragment, screenToFlowPosition(screen), sizes))
         return
       }
       const ids = new Set(nodes.filter((n) => n.selected).map((n) => n.id))
@@ -171,11 +187,11 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
       }
       // Duplicate bypasses the clipboard so it doesn't overwrite what the user copied.
       rename.cancel()
-      select(workspace.paste(diagram, fragment, { x: DUPLICATE_OFFSET, y: DUPLICATE_OFFSET }))
+      paste(fragment, { x: DUPLICATE_OFFSET, y: DUPLICATE_OFFSET })
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [nodes, clipboard, workspace, diagram, rename, screenToFlowPosition])
+  }, [nodes, clipboard, workspace, diagram, rename, screenToFlowPosition, notifier])
 
   return (
     <RenameContext.Provider value={rename}>
@@ -198,9 +214,17 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
           onEdgesChange={onEdgesChange}
           onNodeDragStart={() => rename.cancel()}
           // Dragging one member of a multi-selection moves all of them, so persist every moved node.
-          onNodeDragStop={(_, __, moved) => moved.forEach((n) => diagram.component(n.id)?.setPosition(n.position))}
+          onNodeDragStop={(_, __, moved) => moved.forEach((n) => diagram.positioned(n.id)?.setPosition(n.position))}
           onSelectionDragStart={() => rename.cancel()}
-          onSelectionDragStop={(_, moved) => moved.forEach((n) => diagram.component(n.id)?.setPosition(n.position))}
+          onSelectionDragStop={(_, moved) => moved.forEach((n) => diagram.positioned(n.id)?.setPosition(n.position))}
+          // Loose mode lets a side handle (one source and one target Handle per side) start or end a Link.
+          connectionMode={ConnectionMode.Loose}
+          onPaneContextMenu={(e) => {
+            e.preventDefault()
+            setMenu({ screen: { x: e.clientX, y: e.clientY }, point: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
+          }}
+          onPaneClick={() => setMenu(null)}
+          onMoveStart={() => setMenu(null)}
           // Left-drag on empty canvas draws a selection box; pan moves to middle/right mouse (and scroll/trackpad).
           selectionOnDrag
           panOnDrag={[1, 2]}
@@ -216,13 +240,33 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
             lastSelection.current = key
             rename.cancel()
             if (n.length + e.length !== 1) return onSelectionChange(null)
-            onSelectionChange(n.length ? { kind: 'component', id: n[0].id } : { kind: 'link', id: e[0].id })
+            onSelectionChange(
+              n.length ? { kind: n[0].type === 'resource' ? 'placement' : 'component', id: n[0].id } : { kind: 'link', id: e[0].id },
+            )
           }}
           // Double-click renames a Component or Link, or creates a Component, so it must not also zoom.
           zoomOnDoubleClick={false}
         >
           <Background />
         </ReactFlow>
+        {menu && (
+          <div className="canvas-menu" role="menu" style={{ left: menu.screen.x, top: menu.screen.y }}>
+            {(Object.keys(RESOURCE_KINDS) as ResourceKind[]).map((kind) => (
+              <button
+                type="button"
+                role="menuitem"
+                key={kind}
+                onClick={() => {
+                  setPicking({ kind, point: menu.point })
+                  setMenu(null)
+                }}
+              >
+                <ResourceIcon kind={kind} /> {KIND_LABELS[kind]}
+              </button>
+            ))}
+          </div>
+        )}
+        {picking && <ResourcePicker kind={picking.kind} diagram={diagram} position={picking.point} onClose={() => setPicking(null)} />}
       </div>
     </RenameContext.Provider>
   )

@@ -25,7 +25,12 @@ classDiagram
         renameEnvironmentVariable(id, name)
         environmentVariableUsage(id)
         removeEnvironmentVariable(id)
-        copy(diagram, componentIds)
+        resources: ResourceRegistry
+        createPlacedResource(diagram, spec, position)
+        setResourceType(id, typeId)
+        resourceImpact(id)
+        removeResource(id)
+        copy(diagram, nodeIds)
         paste(diagram, fragment, offset)
         toSnapshot(includeViewports)
         capture()
@@ -64,11 +69,18 @@ classDiagram
         id
         viewport
         components
+        placements
         links
         component(id)
+        placement(id)
+        positioned(id)
         setViewport(v)
         addComponent(position)
-        addAll(components, links)
+        addPlacement(resourceId, position)
+        removePlacement(id)
+        dropPlacementsOf(resourceId)
+        countPlacementsOf(resourceId)
+        addAll(components, placements, links)
         removeComponent(id)
         deletionImpact(id)
         setPorts(componentId, field, ports)
@@ -89,6 +101,54 @@ classDiagram
         dropException(id)
         setEnvironmentVariables(ids)
         dropEnvironmentVariable(id)
+    }
+    class Positioned {
+        <<interface>>
+        id
+        position
+        size
+        setPosition(p)
+        setBounds(p, size)
+    }
+    class NodeBounds {
+        position
+        size
+        setPosition(p)
+        setBounds(p, size)
+    }
+    class Placement {
+        id
+        resourceId
+    }
+    class ResourceKinds {
+        <<module>>
+        RESOURCE_KINDS: typed, sourceIds, targetIds per kind
+        DATABASE_PORTS
+        SIDE_PORTS
+        isResourceKind(v)
+    }
+    class LinkRules {
+        <<module>>
+        checkLink(source, sourcePortId, target, targetPortId)
+    }
+    class Resource {
+        id
+        kind: ResourceKind
+        name
+        typeId: DataType id or null
+        setName(name)
+        setType(typeId)
+    }
+    class ResourceKind {
+        <<type>>
+        database, artifact, user or input-object
+    }
+    class ResourceRegistry {
+        all
+        get(id)
+        byKind(kind)
+        add(resource)
+        remove(id)
     }
     class Link {
         id
@@ -149,7 +209,7 @@ classDiagram
     }
     class UuidGenerator
     class DomainError {
-        code: SELF_LINK, NOT_IN_DIAGRAM, INVALID_PORT or TYPE_IN_USE
+        code: SELF_LINK, NOT_IN_DIAGRAM, INVALID_PORT, TYPE_IN_USE, MISSING_RESOURCE, INVALID_RESOURCE, TYPE_REQUIRED, NO_TYPES or UNKNOWN_TYPE
     }
     class Viewport {
         x
@@ -158,18 +218,20 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion
+        schemaVersion: 8
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable
+        resources: list of ResourceDto
         root: DiagramDto
     }
     class Fragment {
         <<plain data>>
         components: list of ComponentDto
+        placements: list of PlacementDto
         links: list of LinkDto
     }
-    Workspace ..> Fragment : copy returns, paste reads with fresh ids
+    Workspace ..> Fragment : copy returns, paste reads with fresh ids and throws MISSING_RESOURCE first
     Workspace ..> Diagram : paste calls addAll
     ChangeSignal ..|> ObservableStore
     Workspace ..|> ObservableStore
@@ -193,7 +255,23 @@ classDiagram
     Workspace *-- Diagram : root
     Diagram *-- Component
     Diagram *-- Link
+    Diagram *-- Placement
+    Diagram --> LinkRules : addLink calls checkLink
+    Diagram --> ResourceRegistry : reads kind through ResourceLookup
+    Placement ..|> Positioned
+    Component ..|> Positioned
+    Component *-- NodeBounds
+    Placement *-- NodeBounds
+    Placement ..> Resource : shares one, by resourceId
+    Workspace *-- ResourceRegistry
+    Workspace --> DomainError : TYPE_REQUIRED, NO_TYPES, UNKNOWN_TYPE
+    Resource --> ResourceKind
+    Resource --> ResourceKinds : typed or untyped
+    LinkRules --> ResourceKinds : handle ids per kind
     Component *-- Diagram : child
+    ResourceRegistry *-- Resource
+    Resource ..> DataType : typed kinds refer by id
+    Resource --> DomainError : INVALID_RESOURCE
     Workspace *-- DataType
     Workspace *-- ExceptionType
     Component ..> ExceptionType : can return, by id

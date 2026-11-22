@@ -29,11 +29,12 @@ function fakeStorage(failOn?: 'getItem' | 'setItem'): Storage & { data: Map<stri
 }
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   types: [],
   exceptions: [],
   environmentVariables: [],
-  root: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, components: [], links: [] },
+  resources: [],
+  root: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, components: [], placements: [], links: [] },
 }
 
 describe('LocalStorageRepository', () => {

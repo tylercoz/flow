@@ -36,13 +36,15 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   types: [],
   exceptions: [],
   environmentVariables: [],
+  resources: [],
   root: {
     id: 'root',
     viewport: { x: 0, y: 0, zoom: 1 },
+    placements: [],
     components: [
       {
         id: 'c1',
@@ -50,7 +52,7 @@ const stored = {
         position: { x: 1, y: 2 },
         exceptionIds: [],
         environmentVariableIds: [],
-        diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, components: [], links: [] },
+        diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, components: [], placements: [], links: [] },
       },
     ],
     links: [],
@@ -98,6 +100,23 @@ describe('WorkspaceLoader', () => {
     expect(result.canSave).toBe(false)
     expect(result.workspace.root.components).toHaveLength(0)
     expect(notifier.messages).toEqual([expect.objectContaining({ key: 'load', kind: 'persistent' })])
+    expect(repository.saveCalls).toBe(0)
+  })
+
+  it('rejects a schemaVersion 7 save, starts empty and never writes over it', async () => {
+    const { loader, notifier, repository } = setup(() => ({ ...stored, resources: undefined, schemaVersion: 7 }))
+    const result = await loader.load()
+    expect(result.canSave).toBe(false)
+    expect(result.workspace.root.components).toHaveLength(0)
+    expect(notifier.messages).toEqual([expect.objectContaining({ key: 'load', kind: 'persistent' })])
+    expect(repository.saveCalls).toBe(0)
+  })
+
+  it('rejects a snapshot with a dangling resource reference', async () => {
+    const root = { ...stored.root, placements: [{ id: 'p', resourceId: 'ghost', position: { x: 0, y: 0 } }] }
+    const { loader, repository } = setup(() => ({ ...stored, root }))
+    const result = await loader.load()
+    expect(result.canSave).toBe(false)
     expect(repository.saveCalls).toBe(0)
   })
 

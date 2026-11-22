@@ -1,21 +1,25 @@
 import { ChangeSignal } from '../domain/ChangeSignal'
 import type { Diagram } from '../domain/Diagram'
 import type { ObservableStore } from '../domain/ObservableStore'
+import type { Workspace } from '../domain/Workspace'
 
-export type DeleteTarget = { kind: 'component' | 'link'; id: string }
+export type DeleteTarget = { kind: 'component' | 'link' | 'placement' | 'resource'; id: string }
 
-interface PendingDelete {
-  readonly diagram: Diagram
-  readonly componentId: string
-  readonly contents: number
-  readonly links: number
-}
+export type PendingDelete =
+  | { readonly subject: 'component'; readonly counts: { contents: number; links: number }; run(): void }
+  | { readonly subject: 'resource'; readonly counts: { placements: number; links: number }; run(): void }
 
 // Single path for deleting a selection, shared by the Delete key and the Inspector.
 // Kept free of React so the confirm-before-delete rule is testable without a DOM.
 export class DeleteFlow implements ObservableStore {
   private readonly signal = new ChangeSignal()
   private _pending: PendingDelete | null = null
+
+  private readonly workspace: Workspace
+
+  constructor(workspace: Workspace) {
+    this.workspace = workspace
+  }
 
   subscribe = this.signal.subscribe
   getVersion = this.signal.getVersion
@@ -25,25 +29,39 @@ export class DeleteFlow implements ObservableStore {
   }
 
   request(diagram: Diagram, target: DeleteTarget): void {
-    if (target.kind === 'link') {
-      diagram.removeLink(target.id)
-      return
+    switch (target.kind) {
+      case 'link':
+        diagram.removeLink(target.id)
+        return
+      case 'placement':
+        // The Resource survives, so there is nothing to confirm.
+        diagram.removePlacement(target.id)
+        return
+      case 'resource': {
+        const counts = this.workspace.resourceImpact(target.id)
+        this._pending = { subject: 'resource', counts, run: () => this.workspace.removeResource(target.id) }
+        this.signal.notify()
+        return
+      }
+      case 'component': {
+        const counts = diagram.deletionImpact(target.id)
+        // Attached Links are cheap to redraw, so only losing nested work is worth an interruption.
+        if (counts.contents === 0) {
+          diagram.removeComponent(target.id)
+          return
+        }
+        this._pending = { subject: 'component', counts, run: () => diagram.removeComponent(target.id) }
+        this.signal.notify()
+        return
+      }
     }
-    const { contents, links } = diagram.deletionImpact(target.id)
-    // Attached Links are cheap to redraw, so only losing nested work is worth an interruption.
-    if (contents === 0) {
-      diagram.removeComponent(target.id)
-      return
-    }
-    this._pending = { diagram, componentId: target.id, contents, links }
-    this.signal.notify()
   }
 
   confirm(): void {
     const pending = this._pending
     if (!pending) return
     this._pending = null
-    pending.diagram.removeComponent(pending.componentId)
+    pending.run()
     this.signal.notify()
   }
 

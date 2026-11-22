@@ -16,6 +16,10 @@ flowchart TD
         NotificationBar
         DiagramProjector
         ComponentNode
+        PlacementNode
+        ResourcePicker
+        ResourceInspector
+        resourceIcons["resourceIcons: ResourceIcon per ResourceKind"]
         LinkEdge
         PortList
         portEdit["portEdit: applyPortName"]
@@ -33,6 +37,12 @@ flowchart TD
     subgraph Domain[Domain, no React]
         Workspace --> Diagram --> Component --> Diagram
         Diagram --> Link
+        Diagram --> Placement --> NodeBounds
+        Component --> NodeBounds
+        Workspace --> ResourceRegistry --> Resource
+        Diagram --> LinkRules
+        Resource --> ResourceKinds
+        LinkRules --> ResourceKinds
         Navigator --> Workspace
         History -->|"subscribes; capture, replaceContent"| Workspace
         History -->|reconcile after restore| Navigator
@@ -44,6 +54,7 @@ flowchart TD
         WorkspaceLoader --> WorkspaceSerializer
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
+        WorkspaceSerializer -->|checkLink, kinds| Domain
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
@@ -58,6 +69,7 @@ flowchart TD
     App --> Breadcrumb
     App --> CanvasView
     App --> Inspector
+    App -->|Placement selected| ResourceInspector
     App --> ConfirmDialog
     App -->|Types button in header| TypesDialog
     App -->|Exceptions button in header| ExceptionsDialog
@@ -74,6 +86,10 @@ flowchart TD
     FocusGroup -->|filters targets| shortcutAction
     App -->|passes deleteFlow| CanvasView
     App -->|passes deleteFlow| Inspector
+    App -->|passes deleteFlow| ResourceInspector
+    ResourceInspector --> FocusGroup
+    ResourceInspector -->|setName, setResourceType| Workspace
+    ResourceInspector -->|request: placement or resource| DeleteFlow
     ConfirmDialog -->|reads pending| DeleteFlow
     CanvasView --> DiagramProjector
     CanvasView -->|onMoveEnd: setViewport| Diagram
@@ -88,6 +104,16 @@ flowchart TD
     createAtPoint -->|addComponent| Diagram
     createAtPoint -->|start| RenameController
     CanvasView -->|"nodeTypes (module-level)"| ComponentNode
+    CanvasView -->|"nodeTypes 'resource' (module-level)"| PlacementNode
+    CanvasView -->|"pane context menu: pick a kind"| ResourcePicker
+    ResourcePicker -->|addPlacement| Diagram
+    ResourcePicker -->|"createPlacedResource; lists resources.byKind"| Workspace
+    ResourcePicker --> resourceIcons
+    PlacementNode --> resourceIcons
+    PlacementNode -->|"Handles: read, write or top, right, bottom, left"| ResourceKinds
+    PlacementNode -->|"reads Resource by resourceId; useApp"| AppProvider
+    CanvasView -->|"onConnect: addLink with handle ids; errors to Notifier"| Diagram
+    CanvasView -->|"drag, resize: positioned(id)"| Diagram
     CanvasView -->|"edgeTypes (module-level)"| LinkEdge
     LinkEdge -->|start; reads controller from| RenameController
     LinkEdge -->|reuses RenameInput| ComponentNode
@@ -101,6 +127,7 @@ flowchart TD
     Inspector -->|setPorts| Diagram
     RenameController -.implements.-> ObservableStore
     RenameController --> Scheduler
+    DeleteFlow -->|resourceImpact, removeResource| Workspace
     CanvasView -->|request| DeleteFlow
     Inspector -->|request| DeleteFlow
     TypesDialog -->|add, rename, remove types| Workspace

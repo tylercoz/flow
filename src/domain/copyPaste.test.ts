@@ -47,6 +47,43 @@ describe('Workspace copy and paste', () => {
     expect(components[0].diagram.components[0].id).not.toBe(a.diagram.components[0].id)
   })
 
+  it('pastes Placements with new ids and the same resourceId', () => {
+    const { workspace, root } = setup()
+    const p = workspace.createPlacedResource(root, { kind: 'user', name: 'Ann' }, { x: 0, y: 0 })
+    const fragment = workspace.copy(root, new Set([p.id]))
+    expect(fragment.placements).toHaveLength(1)
+    const pasted = workspace.paste(root, fragment, { x: 24, y: 24 }).placements[0]
+    expect(pasted.id).not.toBe(p.id)
+    expect(pasted.resourceId).toBe(p.resourceId)
+    expect(root.placements).toHaveLength(2)
+    expect(workspace.resources.all).toHaveLength(1)
+  })
+
+  it('keeps Link port ids when a Placement and a Component are pasted together', () => {
+    const { workspace, root } = setup()
+    const a = root.addComponent({ x: 0, y: 0 })
+    root.setPorts(a.id, 'inputs', [{ name: 'in', typeId: null }])
+    const p = workspace.createPlacedResource(root, { kind: 'database', name: 'db' }, { x: 50, y: 0 })
+    const link = root.addLink(p.id, a.id, 'read', a.details.inputs[0].id)
+    const fragment = workspace.copy(root, new Set([a.id, p.id]))
+    expect(fragment.links).toHaveLength(1)
+    const pasted = workspace.paste(root, fragment, { x: 24, y: 24 })
+    expect(pasted.links[0].id).not.toBe(link.id)
+    expect(pasted.links[0].sourcePortId).toBe('read')
+    expect(pasted.links[0].targetPortId).toBe(link.targetPortId)
+  })
+
+  it('rejects a paste after the Resource was deleted and changes nothing', () => {
+    const { workspace, root } = setup()
+    const p = workspace.createPlacedResource(root, { kind: 'user', name: 'Ann' }, { x: 0, y: 0 })
+    const fragment = workspace.copy(root, new Set([p.id]))
+    workspace.removeResource(p.resourceId)
+    expect(() => workspace.paste(root, fragment, { x: 1, y: 1 })).toThrowError(
+      expect.objectContaining({ code: 'MISSING_RESOURCE' }),
+    )
+    expect(root.placements).toHaveLength(0)
+  })
+
   it('does not change the copy when the original is edited afterwards', () => {
     const { workspace, root } = setup()
     const a = root.addComponent({ x: 0, y: 0 })

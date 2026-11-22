@@ -1,5 +1,6 @@
 import fc from 'fast-check'
-import type { Component } from '../Component'
+import type { Component, Position, Size } from '../Component'
+import { RESOURCE_KINDS, type ResourceKind } from '../ResourceKinds'
 import type { DetailsDto } from '../Details'
 import type { Diagram } from '../Diagram'
 import type { IdGenerator } from '../IdGenerator'
@@ -49,6 +50,18 @@ export type Command =
   | { kind: 'addEnvironmentVariable'; name: string }
   | { kind: 'toggleEnvironmentVariable'; diagram: number; component: number; variable: number }
   | { kind: 'removeEnvironmentVariable'; variable: number }
+  | { kind: 'addResource'; resourceKind: ResourceKind; name: string; type: number; diagram: number; position: Position }
+  | { kind: 'addPlacement'; diagram: number; resource: number; position: Position }
+  | { kind: 'removePlacement'; diagram: number; placement: number }
+  | { kind: 'movePlacement'; diagram: number; placement: number; position: Position; size?: Size }
+  | { kind: 'renameResource'; resource: number; name: string }
+  | { kind: 'retypeResource'; resource: number; type: number }
+  | { kind: 'removeResource'; resource: number }
+  | { kind: 'addResourceLink'; diagram: number; component: number; placement: number; port: number; direction: 'out' | 'in' }
+  | { kind: 'addPlacementLink'; diagram: number; source: number; target: number; sourcePort: number; targetPort: number }
+
+const resourceKindArb = fc.constantFrom<ResourceKind>(...(Object.keys(RESOURCE_KINDS) as ResourceKind[]))
+const sizeArb: fc.Arbitrary<Size> = fc.record({ width: fc.integer({ min: 1, max: 1000 }), height: fc.integer({ min: 1, max: 1000 }) })
 
 // Weighted toward additions so sequences build nested, non-trivial trees.
 export const commandArb: fc.Arbitrary<Command> = fc.oneof(
@@ -65,6 +78,15 @@ export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addEnvironmentVariable' as const), name: fc.string() }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('toggleEnvironmentVariable' as const), diagram: pick, component: pick, variable: pick }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('removeEnvironmentVariable' as const), variable: pick }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('addResource' as const), resourceKind: resourceKindArb, name: fc.string(), type: pick, diagram: pick, position: positionArb }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('addPlacement' as const), diagram: pick, resource: pick, position: positionArb }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('removePlacement' as const), diagram: pick, placement: pick }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('movePlacement' as const), diagram: pick, placement: pick, position: positionArb, size: sizeArb }, { requiredKeys: ['kind', 'diagram', 'placement', 'position'] }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('renameResource' as const), resource: pick, name: fc.string() }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('retypeResource' as const), resource: pick, type: pick }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('removeResource' as const), resource: pick }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('addResourceLink' as const), diagram: pick, component: pick, placement: pick, port: pick, direction: fc.constantFrom('out' as const, 'in' as const) }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('addPlacementLink' as const), diagram: pick, source: pick, target: pick, sourcePort: pick, targetPort: pick }), weight: 3 },
 )
 
 export const commandsArb = fc.array(commandArb, { maxLength: 40 })
@@ -107,9 +129,75 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
     if (v) workspace.removeEnvironmentVariable(v.id)
     return
   }
+  if (cmd.kind === 'renameResource') {
+    at(workspace.resources.all, cmd.resource)?.setName(cmd.name)
+    return
+  }
+  if (cmd.kind === 'retypeResource') {
+    const r = at(workspace.resources.all.filter((r) => RESOURCE_KINDS[r.kind].typed), cmd.resource)
+    const t = at(workspace.types, cmd.type)
+    if (r && t) workspace.setResourceType(r.id, t.id)
+    return
+  }
+  if (cmd.kind === 'removeResource') {
+    const r = at(workspace.resources.all, cmd.resource)
+    if (r) workspace.removeResource(r.id)
+    return
+  }
   const diagrams = allDiagrams(workspace)
   const d = diagrams[cmd.diagram % diagrams.length]
   switch (cmd.kind) {
+    case 'addResource': {
+      const typed = RESOURCE_KINDS[cmd.resourceKind].typed
+      const t = at(workspace.types, cmd.type)
+      if (typed && !t) return
+      workspace.createPlacedResource(d, { kind: cmd.resourceKind, name: cmd.name, typeId: typed ? t?.id : undefined }, cmd.position)
+      return
+    }
+    case 'addPlacement': {
+      const r = at(workspace.resources.all, cmd.resource)
+      if (r) d.addPlacement(r.id, cmd.position)
+      return
+    }
+    case 'removePlacement': {
+      const p = at(d.placements, cmd.placement)
+      if (p) d.removePlacement(p.id)
+      return
+    }
+    case 'movePlacement': {
+      const p = at(d.placements, cmd.placement)
+      if (!p) return
+      if (cmd.size) p.setBounds(cmd.position, cmd.size)
+      else p.setPosition(cmd.position)
+      return
+    }
+    case 'addResourceLink': {
+      const c = at(d.components, cmd.component)
+      const p = at(d.placements, cmd.placement)
+      const kind = p && workspace.resources.get(p.resourceId)?.kind
+      if (!c || !p || !kind) return
+      if (cmd.direction === 'out') {
+        const port = at(c.details.outputs, cmd.port)
+        const handle = at(RESOURCE_KINDS[kind].targetIds, cmd.port)
+        if (port && handle) d.addLink(c.id, p.id, port.id, handle)
+      } else {
+        const port = at(c.details.inputs, cmd.port)
+        const handle = at(RESOURCE_KINDS[kind].sourceIds, cmd.port)
+        if (port && handle) d.addLink(p.id, c.id, handle, port.id)
+      }
+      return
+    }
+    case 'addPlacementLink': {
+      const s = at(d.placements, cmd.source)
+      const t = at(d.placements, cmd.target)
+      const sk = s && workspace.resources.get(s.resourceId)?.kind
+      const tk = t && workspace.resources.get(t.resourceId)?.kind
+      if (!s || !t || !sk || !tk || s === t) return
+      const out = at(RESOURCE_KINDS[sk].sourceIds, cmd.sourcePort)
+      const inn = at(RESOURCE_KINDS[tk].targetIds, cmd.targetPort)
+      if (out && inn) d.addLink(s.id, t.id, out, inn)
+      return
+    }
     case 'addComponent':
       d.addComponent(cmd.position)
       return

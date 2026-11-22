@@ -2,8 +2,10 @@ import type { DataType } from '../domain/DataType'
 import type { DetailsDto, Port } from '../domain/Details'
 import type { EnvironmentVariable } from '../domain/EnvironmentVariable'
 import type { ExceptionType } from '../domain/ExceptionType'
+import { checkLink, type EndShape } from '../domain/LinkRules'
+import { isResourceKind, RESOURCE_KINDS, type ResourceKind } from '../domain/ResourceKinds'
 import type { Workspace } from '../domain/Workspace'
-import type { ComponentDto, DiagramDto, LinkDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
+import type { ComponentDto, DiagramDto, LinkDto, PlacementDto, ResourceDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
 import { PersistenceError } from './PersistenceError'
 
 type Obj = Record<string, unknown>
@@ -17,7 +19,7 @@ export class WorkspaceSerializer {
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
     // No migrations while in development: data from any other version is rejected and must be cleared.
-    if (obj.schemaVersion !== 7) {
+    if (obj.schemaVersion !== 8) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
     const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
@@ -25,11 +27,13 @@ export class WorkspaceSerializer {
     const environmentVariables = asArray(obj.environmentVariables, 'environmentVariables').map((v, i) =>
       parseType(v, `environmentVariables[${i}]`),
     )
-    const root = parseDiagram(obj.root, 'root')
-    assertTypesExist(root, new Set(types.map((t) => t.id)))
+    const typeIds = new Set(types.map((t) => t.id))
+    const resources = asArray(obj.resources, 'resources').map((r, i) => parseResource(r, `resources[${i}]`, typeIds))
+    const root = parseDiagram(obj.root, 'root', new Map(resources.map((r) => [r.id, r.kind])))
+    assertTypesExist(root, typeIds)
     assertExceptionsExist(root, new Set(exceptions.map((e) => e.id)))
     assertEnvironmentVariablesExist(root, new Set(environmentVariables.map((v) => v.id)))
-    return { schemaVersion: 7, types, exceptions, environmentVariables, root }
+    return { schemaVersion: 8, types, exceptions, environmentVariables, resources, root }
   }
 }
 
@@ -108,25 +112,58 @@ function parseDetails(v: unknown, path: string) {
   }
 }
 
-function parseDiagram(v: unknown, path: string): DiagramDto {
+function parseResource(v: unknown, path: string, typeIds: ReadonlySet<string>): ResourceDto {
+  const o = asObject(v, path)
+  const kind = o.kind
+  if (!isResourceKind(kind)) throw malformed(`${path}.kind`)
+  const typeId = o.typeId === null ? null : asString(o.typeId, `${path}.typeId`)
+  // Same rule as the Resource constructor: only typed kinds carry a Data Type.
+  if (RESOURCE_KINDS[kind].typed !== (typeId !== null)) throw new PersistenceError(`Resource ${String(o.id)} has an invalid type for kind ${kind}`)
+  if (typeId !== null && !typeIds.has(typeId)) throw new PersistenceError(`Resource uses unknown type ${typeId}`)
+  return { id: asString(o.id, `${path}.id`), kind, name: asString(o.name, `${path}.name`), typeId }
+}
+
+function parsePlacement(v: unknown, path: string, resources: ReadonlyMap<string, ResourceKind>): PlacementDto {
+  const o = asObject(v, path)
+  const pos = asObject(o.position, `${path}.position`)
+  const size = o.size === undefined ? undefined : asObject(o.size, `${path}.size`)
+  const resourceId = asString(o.resourceId, `${path}.resourceId`)
+  if (!resources.has(resourceId)) throw new PersistenceError(`Placement uses unknown resource ${resourceId}`)
+  return {
+    id: asString(o.id, `${path}.id`),
+    resourceId,
+    position: { x: asNumber(pos.x, `${path}.position.x`), y: asNumber(pos.y, `${path}.position.y`) },
+    ...(size && { size: { width: asNumber(size.width, `${path}.size.width`), height: asNumber(size.height, `${path}.size.height`) } }),
+  }
+}
+
+function parseDiagram(v: unknown, path: string, resources: ReadonlyMap<string, ResourceKind>): DiagramDto {
   const o = asObject(v, path)
   const vp = asObject(o.viewport, `${path}.viewport`)
   const components = asArray(o.components, `${path}.components`).map((c, i) =>
-    parseComponent(c, `${path}.components[${i}]`),
+    parseComponent(c, `${path}.components[${i}]`, resources),
   )
-  const componentIds = new Set(components.map((c) => c.id))
+  const placements = asArray(o.placements, `${path}.placements`).map((p, i) =>
+    parsePlacement(p, `${path}.placements[${i}]`, resources),
+  )
   const links = asArray(o.links, `${path}.links`).map((l, i) => parseLink(l, `${path}.links[${i}]`))
+  // Components and Placements share one id namespace per Diagram, so Link ends can name either.
+  const ends = new Map<string, EndShape>()
+  for (const c of components) {
+    ends.set(c.id, { kind: 'component', inputIds: c.details.inputs.map((p) => p.id), outputIds: c.details.outputs.map((p) => p.id) })
+  }
+  for (const p of placements) {
+    if (ends.has(p.id)) throw new PersistenceError(`Duplicate node id ${p.id}`)
+    ends.set(p.id, { kind: 'placement', resource: resources.get(p.resourceId)! })
+  }
   for (const link of links) {
     // Both endpoints must be in this same Diagram, matching the domain's addLink rule.
-    if (!componentIds.has(link.sourceId) || !componentIds.has(link.targetId)) {
-      throw new PersistenceError(`Link ${link.id} has an endpoint outside its diagram`)
-    }
-    // Matches the domain's addLink rule, so a stored Link can never point at a missing port.
-    const source = components.find((c) => c.id === link.sourceId)
-    const target = components.find((c) => c.id === link.targetId)
-    if (!source?.details.outputs.some((p) => p.id === link.sourcePortId) || !target?.details.inputs.some((p) => p.id === link.targetPortId)) {
-      throw new PersistenceError(`Link ${link.id} has an endpoint that is not an output and an input`)
-    }
+    const source = ends.get(link.sourceId)
+    const target = ends.get(link.targetId)
+    if (!source || !target) throw new PersistenceError(`Link ${link.id} has an endpoint outside its diagram`)
+    // Same rule as the domain's addLink, so a stored Link can never point at a missing port.
+    const failure = checkLink(source, link.sourcePortId, target, link.targetPortId)
+    if (failure) throw new PersistenceError(`Link ${link.id}: ${failure.message}`)
   }
   return {
     id: asString(o.id, `${path}.id`),
@@ -136,11 +173,12 @@ function parseDiagram(v: unknown, path: string): DiagramDto {
       zoom: asNumber(vp.zoom, `${path}.viewport.zoom`),
     },
     components,
+    placements,
     links,
   }
 }
 
-function parseComponent(v: unknown, path: string): ComponentDto {
+function parseComponent(v: unknown, path: string, resources: ReadonlyMap<string, ResourceKind>): ComponentDto {
   const o = asObject(v, path)
   const pos = asObject(o.position, `${path}.position`)
   const size = o.size === undefined ? undefined : asObject(o.size, `${path}.size`)
@@ -153,7 +191,7 @@ function parseComponent(v: unknown, path: string): ComponentDto {
     environmentVariableIds: asArray(o.environmentVariableIds, `${path}.environmentVariableIds`).map((id, i) =>
       asString(id, `${path}.environmentVariableIds[${i}]`),
     ),
-    diagram: parseDiagram(o.diagram, `${path}.diagram`),
+    diagram: parseDiagram(o.diagram, `${path}.diagram`, resources),
   }
 }
 

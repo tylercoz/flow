@@ -6,7 +6,8 @@ import type { Workspace } from './Workspace'
 const totals = (w: Workspace) => {
   const diagrams = allDiagrams(w)
   return {
-    components: diagrams.reduce((n, d) => n + d.components.length, 0),
+    // Placements count as contents, so they are totalled with components.
+    components: diagrams.reduce((n, d) => n + d.components.length + d.placements.length, 0),
     links: diagrams.reduce((n, d) => n + d.links.length, 0),
   }
 }

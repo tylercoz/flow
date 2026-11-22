@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { ResourceRegistry } from './ResourceRegistry'
 import { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
 import { Navigator } from './Navigator'
 
 function setup() {
   let n = 0
-  const root = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {} })
+  const root = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {}, resources: new ResourceRegistry() })
   const a = root.addComponent({ x: 0, y: 0 })
   const b = a.diagram.addComponent({ x: 0, y: 0 })
   return { root, a, b, nav: new Navigator({ root }) }
@@ -63,7 +64,7 @@ describe('Navigator', () => {
       nav.open(b.id)
       // Same id sequence as setup(), so the new tree has the same ids, as after a restore.
       let n = 0
-      const rebuilt = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {} })
+      const rebuilt = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {}, resources: new ResourceRegistry() })
       rebuilt.addComponent({ x: 0, y: 0 }).diagram.addComponent({ x: 0, y: 0 })
       workspace.root = rebuilt
       let calls = 0
@@ -77,7 +78,7 @@ describe('Navigator', () => {
     it('resets a stale path to the root and notifies once', () => {
       const { workspace, a, nav } = swappable()
       nav.open(a.id)
-      workspace.root = new Diagram('root', { ids: { next: () => 'y' }, onChange: () => {} })
+      workspace.root = new Diagram('root', { ids: { next: () => 'y' }, onChange: () => {}, resources: new ResourceRegistry() })
       let calls = 0
       nav.subscribe(() => calls++)
       nav.reconcile()

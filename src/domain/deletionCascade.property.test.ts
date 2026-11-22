@@ -36,8 +36,8 @@ describe('Property 5: Deletion cascades and keeps references intact', () => {
         expect(after.flatMap((d) => d.links.map((l) => l.id))).toEqual(survivingLinks)
         for (const d of after) {
           for (const l of d.links) {
-            expect(d.component(l.sourceId)).toBeDefined()
-            expect(d.component(l.targetId)).toBeDefined()
+            expect(d.positioned(l.sourceId)).toBeDefined()
+            expect(d.positioned(l.targetId)).toBeDefined()
           }
         }
       }),

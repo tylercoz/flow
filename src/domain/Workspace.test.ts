@@ -7,20 +7,23 @@ import type { DiagramDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
 
 const details = (name: string) => ({ name, inputs: [], outputs: [], notes: '' })
 const viewport = { x: 0, y: 0, zoom: 1 }
-const emptyDiagram = (id: string): DiagramDto => ({ id, viewport, components: [], links: [] })
+const emptyDiagram = (id: string): DiagramDto => ({ id, viewport, components: [], placements: [], links: [] })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 7,
+  schemaVersion: 8,
   types: [],
   exceptions: [],
   environmentVariables: [],
+  resources: [],
   root: {
     id: 'r',
     viewport,
+    placements: [],
     components: [
       { id: 'a', details: details('A'), position: { x: 1, y: 2 }, exceptionIds: [], environmentVariableIds: [], diagram: {
         id: 'ad',
         viewport,
+        placements: [],
         components: [{ id: 'b', details: details('B'), position: { x: 3, y: 4 }, exceptionIds: [], environmentVariableIds: [], diagram: emptyDiagram('bd') }],
         links: [],
       } },
@@ -254,5 +257,76 @@ describe('Workspace exceptions', () => {
     outer.setExceptions([e.id])
     history.undo()
     expect(workspace.root.components[0].exceptionIds).toEqual([])
+  })
+})
+
+describe('Workspace resources', () => {
+  const setup = () => {
+    let n = 0
+    const workspace = Workspace.empty({ next: () => `x${++n}` })
+    return { workspace, nested: workspace.root.addComponent({ x: 0, y: 0 }) }
+  }
+  const code = (c: string) => expect.objectContaining({ code: c })
+
+  it('creates a typed resource and its placement in one notification', () => {
+    const { workspace } = setup()
+    const before = workspace.getVersion()
+    const placement = workspace.createPlacedResource(workspace.root, { kind: 'artifact', name: 'Invoice', typeId: workspace.types[0].id }, { x: 1, y: 2 })
+    expect(workspace.getVersion()).toBe(before + 1)
+    expect(workspace.resources.get(placement.resourceId)?.typeId).toBe(workspace.types[0].id)
+  })
+
+  it('rejects a typed resource when the catalog is empty, creating nothing', () => {
+    const { workspace } = setup()
+    workspace.types.slice().forEach((t) => workspace.removeType(t.id))
+    const before = workspace.getVersion()
+    expect(() => workspace.createPlacedResource(workspace.root, { kind: 'input-object', name: 'In' }, { x: 0, y: 0 })).toThrow(code('NO_TYPES'))
+    expect(workspace.resources.all).toEqual([])
+    expect(workspace.root.placements).toEqual([])
+    expect(workspace.getVersion()).toBe(before)
+  })
+
+  it('rejects a typed resource with a missing or unknown type, creating nothing', () => {
+    const { workspace } = setup()
+    expect(() => workspace.createPlacedResource(workspace.root, { kind: 'artifact', name: 'A' }, { x: 0, y: 0 })).toThrow(code('TYPE_REQUIRED'))
+    expect(() => workspace.createPlacedResource(workspace.root, { kind: 'artifact', name: 'A', typeId: 'nope' }, { x: 0, y: 0 })).toThrow(code('UNKNOWN_TYPE'))
+    expect(workspace.resources.all).toEqual([])
+    expect(workspace.root.placements).toEqual([])
+  })
+
+  it('creates an untyped resource without a type', () => {
+    const { workspace } = setup()
+    const placement = workspace.createPlacedResource(workspace.root, { kind: 'database', name: 'Orders' }, { x: 0, y: 0 })
+    expect(workspace.resources.get(placement.resourceId)?.typeId).toBeNull()
+  })
+
+  it('removes a resource from every Diagram with its links as one notification', () => {
+    const { workspace, nested } = setup()
+    const first = workspace.createPlacedResource(workspace.root, { kind: 'user', name: 'Ann' }, { x: 0, y: 0 })
+    const second = nested.diagram.addPlacement(first.resourceId, { x: 5, y: 5 })
+    const target = workspace.root.addComponent({ x: 9, y: 9 })
+    workspace.root.setPorts(target.id, 'inputs', [{ name: 'in', typeId: null }])
+    workspace.root.addLink(first.id, target.id, 'top', target.details.inputs[0].id)
+    expect(workspace.resourceImpact(first.resourceId)).toEqual({ placements: 2, links: 1 })
+
+    const before = workspace.getVersion()
+    workspace.removeResource(first.resourceId)
+    expect(workspace.getVersion()).toBe(before + 1)
+    expect(workspace.resources.get(first.resourceId)).toBeUndefined()
+    expect(workspace.root.placement(first.id)).toBeUndefined()
+    expect(nested.diagram.placement(second.id)).toBeUndefined()
+    expect(workspace.root.links).toEqual([])
+    expect(workspace.root.components).toHaveLength(2)
+  })
+
+  it('refuses to remove a type a resource uses until the resource is gone', () => {
+    const { workspace } = setup()
+    const typeId = workspace.types[0].id
+    const placement = workspace.createPlacedResource(workspace.root, { kind: 'artifact', name: 'A', typeId }, { x: 0, y: 0 })
+    expect(() => workspace.removeType(typeId)).toThrow(code('TYPE_IN_USE'))
+    expect(workspace.types.some((t) => t.id === typeId)).toBe(true)
+    workspace.removeResource(placement.resourceId)
+    workspace.removeType(typeId)
+    expect(workspace.types.some((t) => t.id === typeId)).toBe(false)
   })
 })

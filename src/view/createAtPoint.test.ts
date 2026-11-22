@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ResourceRegistry } from '../domain/ResourceRegistry'
 import { Diagram } from '../domain/Diagram'
 import type { Scheduler } from '../domain/Scheduler'
 import { NODE_SIZE, createComponentAt, isEmptyCanvas } from './createAtPoint'
@@ -25,7 +26,7 @@ describe('isEmptyCanvas', () => {
 describe('createComponentAt', () => {
   function setup() {
     let n = 0
-    const diagram = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {} })
+    const diagram = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {}, resources: new ResourceRegistry() })
     const scheduler: Scheduler = { set: () => 0 as never, cancel: () => {} }
     return { diagram, rename: new RenameController(scheduler) }
   }

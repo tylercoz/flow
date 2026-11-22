@@ -1,0 +1,936 @@
+{
+  "pbtResults": {
+    "10.2 Write property test for resource creation": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319359098
+    },
+    "10.12 Extend `persistence/roundTrip.property.test.ts` for round trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319359987
+    },
+    "10.11 Extend `history.property.test.ts`": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319361290
+    },
+    "10.5 Write property test for accepted Links": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319367135
+    },
+    "10.3 Write property test for resource edits": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319407660
+    },
+    "10.13 Extend `persistence/roundTrip.property.test.ts` for corruption": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319413394
+    },
+    "10.4 Write property test for Placement bounds": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319462154
+    },
+    "10.8 Write property test for Cascade Delete": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319531894
+    },
+    "10.9 Write property test for Data Type usage": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319581648
+    },
+    "10.14 Write property test for paste of a missing Resource": {
+      "status": "passed",
+      "lastRunTimestamp": 1795319670095
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `src/domain/ResourceKinds.ts` and add error codes": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659450
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318664079
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318692482
+      }
+    ],
+    "1.2 Create `Resource` and `ResourceRegistry` in `src/domain`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659473
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318695584
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318726981
+      }
+    ],
+    "1.3 Write unit tests for `ResourceKinds`, `Resource` and `ResourceRegistry`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659530
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318730940
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318764510
+      }
+    ],
+    "2.1 Create `NodeBounds` and the `Positioned` interface; make `Component` delegate to `NodeBounds`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659546
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318730967
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318765272
+      }
+    ],
+    "2.2 Create `Placement` in `src/domain`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659564
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318769849
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318795956
+      }
+    ],
+    "2.3 Write unit tests for `NodeBounds` and `Placement`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659580
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318798046
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318856725
+      }
+    ],
+    "3.1 Create `src/domain/LinkRules.ts` with `EndShape` and `checkLink`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659597
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318731250
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318765899
+      }
+    ],
+    "3.2 Write unit tests for `checkLink`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659613
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318770479
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318795453
+      }
+    ],
+    "4.1 Extend `Diagram` and its `DiagramContext`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659652
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318798655
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318856066
+      }
+    ],
+    "4.2 Write unit tests for the new `Diagram` members": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659686
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318858713
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318907517
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659704
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318909800
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318930711
+      }
+    ],
+    "6.1 Update `WorkspaceSnapshot.ts`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659723
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318932851
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319002875
+      }
+    ],
+    "6.2 Extend `Workspace`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659738
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319005078
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319067356
+      }
+    ],
+    "6.3 Write unit tests for the new `Workspace` members": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659754
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319070966
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319130687
+      }
+    ],
+    "7.1 Update `WorkspaceSerializer.deserialize`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659774
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319071548
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319130736
+      }
+    ],
+    "7.2 Write unit tests for the serializer and loader": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659795
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319132737
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319185716
+      }
+    ],
+    "8. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659813
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319188973
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319207189
+      }
+    ],
+    "9.1 Extend `Fragment`, `Workspace.copy`, `Workspace.paste` and `withFreshIds`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659830
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319209523
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319267820
+      }
+    ],
+    "9.2 Write unit tests in `copyPaste.test.ts`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659848
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319270417
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319330500
+      }
+    ],
+    "10.1 Extend `src/domain/testing/workspaceArbitrary.ts` and `connect.ts`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659865
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319271152
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319331592
+      }
+    ],
+    "10.2 Write property test for resource creation": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659884
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319334062
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319375168
+      }
+    ],
+    "10.3 Write property test for resource edits": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659902
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319380261
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319419726
+      }
+    ],
+    "10.4 Write property test for Placement bounds": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659919
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319425878
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319469460
+      }
+    ],
+    "10.5 Write property test for accepted Links": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659976
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319334794
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319376020
+      }
+    ],
+    "10.6 Write property test for rejected Links": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318659995
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319380293
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319420614
+      }
+    ],
+    "10.7 Write property test for Placement deletion": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660013
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319471982
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319498914
+      }
+    ],
+    "10.8 Write property test for Cascade Delete": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660029
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319501377
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319538030
+      }
+    ],
+    "10.9 Write property test for Data Type usage": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660046
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319540220
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319590993
+      }
+    ],
+    "10.10 Write property test for copy and paste": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660063
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319593068
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319636201
+      }
+    ],
+    "10.11 Extend `history.property.test.ts`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660079
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319335384
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319376865
+      }
+    ],
+    "10.12 Extend `persistence/roundTrip.property.test.ts` for round trip": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660096
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319336000
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319374432
+      }
+    ],
+    "10.13 Extend `persistence/roundTrip.property.test.ts` for corruption": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660114
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319380934
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319421331
+      }
+    ],
+    "10.14 Write property test for paste of a missing Resource": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660130
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319638689
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319676410
+      }
+    ],
+    "11. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660146
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319678824
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319694890
+      }
+    ],
+    "12.1 Create `src/view/resourceIcons.tsx`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660163
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319697391
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319724841
+      }
+    ],
+    "12.2 Update `DiagramProjector`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660179
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319727460
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319770842
+      }
+    ],
+    "12.3 Create `PlacementNode.tsx`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660196
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319728045
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319770874
+      }
+    ],
+    "12.4 Write example tests for projector and handle ids": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660216
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319773412
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319828997
+      }
+    ],
+    "13.1 Update `DeleteFlow` and `ConfirmDialog`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660239
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319773972
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319830050
+      }
+    ],
+    "13.2 Write unit tests in `DeleteFlow.test.ts`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660256
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319832722
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319878756
+      }
+    ],
+    "14.1 Create `ResourcePicker.tsx`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660273
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319833478
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319879503
+      }
+    ],
+    "14.2 Create `ResourceInspector.tsx`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660292
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319833904
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319877639
+      }
+    ],
+    "15.1 Update `pasteOffset`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660309
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319881910
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319909098
+      }
+    ],
+    "15.2 Wire `CanvasView` and `App`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660369
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319911613
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319992842
+      }
+    ],
+    "16.1 Update `docs/diagrams/`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660387
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319995204
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795320038359
+      }
+    ],
+    "16.2 Update `docs/clear-saved-data.md`": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660405
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319995801
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795320039180
+      }
+    ],
+    "17. Final checkpoint - Run build, test and lint": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318660421
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795320041610
+      },
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795320079652
+      }
+    ],
+    "1. Resource kinds and Resource model": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318764533
+      }
+    ],
+    "3. LinkRules": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318795503
+      }
+    ],
+    "2. NodeBounds and Placement": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318856776
+      }
+    ],
+    "4. Diagram changes": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795318907568
+      }
+    ],
+    "6. Workspace and snapshot types": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319130707
+      }
+    ],
+    "7. Serializer validation": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319185785
+      }
+    ],
+    "9. Copy and paste": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319330520
+      }
+    ],
+    "10. Test arbitraries and property tests": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319676476
+      }
+    ],
+    "12. View: icons, projector and PlacementNode": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319829042
+      }
+    ],
+    "13. Delete flow": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319878788
+      }
+    ],
+    "14. Picker and Inspector": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319879572
+      }
+    ],
+    "15. Canvas and App wiring": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795319992893
+      }
+    ],
+    "16. Documentation": [
+      {
+        "executionId": "8ce1c36f-4d99-43a6-8297-a88799e18d48",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795320039220
+      }
+    ]
+  }
+}

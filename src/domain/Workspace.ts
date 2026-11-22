@@ -8,14 +8,19 @@ import type { EnvironmentVariable } from './EnvironmentVariable'
 import type { ExceptionType } from './ExceptionType'
 import type { IdGenerator } from './IdGenerator'
 import { Link } from './Link'
+import { Placement } from './Placement'
+import { Resource } from './Resource'
+import { RESOURCE_KINDS, type ResourceKind } from './ResourceKinds'
+import { ResourceRegistry } from './ResourceRegistry'
 import type { ObservableStore } from './ObservableStore'
 import { DEFAULT_VIEWPORT, type Viewport } from './Viewport'
-import type { ComponentDto, DiagramDto, Fragment, LinkDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
+import type { ComponentDto, DiagramDto, Fragment, LinkDto, PlacementDto, ResourceDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
 
 export class Workspace implements ObservableStore {
   private readonly signal = new ChangeSignal()
   // One context for every Diagram in the tree, so restored and new content share the id source and signal.
   private readonly ctx: DiagramContext
+  private readonly _resources = new ResourceRegistry()
   private _root: Diagram
   private _types: DataType[]
   private _exceptions: ExceptionType[]
@@ -26,9 +31,11 @@ export class Workspace implements ObservableStore {
     types: readonly DataType[],
     exceptions: readonly ExceptionType[],
     environmentVariables: readonly EnvironmentVariable[],
+    resources: readonly ResourceDto[],
     makeRoot: (ctx: DiagramContext) => Diagram,
   ) {
-    this.ctx = { ids, onChange: () => this.signal.notify() }
+    this.ctx = { ids, onChange: () => this.signal.notify(), resources: this._resources }
+    this.loadResources(resources)
     this._root = makeRoot(this.ctx)
     this._types = types.map((t) => ({ ...t }))
     this._exceptions = exceptions.map((e) => ({ ...e }))
@@ -41,10 +48,11 @@ export class Workspace implements ObservableStore {
   }
   toSnapshot(includeViewports = true): WorkspaceSnapshot {
     return {
-      schemaVersion: 7,
+      schemaVersion: 8,
       types: this._types.map((t) => ({ id: t.id, name: t.name })),
       exceptions: this._exceptions.map((e) => ({ id: e.id, name: e.name })),
       environmentVariables: this._environmentVariables.map((v) => ({ id: v.id, name: v.name })),
+      resources: this._resources.all.map((r) => ({ id: r.id, kind: r.kind, name: r.name, typeId: r.typeId })),
       root: diagramToDto(this._root, includeViewports),
     }
   }
@@ -61,29 +69,37 @@ export class Workspace implements ObservableStore {
       d.components.forEach((c) => collect(c.diagram))
     }
     collect(this._root)
+    this.loadResources(parsed.resources)
     this._root = buildDiagram(parsed.root, this.ctx, viewports)
     this._types = parsed.types.map((t) => ({ ...t }))
     this._exceptions = parsed.exceptions.map((e) => ({ ...e }))
     this._environmentVariables = parsed.environmentVariables.map((v) => ({ ...v }))
     this.signal.notify()
   }
-  // Copies the chosen Components with everything nested in them, and the Links between them.
-  copy(diagram: Diagram, componentIds: ReadonlySet<string>): Fragment {
+  // Copies the chosen Components (with everything nested in them) and Placements, and the Links between them.
+  copy(diagram: Diagram, nodeIds: ReadonlySet<string>): Fragment {
     const dto = diagramToDto(diagram, false)
     return {
-      components: dto.components.filter((c) => componentIds.has(c.id)),
-      // A Link to a Component outside the copy would dangle.
-      links: dto.links.filter((l) => componentIds.has(l.sourceId) && componentIds.has(l.targetId)),
+      components: dto.components.filter((c) => nodeIds.has(c.id)),
+      placements: dto.placements.filter((p) => nodeIds.has(p.id)),
+      // A Link to a node outside the copy would dangle.
+      links: dto.links.filter((l) => nodeIds.has(l.sourceId) && nodeIds.has(l.targetId)),
     }
   }
   // Every id is regenerated so a fragment can be pasted any number of times, in any Diagram.
-  paste(diagram: Diagram, fragment: Fragment, offset: Position): { components: Component[]; links: Link[] } {
+  // Placements keep their resourceId: a paste never creates a Resource.
+  paste(diagram: Diagram, fragment: Fragment, offset: Position): { components: Component[]; placements: Placement[]; links: Link[] } {
+    // Checked before any change, so a rejected paste leaves no partial state.
+    const missing = (d: { placements: PlacementDto[]; components: ComponentDto[] }): boolean =>
+      d.placements.some((p) => !this._resources.get(p.resourceId)) || d.components.some((c) => missing(c.diagram))
+    if (missing(fragment)) throw new DomainError('MISSING_RESOURCE', 'A pasted item uses a resource that no longer exists.')
     const fresh = withFreshIds(fragment, this.ctx.ids)
-    const moved = fresh.components.map((c) => ({ ...c, position: { x: c.position.x + offset.x, y: c.position.y + offset.y } }))
-    const components = moved.map((c) => buildComponent(c, this.ctx))
+    const shift = (p: Position): Position => ({ x: p.x + offset.x, y: p.y + offset.y })
+    const components = fresh.components.map((c) => buildComponent({ ...c, position: shift(c.position) }, this.ctx))
+    const placements = fresh.placements.map((p) => new Placement(p.id, p.resourceId, shift(p.position), this.ctx.onChange, p.size))
     const links = fresh.links.map((l) => buildLink(l, this.ctx))
-    diagram.addAll(components, links)
-    return { components, links }
+    diagram.addAll(components, placements, links)
+    return { components, placements, links }
   }
   get types(): readonly DataType[] {
     return this._types
@@ -100,7 +116,7 @@ export class Workspace implements ObservableStore {
   }
   // Refuses instead of untyping ports, so a stray click cannot silently discard type information.
   removeType(id: string): void {
-    if (this.isTypeInUse(id)) throw new DomainError('TYPE_IN_USE', 'This type is used by a port. Change those ports first.')
+    if (this.isTypeInUse(id)) throw new DomainError('TYPE_IN_USE', 'This type is used by a port or resource.')
     this._types = this._types.filter((t) => t.id !== id)
     this.signal.notify()
   }
@@ -108,7 +124,55 @@ export class Workspace implements ObservableStore {
     const uses = ({ details }: { details: Details }) => [...details.inputs, ...details.outputs].some((p) => p.typeId === id)
     const visit = (d: Diagram): boolean =>
       d.components.some((c) => uses(c) || visit(c.diagram)) || d.links.some(uses)
-    return visit(this.root)
+    return visit(this.root) || this._resources.all.some((r) => r.typeId === id)
+  }
+
+  get resources(): ResourceRegistry {
+    return this._resources
+  }
+  // Validates before mutating; the Resource and its Placement share one notification, so creation is one undo step.
+  createPlacedResource(diagram: Diagram, spec: { kind: ResourceKind; name: string; typeId?: string }, position: Position): Placement {
+    let typeId: string | null = null
+    if (RESOURCE_KINDS[spec.kind].typed) {
+      if (this._types.length === 0) throw new DomainError('NO_TYPES', 'Add a Data Type first.')
+      if (spec.typeId === undefined) throw new DomainError('TYPE_REQUIRED', 'Choose a Data Type.')
+      this.requireType(spec.typeId)
+      typeId = spec.typeId
+    }
+    const resource = new Resource(this.ctx.ids.next(), spec.kind, spec.name, typeId, this.ctx.onChange)
+    this._resources.add(resource)
+    return diagram.addPlacement(resource.id, position)
+  }
+  setResourceType(id: string, typeId: string): void {
+    const resource = this._resources.get(id)
+    if (!resource) throw new DomainError('MISSING_RESOURCE', 'The resource no longer exists.')
+    this.requireType(typeId)
+    resource.setType(typeId)
+  }
+  // What removeResource will delete, across every Diagram, so the UI can warn first.
+  resourceImpact(id: string): { placements: number; links: number } {
+    return this.allDiagrams().reduce(
+      (sum, d) => {
+        const n = d.countPlacementsOf(id)
+        return { placements: sum.placements + n.placements, links: sum.links + n.links }
+      },
+      { placements: 0, links: 0 },
+    )
+  }
+  // Cascade Delete in one notification, so History records a single undo step.
+  removeResource(id: string): void {
+    if (!this._resources.get(id)) throw new DomainError('MISSING_RESOURCE', 'The resource no longer exists.')
+    this.allDiagrams().forEach((d) => d.dropPlacementsOf(id))
+    this._resources.remove(id)
+    this.signal.notify()
+  }
+  private requireType(typeId: string): void {
+    if (!this._types.some((t) => t.id === typeId)) throw new DomainError('UNKNOWN_TYPE', 'The data type does not exist.')
+  }
+  // The registry instance is shared with the DiagramContext, so it is refilled in place.
+  private loadResources(dtos: readonly ResourceDto[]): void {
+    this._resources.all.slice().forEach((r) => this._resources.remove(r.id))
+    dtos.forEach((r) => this._resources.add(new Resource(r.id, r.kind, r.name, r.typeId, this.ctx.onChange)))
   }
 
   get exceptions(): readonly ExceptionType[] {
@@ -157,6 +221,10 @@ export class Workspace implements ObservableStore {
     this._environmentVariables = this._environmentVariables.filter((v) => v.id !== id)
     this.signal.notify()
   }
+  private allDiagrams(): Diagram[] {
+    const visit = (d: Diagram): Diagram[] => [d, ...d.components.flatMap((c) => visit(c.diagram))]
+    return visit(this._root)
+  }
   private allComponents(): Component[] {
     const visit = (d: Diagram): Component[] => d.components.flatMap((c) => [c, ...visit(c.diagram)])
     return visit(this._root)
@@ -167,12 +235,12 @@ export class Workspace implements ObservableStore {
 
   static empty(ids: IdGenerator): Workspace {
     const defaults = ['number', 'string', 'boolean'].map((name) => ({ id: ids.next(), name }))
-    return new Workspace(ids, defaults, [], [], (ctx) => new Diagram(ids.next(), ctx))
+    return new Workspace(ids, defaults, [], [], [], (ctx) => new Diagram(ids.next(), ctx))
   }
 
   // Expects a snapshot already validated by WorkspaceSerializer.
   static restore(snapshot: WorkspaceSnapshot, ids: IdGenerator): Workspace {
-    return new Workspace(ids, snapshot.types, snapshot.exceptions, snapshot.environmentVariables, (ctx) => buildDiagram(snapshot.root, ctx))
+    return new Workspace(ids, snapshot.types, snapshot.exceptions, snapshot.environmentVariables, snapshot.resources, (ctx) => buildDiagram(snapshot.root, ctx))
   }
 }
 
@@ -181,6 +249,12 @@ function diagramToDto(d: Diagram, includeViewports: boolean): DiagramDto {
   return {
     id: d.id,
     viewport,
+    placements: d.placements.map((p) => ({
+      id: p.id,
+      resourceId: p.resourceId,
+      position: { x: p.position.x, y: p.position.y },
+      size: p.size && { width: p.size.width, height: p.size.height },
+    })),
     components: d.components.map((c) => ({
       id: c.id,
       details: c.details.toJSON(),
@@ -205,7 +279,8 @@ function diagramToDto(d: Diagram, includeViewports: boolean): DiagramDto {
 function buildDiagram(dto: DiagramDto, ctx: DiagramContext, viewports?: ReadonlyMap<string, Viewport>): Diagram {
   const components = dto.components.map((c) => buildComponent(c, ctx, viewports))
   const links = dto.links.map((l) => buildLink(l, ctx))
-  return new Diagram(dto.id, ctx, viewports?.get(dto.id) ?? dto.viewport, components, links)
+  const placements = dto.placements.map((p: PlacementDto) => new Placement(p.id, p.resourceId, p.position, ctx.onChange, p.size))
+  return new Diagram(dto.id, ctx, viewports?.get(dto.id) ?? dto.viewport, components, links, placements)
 }
 function buildComponent(c: ComponentDto, ctx: DiagramContext, viewports?: ReadonlyMap<string, Viewport>): Component {
   return new Component(c.id, new Details(ctx.onChange, c.details), c.position, buildDiagram(c.diagram, ctx, viewports), ctx.onChange, c.size, c.exceptionIds, c.environmentVariableIds)
@@ -220,8 +295,18 @@ function withFreshIds(fragment: Fragment, ids: IdGenerator): Fragment {
     if (!renamed.has(id)) renamed.set(id, ids.next())
     return renamed.get(id)!
   }
-  const diagram = (d: DiagramDto): DiagramDto => ({ ...d, id: ids.next(), components: d.components.map(component), links: d.links.map(link) })
+  const diagram = (d: DiagramDto): DiagramDto => ({
+    ...d,
+    id: ids.next(),
+    components: d.components.map(component),
+    placements: d.placements.map((p) => ({ ...p, id: fresh(p.id) })),
+    links: d.links.map(link),
+  })
   const component = (c: ComponentDto): ComponentDto => ({ ...c, id: fresh(c.id), diagram: diagram(c.diagram) })
   const link = (l: LinkDto): LinkDto => ({ ...l, id: ids.next(), sourceId: fresh(l.sourceId), targetId: fresh(l.targetId) })
-  return { components: fragment.components.map(component), links: fragment.links.map(link) }
+  return {
+    components: fragment.components.map(component),
+    placements: fragment.placements.map((p) => ({ ...p, id: fresh(p.id) })),
+    links: fragment.links.map(link),
+  }
 }

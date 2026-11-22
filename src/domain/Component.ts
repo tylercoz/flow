@@ -1,17 +1,16 @@
 import type { Describable } from './Describable'
 import type { Details } from './Details'
 import type { Diagram } from './Diagram'
+import { NodeBounds, type Positioned } from './NodeBounds'
 
 export type Position = { x: number; y: number }
 
 export type Size = { width: number; height: number }
-export class Component implements Describable {
+export class Component implements Describable, Positioned {
   readonly id: string
   readonly details: Details
   readonly diagram: Diagram
-  private _position: Position
-  // Undefined until the user resizes, so the box keeps fitting its text.
-  private _size: Size | undefined
+  private readonly bounds: NodeBounds
   // Ids into Workspace.exceptions; kept off Details because Links share Details and have no exceptions.
   private _exceptionIds: string[]
   // Ids into Workspace.environmentVariables; off Details for the same reason as exceptions.
@@ -30,8 +29,7 @@ export class Component implements Describable {
     this.id = id
     this.details = details
     this.diagram = diagram
-    this._position = { ...position }
-    this._size = size && { ...size }
+    this.bounds = new NodeBounds(position, onChange, size)
     this._exceptionIds = [...exceptionIds]
     this._environmentVariableIds = [...environmentVariableIds]
     this.onChange = onChange
@@ -60,19 +58,15 @@ export class Component implements Describable {
     this._exceptionIds = this._exceptionIds.filter((e) => e !== id)
   }
   get position(): Readonly<Position> {
-    return this._position
+    return this.bounds.position
   }
   get size(): Readonly<Size> | undefined {
-    return this._size
+    return this.bounds.size
   }
-  // Position and size change together because resizing from the top or left edge moves the origin.
   setBounds(p: Position, s: Size): void {
-    this._position = { x: p.x, y: p.y }
-    this._size = { width: s.width, height: s.height }
-    this.onChange()
+    this.bounds.setBounds(p, s)
   }
   setPosition(p: Position): void {
-    this._position = { x: p.x, y: p.y }
-    this.onChange()
+    this.bounds.setPosition(p)
   }
 }

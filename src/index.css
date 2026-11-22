@@ -183,6 +183,34 @@ textarea:focus {
 .react-flow__node-component {
   display: flex;
 }
+.react-flow__node-resource {
+  display: flex;
+}
+.placement-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.placement-node:hover,
+.react-flow__node.selected .placement-node {
+  border-color: var(--accent);
+}
+.placement-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.placement-type {
+  font-size: 0.85em;
+  opacity: 0.7;
+}
 .component-body {
   position: relative;
   display: flex;
@@ -452,6 +480,30 @@ textarea:focus {
   border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+.canvas-menu {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.canvas-menu button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 6px;
 }
 .dialog p {
   flex-basis: 100%;
