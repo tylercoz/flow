@@ -4,7 +4,7 @@ import type { Scheduler, TimerHandle } from '../domain/Scheduler'
 
 export const RENAME_DELAY_MS = 300
 
-// Delays the start of Rename so a double-click can cancel it, and holds which Component is being renamed.
+// Delays the start of Rename so a double-click can cancel it, and holds which Placement or Link is being renamed.
 export class RenameController implements ObservableStore {
   private readonly signal = new ChangeSignal()
   private pending: TimerHandle | undefined

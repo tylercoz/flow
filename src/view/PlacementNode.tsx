@@ -62,7 +62,7 @@ export function PlacementNode({ id, selected, width, height }: NodeProps) {
       {resource?.definition ? (
         <ComponentBody id={id} selected={!!selected} resource={resource} box={box} style={floor} />
       ) : (
-        resource && <ResourceBody resource={resource} style={floor} />
+        resource && <ResourceBody id={id} resource={resource} style={floor} />
       )}
     </>
   )
@@ -70,14 +70,20 @@ export function PlacementNode({ id, selected, width, height }: NodeProps) {
 
 type BodyStyle = { minWidth: number; minHeight: number }
 
-function ResourceBody({ resource, style }: { resource: Resource; style: BodyStyle }) {
+function ResourceBody({ id, resource, style }: { id: string; resource: Resource; style: BodyStyle }) {
   const { workspace } = useApp()
+  const controller = useRenameController()
+  useStore(controller)
   const typeName = resource.typeId ? workspace.types.find((t) => t.id === resource.typeId)?.name : undefined
   return (
-    <div style={style} className="placement-node">
+    <div style={style} className="placement-node" onDoubleClick={() => controller.start(id)}>
       <ResourceIcon kind={resource.kind} />
       <div className="placement-text">
-        <span className="placement-name">{resource.name}</span>
+        {controller.editingId === id ? (
+          <RenameInput target={resource} controller={controller} />
+        ) : (
+          <span className="placement-name">{resource.name}</span>
+        )}
         {typeName && <span className="placement-type">{typeName}</span>}
       </div>
       {resource.kind === 'database' ? (

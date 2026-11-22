@@ -301,7 +301,9 @@ textarea:focus {
 }
 /* The node's own selection ring already shows the editing state, so the input must not draw a second box. */
 .component-node textarea,
-.component-node textarea:focus {
+.component-node textarea:focus,
+.placement-node textarea,
+.placement-node textarea:focus {
   display: block;
   /* An editing textarea's default 20-column width, not the text, sized the box on creation. */
   width: auto;

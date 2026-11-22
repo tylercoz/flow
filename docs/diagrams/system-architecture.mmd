@@ -125,7 +125,7 @@ flowchart TD
     LinkEdge -->|start; reads controller from| RenameController
     LinkEdge -->|renders| RenameInput
     PlacementNode -->|renders; reads controller from| RenameInput
-    PlacementNode -->|schedule, cancel, end; useStore| RenameController
+    PlacementNode -->|"schedule, start, cancel, end; useStore; double-click starts a Rename for any kind"| RenameController
     PlacementNode -->|"component: renders inputs and outputs"| PortList
     PortList -->|applyPortName| portEdit
     PortList -->|"onChange: ports, Handle per port"| PlacementNode
