@@ -129,13 +129,13 @@ describe('History properties', () => {
             const diagrams = workspace.allDiagrams()
             diagrams[w.diagram % diagrams.length].setViewport(w.viewport)
           } else {
-            const targets = [
-              ...workspace.componentResources().map((r) => r.definition!.details),
-              ...workspace.allDiagrams().flatMap((d) => d.links.map((l) => l.details)),
-            ]
-            if (targets.length) {
-              const details = targets[w.pick % targets.length]
-              details.patch(details.toJSON())
+            const definitions = workspace.componentResources().map((r) => r.definition!)
+            const links = workspace.allDiagrams().flatMap((d) => d.links)
+            const target = [...definitions, ...links]
+            if (target.length) {
+              const item = target[w.pick % target.length]
+              if ('setNotes' in item) item.setNotes(item.notes)
+              else item.setName(item.name)
             }
           }
         }

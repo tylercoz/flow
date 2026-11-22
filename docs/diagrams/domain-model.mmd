@@ -90,7 +90,11 @@ classDiagram
         removeLink(id)
     }
     class ComponentDefinition {
-        details
+        inputs: list of Port
+        outputs: list of Port
+        notes
+        setPorts(field, ports)
+        setNotes(notes)
         diagram: the one child Diagram, shared by every Placement
         exceptionIds: ExceptionType ids
         environmentVariableIds: EnvironmentVariable ids
@@ -121,14 +125,17 @@ classDiagram
     }
     class ResourceKinds {
         <<module>>
-        RESOURCE_KINDS: typed, sourceIds, targetIds per kind (component handles come from its Details ports)
+        RESOURCE_KINDS: typed per kind
+        FIXED_HANDLES: source and target ids per non-component kind
         DATABASE_PORTS
         SIDE_PORTS
+        handleIds(kind, ports, role)  %% a component's ids come from the given ports
+        kindInvariantError(kind, typeId, hasDefinition)
         isResourceKind(v)
     }
     class LinkRules {
         <<module>>
-        checkLink(source, sourcePortId, target, targetPortId)
+        checkLink(sourceIds, sourcePortId, targetIds, targetPortId)
     }
     class Resource {
         id
@@ -136,8 +143,9 @@ classDiagram
         name
         typeId: DataType id or null
         definition: ComponentDefinition, non-null only for component
-        setName(name)  %% a component's name lives in definition.details
+        setName(name)
         setType(typeId)
+        handleIds(role)
     }
     class ResourceKind {
         <<type>>
@@ -152,26 +160,25 @@ classDiagram
     }
     class Link {
         id
-        sourceId
-        targetId
+        name
         sourceId, targetId: Placement ids in the same Diagram
         sourcePortId: output port id of the source Resource
         targetPortId: input port id of the target Resource
-        details
-    }
-    class Details {
-        name
-        inputs: list of Port
-        outputs: list of Port
-        notes
-        patch(partial)
-        toJSON()
+        setName(name)
     }
     class Port {
         <<type>>
         id
         name
         typeId: DataType id or null
+    }
+    class Catalog {
+        all: list of entries
+        has(id)
+        add(name)
+        rename(id, name)
+        remove(id)
+        replace(entries)
     }
     class DataType {
         <<type>>
@@ -187,11 +194,6 @@ classDiagram
         <<type>>
         id
         name
-    }
-    class Describable {
-        <<interface>>
-        id
-        details
     }
     class Notifier {
         messages
@@ -219,7 +221,7 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 9
+        schemaVersion: 10
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable
@@ -273,18 +275,16 @@ classDiagram
     ResourceRegistry *-- Resource
     Resource ..> DataType : typed kinds refer by id
     Resource --> DomainError : INVALID_RESOURCE
-    Workspace *-- DataType
-    Workspace *-- ExceptionType
+    Workspace *-- Catalog : one each for types, exceptions, environment variables
+    Catalog o-- DataType
+    Catalog o-- ExceptionType
     ComponentDefinition ..> ExceptionType : can return, by id
-    Workspace *-- EnvironmentVariable
+    Catalog o-- EnvironmentVariable
     ComponentDefinition ..> EnvironmentVariable : relies on, by id
-    Details *-- Port
+    ComponentDefinition *-- Port
     Link ..> Port : joins an output to an input, by id
     Port ..> DataType : refers by id
     Workspace --> DomainError : TYPE_IN_USE
-    ComponentDefinition *-- Details
-    Link *-- Details
-    Link ..|> Describable
     Navigator --> Diagram : reads root, follows Placement ids via resourceOf
     Notifier --> Scheduler
     TimerScheduler ..|> Scheduler

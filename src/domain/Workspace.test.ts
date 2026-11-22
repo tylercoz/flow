@@ -5,7 +5,6 @@ import { connect } from './testing/connect'
 import { Workspace } from './Workspace'
 import type { DiagramDto, ResourceDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
 
-const details = (name: string) => ({ name, inputs: [], outputs: [], notes: '' })
 const viewport = { x: 0, y: 0, zoom: 1 }
 const diagramDto = (id: string, placements: DiagramDto['placements'] = []): DiagramDto => ({ id, viewport, placements, links: [] })
 const componentDto = (id: string, name: string, diagram: DiagramDto): ResourceDto => ({
@@ -13,11 +12,11 @@ const componentDto = (id: string, name: string, diagram: DiagramDto): ResourceDt
   kind: 'component',
   name,
   typeId: null,
-  component: { details: details(name), exceptionIds: [], environmentVariableIds: [], diagram },
+  component: { inputs: [], outputs: [], notes: '', exceptionIds: [], environmentVariableIds: [], diagram },
 })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 9,
+  schemaVersion: 10,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -37,18 +36,18 @@ function restore() {
 }
 
 describe('Workspace.restore', () => {
-  it('keeps stored ids and details', () => {
-    const { workspace, a, b } = restore()
+  it('keeps stored ids and names', () => {
+    const { workspace, a } = restore()
     expect(workspace.root.id).toBe('r')
     expect(workspace.root.placements[0].id).toBe('pa')
     expect(a.diagram.placements[0].id).toBe('pb')
-    expect(b.details.name).toBe('B')
+    expect(workspace.resources.get('rb')!.name).toBe('B')
   })
 
   it('notifies when a nested component Resource changes', () => {
     const { workspace, b } = restore()
     const before = workspace.getVersion()
-    b.details.patch({ name: 'B2' })
+    b.setNotes('changed')
     expect(workspace.getVersion()).toBeGreaterThan(before)
   })
 
@@ -85,7 +84,7 @@ describe('Workspace types', () => {
     expect(ws.types.some((t) => t.id === type.id)).toBe(false)
     expect(ws.getVersion()).toBe(before + 3)
   })
-  it('refuses to remove a type used by a nested component port or a link port', () => {
+  it('refuses to remove a type used by the port of a nested component or of another component', () => {
     const ws = empty()
     const [number, string] = ws.types
     const parent = ws.createPlacedResource(ws.root, { kind: 'component', name: 'P' }, { x: 0, y: 0 })
@@ -93,8 +92,7 @@ describe('Workspace types', () => {
     const nested = ws.createPlacedResource(parentDiagram, { kind: 'component', name: 'N' }, { x: 0, y: 0 })
     ws.setPorts(nested.resourceId, 'inputs', [{ name: 'a', typeId: number.id }])
     const other = ws.createPlacedResource(ws.root, { kind: 'component', name: 'O' }, { x: 1, y: 1 })
-    const link = connect(ws, ws.root, other, parent)
-    link.details.patch({ outputs: [{ id: 'lp', name: 'b', typeId: string.id }] })
+    ws.setPorts(other.resourceId, 'outputs', [{ name: 'b', typeId: string.id }])
     expect(() => ws.removeType(number.id)).toThrow(DomainError)
     expect(() => ws.removeType(string.id)).toThrow(DomainError)
     ws.setPorts(nested.resourceId, 'inputs', [])
@@ -323,7 +321,7 @@ describe('Workspace resources', () => {
     const second = nested.addPlacement(first.resourceId, { x: 5, y: 5 })
     const target = workspace.createPlacedResource(workspace.root, { kind: 'component', name: 'T' }, { x: 9, y: 9 })
     workspace.setPorts(target.resourceId, 'inputs', [{ name: 'in', typeId: null }])
-    const input = workspace.resources.get(target.resourceId)!.definition!.details.inputs[0]
+    const input = workspace.resources.get(target.resourceId)!.definition!.inputs[0]
     workspace.root.addLink(first.id, target.id, 'top', input.id)
     expect(workspace.resourceImpact(first.resourceId)).toEqual({ placements: 2, links: 1 })
 
@@ -356,7 +354,7 @@ describe('Workspace resources', () => {
     workspace.root.resourceOf(first.id)!.setName('Renamed')
     expect(nested.resourceOf(second.id)!.name).toBe('Renamed')
     workspace.setPorts(first.resourceId, 'inputs', [{ name: 'in', typeId: null }])
-    expect(nested.resourceOf(second.id)!.definition!.details.inputs).toHaveLength(1)
+    expect(nested.resourceOf(second.id)!.definition!.inputs).toHaveLength(1)
     // Geometry stays private to each Placement.
     expect(second.position).toEqual({ x: 7, y: 7 })
     expect(first.position).toEqual({ x: 0, y: 0 })

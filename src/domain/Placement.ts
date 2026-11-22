@@ -1,7 +1,7 @@
 import { NodeBounds, type Position, type Size } from './NodeBounds'
 
 // A leaf node that shows one shared Resource in a Diagram. Name and type live on the Resource,
-// so a Placement has no Details and is not Describable.
+// so a Placement has no name or ports of its own.
 export class Placement {
   readonly id: string
   readonly resourceId: string

@@ -1,6 +1,6 @@
 import type { ComponentDefinition } from './ComponentDefinition'
 import { DomainError } from './DomainError'
-import { RESOURCE_KINDS, type ResourceKind } from './ResourceKinds'
+import { handleIds, kindInvariantError, RESOURCE_KINDS, type HandleRole, type ResourceKind } from './ResourceKinds'
 
 export class Resource {
   readonly id: string
@@ -18,12 +18,8 @@ export class Resource {
     definition: ComponentDefinition | null,
     onChange: () => void,
   ) {
-    if ((kind === 'component') !== (definition !== null)) {
-      throw new DomainError('INVALID_RESOURCE', `A ${kind} resource ${definition ? 'cannot' : 'must'} have a component definition.`)
-    }
-    const typed = RESOURCE_KINDS[kind].typed
-    if (typed && typeId === null) throw new DomainError('INVALID_RESOURCE', `A ${kind} resource needs a data type.`)
-    if (!typed && typeId !== null) throw new DomainError('INVALID_RESOURCE', `A ${kind} resource cannot have a data type.`)
+    const invalid = kindInvariantError(kind, typeId, definition !== null)
+    if (invalid) throw new DomainError('INVALID_RESOURCE', invalid)
     this.id = id
     this.kind = kind
     this._name = name
@@ -31,18 +27,17 @@ export class Resource {
     this.definition = definition
     this.onChange = onChange
   }
-  // A component's name lives in Details so the rename input and the Inspector edit one field.
   get name(): string {
-    return this.definition ? this.definition.details.name : this._name
+    return this._name
   }
   get typeId(): string | null {
     return this._typeId
   }
+  // Read live from the definition, so a port edit shows in every Diagram with no copying.
+  handleIds(role: HandleRole): readonly string[] {
+    return handleIds(this.kind, this.definition, role)
+  }
   setName(name: string): void {
-    if (this.definition) {
-      this.definition.details.patch({ name }) // notifies once
-      return
-    }
     this._name = name
     this.onChange()
   }

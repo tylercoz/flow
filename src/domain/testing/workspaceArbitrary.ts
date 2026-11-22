@@ -1,8 +1,8 @@
 import fc from 'fast-check'
 import type { Position, Size } from '../NodeBounds'
 import type { Placement } from '../Placement'
+import type { Port } from '../Port'
 import { RESOURCE_KINDS, type ResourceKind } from '../ResourceKinds'
-import type { DetailsDto } from '../Details'
 import type { IdGenerator } from '../IdGenerator'
 import type { Viewport } from '../Viewport'
 import { Workspace } from '../Workspace'
@@ -27,8 +27,9 @@ export const viewportArb: fc.Arbitrary<Viewport> = fc.record({
 })
 // Generated workspaces have no ids to point at, so ports are untyped here; type references are covered by unit tests.
 const portArb = fc.record({ id: fc.nat({ max: 20 }).map((n) => `p${n}`), name: fc.string(), typeId: fc.constant(null) })
-export const detailsPatchArb: fc.Arbitrary<Partial<DetailsDto>> = fc.record(
-  { name: fc.string(), inputs: fc.array(portArb), outputs: fc.array(portArb), notes: fc.string() },
+export type ComponentPatch = { inputs?: Port[]; outputs?: Port[]; notes?: string }
+export const componentPatchArb: fc.Arbitrary<ComponentPatch> = fc.record(
+  { inputs: fc.array(portArb), outputs: fc.array(portArb), notes: fc.string() },
   { requiredKeys: [] },
 )
 
@@ -40,8 +41,8 @@ export type Command =
   | { kind: 'addComponent'; diagram: number; position: { x: number; y: number } }
   | { kind: 'addLink'; diagram: number; source: number; target: number; sourcePort: number; targetPort: number }
   | { kind: 'removeLink'; diagram: number; link: number }
-  | { kind: 'patchComponent'; component: number; patch: Partial<DetailsDto> }
-  | { kind: 'patchLink'; diagram: number; link: number; patch: Partial<DetailsDto> }
+  | { kind: 'patchComponent'; component: number; patch: ComponentPatch }
+  | { kind: 'patchLink'; diagram: number; link: number; name: string }
   | { kind: 'setViewport'; diagram: number; viewport: Viewport }
   | { kind: 'addException'; name: string }
   | { kind: 'toggleException'; component: number; exception: number }
@@ -65,8 +66,8 @@ export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addComponent' as const), diagram: pick, position: positionArb }), weight: 5 },
   { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick, sourcePort: pick, targetPort: pick }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('removeLink' as const), diagram: pick, link: pick }), weight: 1 },
-  { arbitrary: fc.record({ kind: fc.constant('patchComponent' as const), component: pick, patch: detailsPatchArb }), weight: 2 },
-  { arbitrary: fc.record({ kind: fc.constant('patchLink' as const), diagram: pick, link: pick, patch: detailsPatchArb }), weight: 1 },
+  { arbitrary: fc.record({ kind: fc.constant('patchComponent' as const), component: pick, patch: componentPatchArb }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('patchLink' as const), diagram: pick, link: pick, name: fc.string() }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('setViewport' as const), diagram: pick, viewport: viewportArb }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('addException' as const), name: fc.string() }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('toggleException' as const), component: pick, exception: pick }), weight: 3 },
@@ -91,12 +92,7 @@ const at = <T>(items: readonly T[], i: number): T | undefined => (items.length ?
 export function handleIds(workspace: Workspace, placement: Placement, role: 'source' | 'target'): readonly string[] {
   const resource = workspace.resources.get(placement.resourceId)
   if (!resource) return []
-  if (resource.definition) {
-    const { inputs, outputs } = resource.definition.details
-    return (role === 'source' ? outputs : inputs).map((p) => p.id)
-  }
-  const spec = RESOURCE_KINDS[resource.kind]
-  return role === 'source' ? spec.sourceIds : spec.targetIds
+  return resource.handleIds(role)
 }
 
 // Commands that have no valid target (empty diagram, self-link pick) are skipped, not errors.
@@ -145,7 +141,7 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
       const { inputs, outputs, ...rest } = cmd.patch
       if (inputs) workspace.setPorts(at(components, cmd.component)!.id, 'inputs', inputs)
       else if (outputs) workspace.setPorts(at(components, cmd.component)!.id, 'outputs', outputs)
-      else c.details.patch(rest)
+      else if (rest.notes !== undefined) c.setNotes(rest.notes)
       return
     }
     case 'toggleEnvironmentVariable': {
@@ -211,7 +207,7 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
       return
     }
     case 'patchLink':
-      at(d.links, cmd.link)?.details.patch(cmd.patch)
+      at(d.links, cmd.link)?.setName(cmd.name)
       return
     case 'setViewport':
       d.setViewport(cmd.viewport)

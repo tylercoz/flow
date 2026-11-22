@@ -27,8 +27,8 @@ describe('Diagram links', () => {
         expect(diagram.links).toHaveLength(before.length + 1)
         expect(diagram.links.filter((l) => !before.includes(l.id))).toEqual([link])
         expect([link.sourceId, link.targetId]).toEqual([source.id, target.id])
-        const out = workspace.resources.get(source.resourceId)!.definition!.details.outputs.at(-1)?.id
-        const inn = workspace.resources.get(target.resourceId)!.definition!.details.inputs.at(-1)?.id
+        const out = workspace.resources.get(source.resourceId)!.definition!.outputs.at(-1)?.id
+        const inn = workspace.resources.get(target.resourceId)!.definition!.inputs.at(-1)?.id
         expect([link.sourcePortId, link.targetPortId]).toEqual([out, inn])
 
         diagram.removeLink(link.id)

@@ -23,8 +23,8 @@ describe('Created components start empty', () => {
         expect(diagram.placements.slice(0, -1)).toEqual(placementsBefore)
         expect(diagram.placements.at(-1)).toBe(created)
         expect(created.position).toEqual(position)
-        expect(resource.definition!.details.inputs).toHaveLength(0)
-        expect(resource.definition!.details.outputs).toHaveLength(0)
+        expect(resource.definition!.inputs).toHaveLength(0)
+        expect(resource.definition!.outputs).toHaveLength(0)
         expect(resource.definition!.diagram.placements).toHaveLength(0)
         expect(resource.definition!.diagram.links).toHaveLength(0)
       }),

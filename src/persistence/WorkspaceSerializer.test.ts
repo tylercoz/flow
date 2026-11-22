@@ -5,7 +5,6 @@ import { PersistenceError } from './PersistenceError'
 import { WorkspaceSerializer } from './WorkspaceSerializer'
 
 const serializer = new WorkspaceSerializer()
-const details = { name: '', inputs: [], outputs: [], notes: '' }
 const diagram = (id: string, placements: unknown[] = [], links: unknown[] = []) => ({
   id,
   viewport: { x: 0, y: 0, zoom: 1 },
@@ -13,17 +12,17 @@ const diagram = (id: string, placements: unknown[] = [], links: unknown[] = []) 
   links,
 })
 const placement = (id: string, resourceId: string) => ({ id, resourceId, position: { x: 1, y: 2 } })
-// A component Resource; its name lives in `details.name`.
+// A component Resource.
 const componentResource = (id: string, over: Record<string, unknown> = {}, child = diagram(`${id}-d`)) => ({
   id,
   kind: 'component',
   name: '',
   typeId: null,
-  component: { details, exceptionIds: [], environmentVariableIds: [], diagram: child, ...over },
+  component: { inputs: [], outputs: [], notes: '', exceptionIds: [], environmentVariableIds: [], diagram: child, ...over },
 })
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 9,
+  schemaVersion: 10,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -48,7 +47,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(9)
+    expect(serializer.serialize(ws).schemaVersion).toBe(10)
     expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -72,13 +71,13 @@ describe('WorkspaceSerializer', () => {
   })
 
   it('keeps types and port type references', () => {
-    const typed = { ...details, outputs: [{ id: 'p', name: 'o', typeId: 't1' }] }
-    const raw = valid(diagram('r'), [componentResource('a', { details: typed })], { types: [{ id: 't1', name: 'number' }] })
+    const typed = [{ id: 'p', name: 'o', typeId: 't1' }]
+    const raw = valid(diagram('r'), [componentResource('a', { outputs: typed })], { types: [{ id: 't1', name: 'number' }] })
     expect(serializer.deserialize(raw)).toEqual(raw)
   })
   it('rejects a port that names a missing type', () => {
-    const typed = { ...details, outputs: [{ id: 'p', name: 'o', typeId: 'ghost' }] }
-    expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { details: typed })]))).toThrow(PersistenceError)
+    const typed = [{ id: 'p', name: 'o', typeId: 'ghost' }]
+    expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { outputs: typed })]))).toThrow(PersistenceError)
   })
   it('keeps exceptions and the exception ids of component Resources', () => {
     const raw = valid(diagram('r'), [componentResource('a', { exceptionIds: ['e1'] })], { exceptions: [{ id: 'e1', name: 'NotFound' }] })
@@ -97,18 +96,19 @@ describe('WorkspaceSerializer', () => {
     expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['ghost'] })]))).toThrow(PersistenceError)
   })
 
-  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [10], [undefined], ['9']])('rejects schemaVersion %s', (schemaVersion) => {
+  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [11], [undefined], ['10']])('rejects schemaVersion %s', (schemaVersion) => {
     expect(() => serializer.deserialize({ ...valid(), schemaVersion })).toThrow(PersistenceError)
   })
 
   it.each([
     ['null', null],
     ['array', []],
-    ['missing root', { schemaVersion: 9 }],
+    ['missing root', { schemaVersion: 10 }],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],
     ['non-array placements', valid({ ...diagram('r'), placements: {} } as never)],
-    ['missing details field', valid(diagram('r'), [componentResource('c', { details: { name: 'x' } })])],
+    ['missing notes', valid(diagram('r'), [componentResource('c', { notes: undefined })])],
+    ['non-array inputs', valid(diagram('r'), [componentResource('c', { inputs: 'x' })])],
     ['non-finite position', valid(diagram('r', [{ ...placement('p', 'c'), position: { x: Infinity, y: 0 } }]), [componentResource('c')])],
     ['non-numeric size', valid(diagram('r', [{ ...placement('p', 'c'), size: { width: '9', height: 1 } }]), [componentResource('c')])],
     ['malformed child diagram', valid(diagram('r'), [componentResource('c', { diagram: 5 })])],
@@ -136,15 +136,15 @@ describe('WorkspaceSerializer', () => {
     })
 
     it('names the Link whose endpoint is missing from its diagram', () => {
-      const link = { id: 'bad-l', details, sourceId: 'p1', targetId: 'ghost', sourcePortId: 'o', targetPortId: 'i' }
-      const a = componentResource('a', { details: { ...details, outputs: [port('o')] } })
+      const link = { id: 'bad-l', name: '', sourceId: 'p1', targetId: 'ghost', sourcePortId: 'o', targetPortId: 'i' }
+      const a = componentResource('a', { outputs: [port('o')] })
       expect(rejection(valid(diagram('r', [placement('p1', 'a')], [link]), [a]))).toContain('bad-l')
     })
 
     it('names the Link whose port is not on the referenced Resource or is on the wrong side', () => {
-      const a = componentResource('a', { details: { ...details, outputs: [port('o')] } })
-      const b = componentResource('b', { details: { ...details, inputs: [port('i')] } })
-      const link = { id: 'bad-l', details, sourceId: 'p1', targetId: 'p2', sourcePortId: 'o', targetPortId: 'i' }
+      const a = componentResource('a', { outputs: [port('o')] })
+      const b = componentResource('b', { inputs: [port('i')] })
+      const link = { id: 'bad-l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'o', targetPortId: 'i' }
       const ps = [placement('p1', 'a'), placement('p2', 'b')]
       expect(() => serializer.deserialize(valid(diagram('r', ps, [link]), [a, b]))).not.toThrow()
       for (const bad of [{ targetPortId: 'o' }, { sourcePortId: 'i' }, { targetPortId: 'ghost' }]) {
@@ -185,15 +185,15 @@ describe('WorkspaceSerializer', () => {
     const withResources = (root: unknown, overrides: Record<string, unknown> = {}) => ({ ...valid(), types, resources, root, ...overrides })
 
     it('round-trips resources, placements with a size, and a link between placements', () => {
-      const out = componentResource('c', { details: { ...details, outputs: [port('o')] } })
-      const link = { id: 'l', details, sourceId: 'pc', targetId: 'p1', sourcePortId: 'o', targetPortId: 'write' }
+      const out = componentResource('c', { outputs: [port('o')] })
+      const link = { id: 'l', name: '', sourceId: 'pc', targetId: 'p1', sourcePortId: 'o', targetPortId: 'write' }
       const sized = { ...placement('p1', 'r1'), size: { width: 90, height: 40 } }
       const raw = withResources(diagram('r', [placement('pc', 'c'), sized, placement('p2', 'r2')], [link]), { resources: [...resources, out] })
       expect(serializer.deserialize(JSON.parse(JSON.stringify(raw)))).toEqual(raw)
     })
 
     it('accepts a link between two placements using side ids', () => {
-      const link = { id: 'l', details, sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
+      const link = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
       expect(() => serializer.deserialize(withResources(diagram('r', [placement('p1', 'r1'), placement('p2', 'r2')], [link])))).not.toThrow()
     })
 
@@ -209,11 +209,11 @@ describe('WorkspaceSerializer', () => {
 
     it('rejects a link end in another diagram, or with a handle the placement lacks', () => {
       const inner = componentResource('c', {}, diagram('c-d', [placement('inner', 'r1')]))
-      const outside = { id: 'l', details, sourceId: 'p1', targetId: 'inner', sourcePortId: 'read', targetPortId: 'write' }
+      const outside = { id: 'l', name: '', sourceId: 'p1', targetId: 'inner', sourcePortId: 'read', targetPortId: 'write' }
       const raw = withResources(diagram('r', [placement('p1', 'r1')], [outside]), { resources: [...resources, inner] })
       expect(() => serializer.deserialize(raw)).toThrow(PersistenceError)
 
-      const base = { id: 'l', details, sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
+      const base = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'read', targetPortId: 'left' }
       for (const bad of [{ sourcePortId: 'write' }, { sourcePortId: 'top' }, { targetPortId: 'read' }, { targetPortId: 'middle' }]) {
         const ps = [placement('p1', 'r1'), placement('p2', 'r2')]
         // p1 is a database (read/write only), p2 is four-sided.

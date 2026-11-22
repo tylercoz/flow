@@ -10,9 +10,11 @@ flowchart TD
         ConfirmDialog
         TypesDialog
         ExceptionsDialog
-        exceptionEdit["exceptionEdit: availableExceptions"]
         EnvironmentVariablesDialog
-        environmentVariableEdit["environmentVariableEdit: availableEnvironmentVariables"]
+        CatalogDialog["CatalogDialog: shared list dialog"]
+        IdListEditor["IdListEditor: chosen ids plus add select"]
+        idListEdit["idListEdit: availableEntries"]
+        RenameInput["RenameInput: RenameContext, useRenameController"]
         NotificationBar
         DiagramProjector
         PlacementNode["PlacementNode: component or other kind"]
@@ -22,7 +24,6 @@ flowchart TD
         PortList
         portEdit["portEdit: applyPortName"]
         Level[Level, inside CanvasView]
-        RenameContext
         RenameController
         createAtPoint["createAtPoint: isEmptyCanvas, createComponentAt"]
         useStore
@@ -38,11 +39,10 @@ flowchart TD
         Diagram --> Placement --> NodeBounds
         Workspace --> ResourceRegistry --> Resource
         Resource -->|"component kind only"| ComponentDefinition
-        ComponentDefinition --> Details
         ComponentDefinition -->|"one child Diagram, shared by every Placement"| Diagram
         Workspace -->|"diagramGraph, wouldCreateCycle"| DiagramGraph
         Diagram -->|"addPlacement asks Workspace.wouldCreateCycle"| Workspace
-        Diagram -->|"resourceOf, endShape: reads Resource live"| ResourceRegistry
+        Diagram -->|"resourceOf, Resource.handleIds: reads Resource live"| ResourceRegistry
         Diagram --> LinkRules
         Resource --> ResourceKinds
         LinkRules --> ResourceKinds
@@ -57,8 +57,8 @@ flowchart TD
         WorkspaceLoader --> WorkspaceSerializer
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
-        WorkspaceSerializer -->|checkLink, kinds| Domain
-        WorkspaceSerializer -->|"schemaVersion 9; findCycle rejects Reference_Cycle"| DiagramGraph
+        WorkspaceSerializer -->|checkLink, handleIds, kindInvariantError| Domain
+        WorkspaceSerializer -->|"schemaVersion 10; findCycle rejects Reference_Cycle"| DiagramGraph
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
@@ -83,8 +83,12 @@ flowchart TD
     HistoryControls -->|"undo, redo; useStore"| History
     HistoryControls -->|classifies key events| shortcutAction
     Inspector --> FocusGroup
-    TypesDialog --> FocusGroup
-    ExceptionsDialog --> FocusGroup
+    TypesDialog --> CatalogDialog
+    ExceptionsDialog --> CatalogDialog
+    EnvironmentVariablesDialog --> CatalogDialog
+    CatalogDialog --> FocusGroup
+    Inspector --> IdListEditor
+    IdListEditor -->|availableEntries| idListEdit
     EnvironmentVariablesDialog --> FocusGroup
     FocusGroup -->|"beginGroup on focus, endGroup on blur"| History
     FocusGroup -->|filters targets| shortcutAction
@@ -96,7 +100,7 @@ flowchart TD
     CanvasView -->|onMoveEnd: setViewport| Diagram
     CanvasView -->|keyed by Diagram id| Level
     Level -->|owns one, built from AppServices.scheduler| RenameController
-    Level -->|provides it through| RenameContext
+    Level -->|provides it through RenameContext| RenameInput
     CanvasView -->|holds the copied Fragment, so it survives Level changes| Level
     Level -->|classifies key events| clipboardShortcut
     Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
@@ -117,8 +121,8 @@ flowchart TD
     CanvasView -->|"drag: placement(id).setPosition"| Diagram
     CanvasView -->|"edgeTypes (module-level)"| LinkEdge
     LinkEdge -->|start; reads controller from| RenameController
-    LinkEdge -->|reuses RenameInput| PlacementNode
-    PlacementNode -->|reads controller from| RenameContext
+    LinkEdge -->|renders| RenameInput
+    PlacementNode -->|renders; reads controller from| RenameInput
     PlacementNode -->|schedule, cancel, end; useStore| RenameController
     PlacementNode -->|"component: renders inputs and outputs"| PortList
     PortList -->|applyPortName| portEdit
@@ -133,10 +137,8 @@ flowchart TD
     TypesDialog -->|add, rename, remove types| Workspace
     TypesDialog -->|remove refused| Notifier
     ExceptionsDialog -->|"add, rename, exceptionUsage, removeException (after confirmation)"| Workspace
-    Inspector -->|"setExceptions; offers availableExceptions"| exceptionEdit
     Inspector -->|setExceptions| ComponentDefinition
     EnvironmentVariablesDialog -->|"add, rename, environmentVariableUsage, removeEnvironmentVariable (after confirmation)"| Workspace
-    Inspector -->|"setEnvironmentVariables; offers availableEnvironmentVariables"| environmentVariableEdit
     Inspector -->|setEnvironmentVariables| ComponentDefinition
     View -->|useStore| Domain
     View -->|commands| Domain

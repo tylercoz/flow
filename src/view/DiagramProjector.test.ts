@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RESOURCE_KINDS } from '../domain/ResourceKinds'
+import { handleIds } from '../domain/ResourceKinds'
 import { Workspace } from '../domain/Workspace'
 import { connect } from '../domain/testing/connect'
 import { toEdges, toNodes } from './DiagramProjector'
@@ -83,7 +83,7 @@ describe('DiagramProjector', () => {
     ['artifact', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
     ['input-object', ['top', 'right', 'bottom', 'left'], ['top', 'right', 'bottom', 'left']],
   ] as const)('%s exposes the expected source and target handle ids', (kind, sources, targets) => {
-    expect([...RESOURCE_KINDS[kind].sourceIds]).toEqual(sources)
-    expect([...RESOURCE_KINDS[kind].targetIds]).toEqual(targets)
+    expect([...handleIds(kind, null, 'source')]).toEqual(sources)
+    expect([...handleIds(kind, null, 'target')]).toEqual(targets)
   })
 })

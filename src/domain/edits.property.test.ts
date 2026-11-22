@@ -1,8 +1,7 @@
 import fc from 'fast-check'
 import { describe, it, expect } from 'vitest'
-import type { Details } from './Details'
 import { connect } from './testing/connect'
-import { detailsPatchArb, positionArb, workspaceArb } from './testing/workspaceArbitrary'
+import { componentPatchArb, positionArb, workspaceArb } from './testing/workspaceArbitrary'
 
 const sizeArb = fc.record({ width: fc.integer({ min: 1, max: 1000 }), height: fc.integer({ min: 1, max: 1000 }) })
 
@@ -70,27 +69,28 @@ describe('edits', () => {
   // **Validates: Requirements 1.2, 1.3, 3.2**
   it('Property 2: a partial update changes exactly the given fields and setPosition reads back', () => {
     fc.assert(
-      fc.property(workspaceArb, fc.nat(), detailsPatchArb, positionArb, ({ workspace }, pickIndex, patch, position) => {
+      fc.property(workspaceArb, fc.nat(), componentPatchArb, fc.string(), positionArb, ({ workspace }, pickIndex, patch, name, position) => {
         // Guarantee at least one component Resource and one Link exist, whatever the generated shape.
         const root = workspace.root
         const a = workspace.createPlacedResource(root, { kind: 'component', name: '' }, { x: 0, y: 0 })
         const b = workspace.createPlacedResource(root, { kind: 'component', name: '' }, { x: 1, y: 1 })
         connect(workspace, root, a, b)
 
-        const targets: Details[] = [
-          ...workspace.componentResources().map((r) => r.definition!.details),
-          ...workspace.allDiagrams().flatMap((d) => d.links.map((l) => l.details)),
-        ]
-        const details = targets[pickIndex % targets.length]
-
-        const before = details.toJSON()
-        details.patch(patch)
-        expect(details.toJSON()).toEqual({
-          name: patch.name ?? before.name,
+        const components = workspace.componentResources()
+        const definition = components[pickIndex % components.length].definition!
+        const before = { inputs: definition.inputs, outputs: definition.outputs, notes: definition.notes }
+        if (patch.inputs) definition.setPorts('inputs', patch.inputs)
+        if (patch.outputs) definition.setPorts('outputs', patch.outputs)
+        if (patch.notes !== undefined) definition.setNotes(patch.notes)
+        expect({ inputs: definition.inputs, outputs: definition.outputs, notes: definition.notes }).toEqual({
           inputs: patch.inputs ?? before.inputs,
           outputs: patch.outputs ?? before.outputs,
           notes: patch.notes ?? before.notes,
         })
+        const links = workspace.allDiagrams().flatMap((d) => d.links)
+        const link = links[pickIndex % links.length]
+        link.setName(name)
+        expect(link.name).toBe(name)
 
         const placements = workspace.allDiagrams().flatMap((d) => [...d.placements])
         const placement = placements[pickIndex % placements.length]

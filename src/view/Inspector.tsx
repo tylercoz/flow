@@ -1,14 +1,13 @@
 import type { ComponentDefinition } from '../domain/ComponentDefinition'
-import type { NewPort, Port } from '../domain/Details'
+import type { NewPort, Port } from '../domain/Port'
 import type { Diagram } from '../domain/Diagram'
 import type { Placement } from '../domain/Placement'
 import type { Resource } from '../domain/Resource'
 import { RESOURCE_KINDS } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
 import type { DeleteFlow } from './DeleteFlow'
-import { availableEnvironmentVariables } from './environmentVariableEdit'
-import { availableExceptions } from './exceptionEdit'
 import { FocusGroup } from './FocusGroup'
+import { IdListEditor } from './IdListEditor'
 import { useStore } from './useStore'
 
 interface InspectorProps {
@@ -35,7 +34,7 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
 
   // Edits replace the whole list; Workspace.setPorts also drops the Links of removed ports.
   const list = (res: Resource, def: ComponentDefinition, field: ListField, label: string, noun: string) => {
-    const ports = def.details[field]
+    const ports = def[field]
     const set = (next: NewPort[]) => workspace.setPorts(res.id, field, next)
     const update = (i: number, change: Partial<Port>) => set(ports.map((p, j) => (j === i ? { ...p, ...change } : p)))
     return (
@@ -60,76 +59,6 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
         <button type="button" onClick={() => set([...ports, { name: '', typeId: null }])}>
           Add {noun}
         </button>
-      </div>
-    )
-  }
-  const exceptions = (def: ComponentDefinition) => {
-    const names = new Map(workspace.exceptions.map((e) => [e.id, e.name]))
-    const available = availableExceptions(workspace.exceptions, def.exceptionIds)
-    return (
-      <div>
-        <label htmlFor={`${idPrefix}-add-exception`}>Exceptions</label>
-        {def.exceptionIds.map((id, i) => (
-          <div className="field-row" key={id}>
-            <span>{names.get(id) || 'Unnamed exception'}</span>
-            <button
-              type="button"
-              aria-label={`Remove exception ${i + 1}`}
-              onClick={() => def.setExceptions(def.exceptionIds.filter((e) => e !== id))}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-        {/* Controlled at '' so choosing an entry adds it and the select returns to its prompt. */}
-        <select
-          id={`${idPrefix}-add-exception`}
-          value=""
-          disabled={available.length === 0}
-          onChange={(e) => def.setExceptions([...def.exceptionIds, e.target.value])}
-        >
-          <option value="">Add exception</option>
-          {available.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.name || 'Unnamed exception'}
-            </option>
-          ))}
-        </select>
-      </div>
-    )
-  }
-  const environmentVariables = (def: ComponentDefinition) => {
-    const names = new Map(workspace.environmentVariables.map((v) => [v.id, v.name]))
-    const available = availableEnvironmentVariables(workspace.environmentVariables, def.environmentVariableIds)
-    return (
-      <div>
-        <label htmlFor={`${idPrefix}-add-environment-variable`}>Environment variables</label>
-        {def.environmentVariableIds.map((id, i) => (
-          <div className="field-row" key={id}>
-            <span>{names.get(id) || 'Unnamed environment variable'}</span>
-            <button
-              type="button"
-              aria-label={`Remove environment variable ${i + 1}`}
-              onClick={() => def.setEnvironmentVariables(def.environmentVariableIds.filter((v) => v !== id))}
-            >
-              ×
-            </button>
-          </div>
-        ))}
-        {/* Controlled at '' so choosing an entry adds it and the select returns to its prompt. */}
-        <select
-          id={`${idPrefix}-add-environment-variable`}
-          value=""
-          disabled={available.length === 0}
-          onChange={(e) => def.setEnvironmentVariables([...def.environmentVariableIds, e.target.value])}
-        >
-          <option value="">Add environment variable</option>
-          {available.map((v) => (
-            <option key={v.id} value={v.id}>
-              {v.name || 'Unnamed environment variable'}
-            </option>
-          ))}
-        </select>
       </div>
     )
   }
@@ -160,15 +89,29 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
           <>
             {list(resource, definition, 'inputs', 'Inputs', 'input')}
             {list(resource, definition, 'outputs', 'Outputs', 'output')}
-            {exceptions(definition)}
-            {environmentVariables(definition)}
+            <IdListEditor
+              label="Exceptions"
+              noun="exception"
+              entries={workspace.exceptions}
+              chosen={definition.exceptionIds}
+              idPrefix={idPrefix}
+              onChange={(ids) => definition.setExceptions(ids)}
+            />
+            <IdListEditor
+              label="Environment variables"
+              noun="environment variable"
+              entries={workspace.environmentVariables}
+              chosen={definition.environmentVariableIds}
+              idPrefix={idPrefix}
+              onChange={(ids) => definition.setEnvironmentVariables(ids)}
+            />
             <div>
               <label htmlFor={`${idPrefix}-notes`}>Notes</label>
               <textarea
                 id={`${idPrefix}-notes`}
                 rows={4}
-                value={definition.details.notes}
-                onChange={(e) => definition.details.patch({ notes: e.target.value })}
+                value={definition.notes}
+                onChange={(e) => definition.setNotes(e.target.value)}
               />
             </div>
           </>

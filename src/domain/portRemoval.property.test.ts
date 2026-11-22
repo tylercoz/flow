@@ -40,9 +40,9 @@ describe('port removal', () => {
           ]
           workspace.setPorts(resourceId, field, next)
 
-          const details = workspace.resources.get(resourceId)!.definition!.details
-          const inputIds = new Set(details.inputs.map((p) => p.id))
-          const outputIds = new Set(details.outputs.map((p) => p.id))
+          const definition = workspace.resources.get(resourceId)!.definition!
+          const inputIds = new Set(definition.inputs.map((p) => p.id))
+          const outputIds = new Set(definition.outputs.map((p) => p.id))
           for (const d of workspace.allDiagrams()) {
             for (const l of d.links) {
               if (d.placement(l.sourceId)?.resourceId === resourceId) expect(outputIds.has(l.sourcePortId)).toBe(true)

@@ -36,7 +36,7 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 9,
+  schemaVersion: 10,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -47,7 +47,9 @@ const stored = {
       name: 'A',
       typeId: null,
       component: {
-        details: { name: 'A', inputs: [], outputs: [], notes: '' },
+        inputs: [],
+        outputs: [],
+        notes: '',
         exceptionIds: [],
         environmentVariableIds: [],
         diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, placements: [], links: [] },
@@ -99,7 +101,7 @@ describe('WorkspaceLoader', () => {
   })
 
   it('handles a PersistenceError from deserialize', async () => {
-    const { loader, notifier, repository } = setup(() => ({ schemaVersion: 99 }))
+    const { loader, notifier, repository } = setup(() => ({ schemaVersion: 109 }))
     const result = await loader.load()
     expect(result.canSave).toBe(false)
     expect(result.workspace.root.placements).toHaveLength(0)
@@ -107,8 +109,8 @@ describe('WorkspaceLoader', () => {
     expect(repository.saveCalls).toBe(0)
   })
 
-  it('rejects a schemaVersion 8 save, starts empty and never writes over it', async () => {
-    const { loader, notifier, repository } = setup(() => ({ ...stored, schemaVersion: 8 }))
+  it('rejects a schemaVersion 9 save, starts empty and never writes over it', async () => {
+    const { loader, notifier, repository } = setup(() => ({ ...stored, schemaVersion: 9 }))
     const result = await loader.load()
     expect(result.canSave).toBe(false)
     expect(result.workspace.root.placements).toHaveLength(0)

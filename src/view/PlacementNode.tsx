@@ -1,30 +1,16 @@
-import { createContext, useContext, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type RefObject } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type RefObject } from 'react'
 import { NodeResizer, Handle, Position, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
-import type { Details } from '../domain/Details'
 import type { Resource } from '../domain/Resource'
-import { DATABASE_PORTS, RESOURCE_KINDS, SIDE_PORTS } from '../domain/ResourceKinds'
+import { DATABASE_PORTS, SIDE_PORTS } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
 import { NODE_SIZE } from './createAtPoint'
 import { PortList } from './PortList'
-import type { RenameController } from './RenameController'
+import { RenameInput, useRenameController } from './RenameInput'
 import { ResourceIcon } from './resourceIcons'
 import { useStore } from './useStore'
 
-// nodeTypes must be a module-level constant, so Level hands the controller to nodes through context.
-export const RenameContext = createContext<RenameController | null>(null)
-
-export function useRenameController(): RenameController {
-  const controller = useContext(RenameContext)
-  // A missing provider is a wiring bug in Level, not a runtime condition.
-  if (!controller) throw new Error('PlacementNode must be rendered inside RenameContext.Provider')
-  return controller
-}
-
 // Pointer travel above this between press and release means the user dragged the node.
 const DRAG_THRESHOLD_PX = 4
-
-// Gives React Flow about a sixth of a second to measure a new node before we stop retrying focus.
-const MAX_FOCUS_FRAMES = 10
 
 // Smaller than a component's box: a non-component Resource has no port lists to fit.
 const MIN_SIZE = { width: 120, height: 48 }
@@ -100,11 +86,11 @@ function ResourceBody({ resource, style }: { resource: Resource; style: BodyStyl
           <Handle id={DATABASE_PORTS.read} type="source" position={Position.Right} />
         </>
       ) : (
-        RESOURCE_KINDS[resource.kind].sourceIds.map((side) => (
+        SIDE_PORTS.map((side) => (
           <span key={side}>
             {/* Same id and side for both roles; loose connection mode lets either start or end a Link. */}
-            <Handle id={side} type="source" position={SIDE_POSITIONS[side as keyof typeof SIDE_POSITIONS]} />
-            <Handle id={side} type="target" position={SIDE_POSITIONS[side as keyof typeof SIDE_POSITIONS]} />
+            <Handle id={side} type="source" position={SIDE_POSITIONS[side]} />
+            <Handle id={side} type="target" position={SIDE_POSITIONS[side]} />
           </span>
         ))
       )}
@@ -124,9 +110,8 @@ function ComponentBody({ id, selected, resource, box, style }: ComponentBodyProp
   const { navigator, workspace } = useApp()
   const controller = useRenameController()
   useStore(controller)
-  const details = resource.definition?.details
-  const inputs = details?.inputs ?? []
-  const outputs = details?.outputs ?? []
+  const inputs = resource.definition?.inputs ?? []
+  const outputs = resource.definition?.outputs ?? []
   const updateNodeInternals = useUpdateNodeInternals()
   const portKey = [...inputs, ...outputs].map((p) => p.id).join()
   // React Flow measures Handles only when told; without this a new or removed port keeps stale connection points.
@@ -167,7 +152,7 @@ function ComponentBody({ id, selected, resource, box, style }: ComponentBodyProp
           }}
           onDoubleClick={(e) => e.stopPropagation()}
         />
-        {details && controller.editingId === id ? <RenameInput details={details} controller={controller} /> : details?.name}
+        {controller.editingId === id ? <RenameInput target={resource} controller={controller} /> : resource.name}
       </div>
       <PortList ports={outputs} field="outputs" onChange={(next) => workspace.setPorts(resource.id, 'outputs', next)} />
     </div>
@@ -183,61 +168,4 @@ function measureMinSize(el: HTMLElement): { width: number; height: number } {
   const size = { width: Math.max(NODE_SIZE.width, el.offsetWidth), height: Math.max(NODE_SIZE.height, el.offsetHeight) }
   Object.assign(el.style, { flex, width, height, minWidth, minHeight })
   return size
-}
-
-export function RenameInput({ details, controller }: { details: Details; controller: RenameController }) {
-  const [draft, setDraft] = useState(details.name)
-  const input = useRef<HTMLTextAreaElement>(null)
-  // Unmounting a focused input can still deliver a blur; this keeps Escape from committing through it.
-  const finished = useRef(false)
-
-  // React Flow keeps a new node `visibility: hidden` until it has measured it, and focus() on a hidden
-  // input is a no-op, so retry per frame until the focus sticks.
-  useEffect(() => {
-    let frame = 0
-    let attempts = 0
-    const tryFocus = () => {
-      const el = input.current
-      if (!el) return
-      el.focus()
-      el.select()
-      if (document.activeElement !== el && ++attempts < MAX_FOCUS_FRAMES) frame = requestAnimationFrame(tryFocus)
-    }
-    tryFocus()
-    return () => cancelAnimationFrame(frame)
-  }, [])
-
-  const commit = () => {
-    if (finished.current) return
-    finished.current = true
-    details.patch({ name: draft })
-    controller.end()
-  }
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    // Shift+Enter falls through to the textarea's default and inserts a newline.
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      commit()
-    }
-    if (e.key === 'Escape') {
-      finished.current = true
-      controller.end()
-    }
-  }
-
-  return (
-    <textarea
-      ref={input}
-      className="nodrag nopan"
-      // Grows with the text so no scrollbar or hidden line appears.
-      rows={draft.split('\n').length}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={onKeyDown}
-      onBlur={commit}
-      // Selecting text inside the input must not restart the Rename.
-      onDoubleClick={(e) => e.stopPropagation()}
-    />
-  )
 }

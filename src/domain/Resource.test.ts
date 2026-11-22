@@ -3,7 +3,7 @@ import { DomainError } from './DomainError'
 import { Resource } from './Resource'
 import { ResourceRegistry } from './ResourceRegistry'
 import { Workspace } from './Workspace'
-import { DATABASE_PORTS, RESOURCE_KINDS, SIDE_PORTS, isResourceKind, type ResourceKind } from './ResourceKinds'
+import { DATABASE_PORTS, RESOURCE_KINDS, SIDE_PORTS, handleIds, isResourceKind, kindInvariantError, type ResourceKind } from './ResourceKinds'
 
 const KINDS: ResourceKind[] = ['database', 'artifact', 'user', 'input-object', 'component']
 const make = (id: string, kind: ResourceKind, onChange = () => {}) =>
@@ -16,12 +16,27 @@ describe('ResourceKinds', () => {
   })
 
   it('gives a database read as source and write as target, others the four sides', () => {
-    expect(RESOURCE_KINDS.database.sourceIds).toEqual([DATABASE_PORTS.read])
-    expect(RESOURCE_KINDS.database.targetIds).toEqual([DATABASE_PORTS.write])
+    expect(handleIds('database', null, 'source')).toEqual([DATABASE_PORTS.read])
+    expect(handleIds('database', null, 'target')).toEqual([DATABASE_PORTS.write])
     for (const kind of ['artifact', 'user', 'input-object'] as const) {
-      expect(RESOURCE_KINDS[kind].sourceIds).toEqual(SIDE_PORTS)
-      expect(RESOURCE_KINDS[kind].targetIds).toEqual(SIDE_PORTS)
+      expect(handleIds(kind, null, 'source')).toEqual(SIDE_PORTS)
+      expect(handleIds(kind, null, 'target')).toEqual(SIDE_PORTS)
     }
+  })
+
+  it('takes component handles from the given port lists, outputs as source and inputs as target', () => {
+    const ports = { inputs: [{ id: 'i' }], outputs: [{ id: 'o' }] }
+    expect(handleIds('component', ports, 'source')).toEqual(['o'])
+    expect(handleIds('component', ports, 'target')).toEqual(['i'])
+  })
+
+  it('kindInvariantError returns a message for each broken invariant and null otherwise', () => {
+    expect(kindInvariantError('artifact', null, false)).toMatch(/needs a data type/)
+    expect(kindInvariantError('user', 't1', false)).toMatch(/cannot have a data type/)
+    expect(kindInvariantError('component', null, false)).toMatch(/must have a component definition/)
+    expect(kindInvariantError('user', null, true)).toMatch(/cannot have a component definition/)
+    expect(kindInvariantError('artifact', 't1', false)).toBeNull()
+    expect(kindInvariantError('component', null, true)).toBeNull()
   })
 
   it('isResourceKind accepts kinds and rejects other values', () => {
@@ -60,14 +75,13 @@ describe('Resource', () => {
     expect(() => new Resource('r', 'component', 'C', null, definition, () => {})).not.toThrow()
   })
 
-  it('reads and writes a component name through its Details, notifying once', () => {
+  it('renames a component through the Resource, notifying once', () => {
     const ws = Workspace.empty({ next: () => 'x' + Math.random() })
     const placement = ws.createPlacedResource(ws.root, { kind: 'component', name: 'C' }, { x: 0, y: 0 })
     const resource = ws.resources.get(placement.resourceId)!
     const before = ws.getVersion()
     resource.setName('D')
     expect(resource.name).toBe('D')
-    expect(resource.definition!.details.name).toBe('D')
     expect(ws.getVersion()).toBe(before + 1)
   })
 

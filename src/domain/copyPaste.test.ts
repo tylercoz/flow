@@ -71,7 +71,7 @@ describe('Workspace copy and paste', () => {
     const a = component()
     workspace.setPorts(a.resourceId, 'inputs', [{ name: 'in', typeId: null }])
     const p = workspace.createPlacedResource(root, { kind: 'database', name: 'db' }, { x: 50, y: 0 })
-    const input = workspace.resources.get(a.resourceId)!.definition!.details.inputs[0]
+    const input = workspace.resources.get(a.resourceId)!.definition!.inputs[0]
     const link = root.addLink(p.id, a.id, 'read', input.id)
     const fragment = workspace.copy(root, new Set([a.id, p.id]))
     expect(fragment.links).toHaveLength(1)

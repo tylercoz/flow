@@ -13,9 +13,9 @@ function setup() {
   const place = (kind: ResourceKind, name: string = kind, at = { x: 0, y: 0 }) =>
     workspace.createPlacedResource(diagram, { kind, name }, at)
   const component = (at = { x: 0, y: 0 }) => place('component', '', at)
-  const detailsOf = (p: Placement) => workspace.resources.get(p.resourceId)!.definition!.details
+  const definitionOf = (p: Placement) => workspace.resources.get(p.resourceId)!.definition!
   const childOf = (p: Placement) => workspace.resources.get(p.resourceId)!.definition!.diagram
-  return { workspace, diagram, place, component, detailsOf, childOf }
+  return { workspace, diagram, place, component, definitionOf, childOf }
 }
 
 const code = (fn: () => unknown) => {
@@ -39,12 +39,12 @@ describe('Diagram', () => {
   })
 
   it('rejects self links and links to unknown Placements', () => {
-    const { diagram, component, workspace, detailsOf } = setup()
+    const { diagram, component, workspace, definitionOf } = setup()
     const a = component()
     workspace.setPorts(a.resourceId, 'outputs', [{ name: 'o', typeId: null }])
     workspace.setPorts(a.resourceId, 'inputs', [{ name: 'i', typeId: null }])
-    const [o] = detailsOf(a).outputs
-    const [i] = detailsOf(a).inputs
+    const [o] = definitionOf(a).outputs
+    const [i] = definitionOf(a).inputs
     expect(code(() => diagram.addLink(a.id, a.id, o.id, i.id))).toBe('SELF_LINK')
     expect(code(() => diagram.addLink(a.id, 'missing', o.id, i.id))).toBe('NOT_IN_DIAGRAM')
     expect(diagram.links).toHaveLength(0)
@@ -63,17 +63,17 @@ describe('Diagram', () => {
   })
 
   it('only links an output of the source to an input of the target', () => {
-    const { workspace, diagram, component, detailsOf } = setup()
+    const { workspace, diagram, component, definitionOf } = setup()
     const a = component()
     const b = component({ x: 1, y: 1 })
     for (const p of [a, b]) {
       workspace.setPorts(p.resourceId, 'outputs', [{ name: 'o', typeId: null }])
       workspace.setPorts(p.resourceId, 'inputs', [{ name: 'i', typeId: null }])
     }
-    const [ao] = detailsOf(a).outputs
-    const [ai] = detailsOf(a).inputs
-    const [bo] = detailsOf(b).outputs
-    const [bi] = detailsOf(b).inputs
+    const [ao] = definitionOf(a).outputs
+    const [ai] = definitionOf(a).inputs
+    const [bo] = definitionOf(b).outputs
+    const [bi] = definitionOf(b).inputs
     expect(code(() => diagram.addLink(a.id, b.id, ai.id, bi.id))).toBe('INVALID_PORT')
     expect(code(() => diagram.addLink(a.id, b.id, ao.id, bo.id))).toBe('INVALID_PORT')
     expect(code(() => diagram.addLink(a.id, b.id, ao.id, 'missing'))).toBe('INVALID_PORT')
@@ -85,12 +85,12 @@ describe('Diagram', () => {
   })
 
   it('keeps ids of kept ports and gives new ports an id', () => {
-    const { workspace, component, detailsOf } = setup()
+    const { workspace, component, definitionOf } = setup()
     const a = component()
     workspace.setPorts(a.resourceId, 'inputs', [{ name: 'x', typeId: null }])
-    const [first] = detailsOf(a).inputs
+    const [first] = definitionOf(a).inputs
     workspace.setPorts(a.resourceId, 'inputs', [{ ...first, name: 'renamed' }, { name: 'y', typeId: null }])
-    const { inputs } = detailsOf(a)
+    const { inputs } = definitionOf(a)
     expect(inputs[0]).toEqual({ ...first, name: 'renamed' })
     expect(inputs[1].id).not.toBe(first.id)
   })
@@ -119,12 +119,12 @@ describe('Diagram', () => {
   })
 
   it('counts the Links attached to the Placements of a Resource', () => {
-    const { diagram, place, component, detailsOf, workspace } = setup()
+    const { diagram, place, component, definitionOf, workspace } = setup()
     const a = component()
     workspace.setPorts(a.resourceId, 'outputs', [{ name: 'o', typeId: null }])
     const p = place('user')
     const q = diagram.addPlacement(p.resourceId, { x: 3, y: 3 })
-    diagram.addLink(a.id, p.id, detailsOf(a).outputs[0].id, 'left')
+    diagram.addLink(a.id, p.id, definitionOf(a).outputs[0].id, 'left')
     expect(diagram.countPlacementsOf(p.resourceId)).toEqual({ placements: 2, links: 1 })
     diagram.removePlacement(p.id)
     expect(diagram.placements).toContain(q)
@@ -154,13 +154,13 @@ describe('Diagram', () => {
   })
 
   it('links a component output to a database write handle and a database read handle to a component input', () => {
-    const { workspace, diagram, place, component, detailsOf } = setup()
+    const { workspace, diagram, place, component, definitionOf } = setup()
     const a = component()
     workspace.setPorts(a.resourceId, 'outputs', [{ name: 'o', typeId: null }])
     workspace.setPorts(a.resourceId, 'inputs', [{ name: 'i', typeId: null }])
     const db = place('database')
-    diagram.addLink(a.id, db.id, detailsOf(a).outputs[0].id, 'write')
-    diagram.addLink(db.id, a.id, 'read', detailsOf(a).inputs[0].id)
+    diagram.addLink(a.id, db.id, definitionOf(a).outputs[0].id, 'write')
+    diagram.addLink(db.id, a.id, 'read', definitionOf(a).inputs[0].id)
     expect(diagram.links).toHaveLength(2)
   })
 

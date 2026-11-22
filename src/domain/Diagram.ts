@@ -1,8 +1,7 @@
-import { Details } from './Details'
 import { DomainError } from './DomainError'
 import type { IdGenerator } from './IdGenerator'
 import { Link } from './Link'
-import { checkLink, type EndShape } from './LinkRules'
+import { checkLink } from './LinkRules'
 import type { Position } from './NodeBounds'
 import { Placement } from './Placement'
 import type { Resource } from './Resource'
@@ -111,12 +110,12 @@ export class Diagram {
 
   addLink(sourceId: string, targetId: string, sourcePortId: string, targetPortId: string): Link {
     if (sourceId === targetId) throw new DomainError('SELF_LINK', 'A node cannot be linked to itself.')
-    const source = this.endShape(sourceId)
-    const target = this.endShape(targetId)
+    const source = this.resourceOf(sourceId)
+    const target = this.resourceOf(targetId)
     if (!source || !target) throw new DomainError('NOT_IN_DIAGRAM', 'Both nodes must be in the same diagram.')
-    const failure = checkLink(source, sourcePortId, target, targetPortId)
+    const failure = checkLink(source.handleIds('source'), sourcePortId, target.handleIds('target'), targetPortId)
     if (failure) throw new DomainError(failure.code, failure.message)
-    const link = new Link(this.ctx.ids.next(), new Details(this.ctx.onChange), sourceId, targetId, sourcePortId, targetPortId)
+    const link = new Link(this.ctx.ids.next(), '', this.ctx.onChange, sourceId, targetId, sourcePortId, targetPortId)
     this._links.push(link)
     this.ctx.onChange()
     return link
@@ -126,17 +125,6 @@ export class Diagram {
     if (!this._links.some((l) => l.id === id)) throw new DomainError('NOT_IN_DIAGRAM', 'Link is not in this diagram.')
     this._links = this._links.filter((l) => l.id !== id)
     this.ctx.onChange()
-  }
-
-  // Ports are read live from the Resource, so a port edit shows in every Diagram with no copying.
-  private endShape(placementId: string): EndShape | undefined {
-    const resource = this.resourceOf(placementId)
-    if (!resource) return undefined
-    if (resource.definition) {
-      const { inputs, outputs } = resource.definition.details
-      return { kind: 'component', inputIds: inputs.map((p) => p.id), outputIds: outputs.map((p) => p.id) }
-    }
-    return { kind: 'placement', resource: resource.kind }
   }
 
   private dropNode(id: string): void {

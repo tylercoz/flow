@@ -7,7 +7,6 @@ import { WorkspaceSerializer } from './WorkspaceSerializer'
 type Json = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 
 const viewport = { x: 0, y: 0, zoom: 1 }
-const emptyDetails = { name: '', inputs: [], outputs: [], notes: '' }
 const placement = (id: string, resourceId: string) => ({ id, resourceId, position: { x: 0, y: 0 } })
 
 // Ids carry a `bad-` prefix so they cannot collide with ids from generated workspaces.
@@ -18,12 +17,9 @@ function componentResource(id: string, placements: unknown[] = [], links: unknow
     name: id,
     typeId: null,
     component: {
-      details: {
-        name: id,
-        inputs: [{ id: 'in', name: 'in', typeId: null }],
-        outputs: [{ id: 'out', name: 'out', typeId: null }],
-        notes: '',
-      },
+      inputs: [{ id: 'in', name: 'in', typeId: null }],
+      outputs: [{ id: 'out', name: 'out', typeId: null }],
+      notes: '',
       exceptionIds: [],
       environmentVariableIds: [],
       diagram: { id: `${id}-diagram`, viewport, placements, links },
@@ -45,9 +41,9 @@ const snapshotArb = workspaceArb.map(({ workspace }) => JSON.parse(JSON.stringif
 
 describe('Feature: components-as-resources, Property 11: Corrupt snapshots are rejected', () => {
   // **Validates: Requirements 8.2**
-  it('rejects any schemaVersion other than 9', () => {
+  it('rejects any schemaVersion other than 10', () => {
     fc.assert(
-      fc.property(snapshotArb, fc.integer().filter((v) => v !== 9), (raw, version) => {
+      fc.property(snapshotArb, fc.integer().filter((v) => v !== 10), (raw, version) => {
         raw.schemaVersion = version
         reject(raw)
       }),
@@ -71,7 +67,7 @@ describe('Feature: components-as-resources, Property 11: Corrupt snapshots are r
       fc.property(snapshotArb, endArb, fc.string({ minLength: 1 }), (raw, end, junk) => {
         raw.resources.push(componentResource('bad-a'), componentResource('bad-b'))
         raw.root.placements.push(placement('bad-pa', 'bad-a'), placement('bad-pb', 'bad-b'))
-        const link = { id: 'bad-link', details: emptyDetails, sourceId: 'bad-pa', targetId: 'bad-pb', sourcePortId: 'out', targetPortId: 'in' }
+        const link = { id: 'bad-link', name: '', sourceId: 'bad-pa', targetId: 'bad-pb', sourcePortId: 'out', targetPortId: 'in' }
         link[end] = `bad-missing-${junk}`
         raw.root.links.push(link)
         expect(reject(raw).message).toContain('bad-link')

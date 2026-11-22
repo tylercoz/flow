@@ -1,6 +1,6 @@
 import type { Position, Size } from './NodeBounds'
 import type { DataType } from './DataType'
-import type { DetailsDto } from './Details'
+import type { Port } from './Port'
 import type { EnvironmentVariable } from './EnvironmentVariable'
 import type { ExceptionType } from './ExceptionType'
 import type { ResourceKind } from './ResourceKinds'
@@ -9,7 +9,7 @@ import type { Viewport } from './Viewport'
 // Plain data only, so persistence can depend on the domain without the reverse.
 export type LinkDto = {
   id: string
-  details: DetailsDto
+  name: string
   sourceId: string
   targetId: string
   sourcePortId: string
@@ -18,7 +18,9 @@ export type LinkDto = {
 
 // The state only a component Resource has. Position and size belong to each Placement.
 export type ComponentDto = {
-  details: DetailsDto
+  inputs: Port[]
+  outputs: Port[]
+  notes: string
   exceptionIds: string[]
   environmentVariableIds: string[]
   diagram: DiagramDto
@@ -48,7 +50,7 @@ export type DiagramDto = {
 }
 
 export type WorkspaceSnapshot = {
-  schemaVersion: 9
+  schemaVersion: 10
   types: DataType[]
   exceptions: ExceptionType[]
   environmentVariables: EnvironmentVariable[]

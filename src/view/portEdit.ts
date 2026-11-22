@@ -1,4 +1,4 @@
-import type { NewPort } from '../domain/Details'
+import type { NewPort } from '../domain/Port'
 // An index past the end means a port being added. An empty name deletes the port (or abandons the add).
 // Returns undefined when nothing changes, so the caller does not record an empty undo step.
 export function applyPortName(ports: readonly NewPort[], index: number, name: string): NewPort[] | undefined {

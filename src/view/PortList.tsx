@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import type { NewPort, Port } from '../domain/Details'
+import type { NewPort, Port } from '../domain/Port'
 import { applyPortName } from './portEdit'
 
 interface PortListProps {

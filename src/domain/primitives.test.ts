@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ChangeSignal } from './ChangeSignal'
 import { DEFAULT_VIEWPORT } from './Viewport'
-import { Details } from './Details'
 import { DomainError } from './DomainError'
 import { TimerScheduler } from './Scheduler'
 import { UuidGenerator } from './IdGenerator'
@@ -19,16 +18,6 @@ describe('ChangeSignal', () => {
   })
 })
 
-describe('Details', () => {
-  it('starts empty, patches only given fields and notifies', () => {
-    const onChange = vi.fn()
-    const details = new Details(onChange)
-    expect(details.toJSON()).toEqual({ name: '', inputs: [], outputs: [], notes: '' })
-    details.patch({ name: 'A', notes: undefined })
-    expect(details.toJSON()).toEqual({ name: 'A', inputs: [], outputs: [], notes: '' })
-    expect(onChange).toHaveBeenCalledTimes(1)
-  })
-})
 
 describe('other primitives', () => {
   it('defaults the viewport to origin at zoom 1', () => {

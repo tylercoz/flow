@@ -88,8 +88,6 @@ describe('resources properties', () => {
           } else {
             resource.setName(newName)
             entry.name = newName
-            // A component's name lives in its details, so the snapshot holds it in both places.
-            if (entry.component) entry.component.details.name = newName
           }
 
           const after = JSON.parse(workspace.capture()) as WorkspaceSnapshot
@@ -133,11 +131,11 @@ describe('resources properties', () => {
           const variable = workspace.addEnvironmentVariable('v')
 
           const before = JSON.parse(workspace.capture()) as WorkspaceSnapshot
-          const portsBefore = { inputs: definition.details.inputs, outputs: definition.details.outputs }
+          const portsBefore = { inputs: definition.inputs, outputs: definition.outputs }
 
           // Ports are only appended, because removal also prunes Links elsewhere (covered by the port-removal property).
           if (edit === 'name') resource.setName(text)
-          else if (edit === 'notes') definition.details.patch({ notes: text })
+          else if (edit === 'notes') definition.setNotes(text)
           else if (edit === 'inputs' || edit === 'outputs') {
             workspace.setPorts(resource.id, edit, [...portsBefore[edit], { name: text, typeId: null }])
           } else if (edit === 'exception') definition.setExceptions([...definition.exceptionIds, exception.id])
@@ -149,11 +147,11 @@ describe('resources properties', () => {
 
           const entry = after.resources.find((r) => r.id === resource.id)!.component!
           const entryBefore = before.resources.find((r) => r.id === resource.id)!.component!
-          if (edit === 'name') expect(entry.details.name).toBe(text)
-          if (edit === 'notes') expect(entry.details.notes).toBe(text)
+          if (edit === 'name') expect(after.resources.find((r) => r.id === resource.id)!.name).toBe(text)
+          if (edit === 'notes') expect(entry.notes).toBe(text)
           if (edit === 'inputs' || edit === 'outputs') {
-            expect(entry.details[edit]).toHaveLength(entryBefore.details[edit].length + 1)
-            expect(entry.details[edit].slice(0, -1)).toEqual(entryBefore.details[edit])
+            expect(entry[edit]).toHaveLength(entryBefore[edit].length + 1)
+            expect(entry[edit].slice(0, -1)).toEqual(entryBefore[edit])
           }
           if (edit === 'exception') expect(entry.exceptionIds).toEqual([...entryBefore.exceptionIds, exception.id])
           if (edit === 'variable') expect(entry.environmentVariableIds).toEqual([...entryBefore.environmentVariableIds, variable.id])
@@ -164,7 +162,8 @@ describe('resources properties', () => {
           placed.forEach(({ d, p }) => {
             const seen = d.resourceOf(p.id)
             expect(seen).toBe(resource)
-            expect(seen!.definition!.details.toJSON()).toEqual(entry.details)
+            const live = seen!.definition!
+            expect({ inputs: live.inputs, outputs: live.outputs, notes: live.notes }).toEqual({ inputs: entry.inputs, outputs: entry.outputs, notes: entry.notes })
           })
         },
       ),
@@ -239,25 +238,19 @@ describe('resources properties', () => {
 
   // Feature: resource-nodes, Property 8: A Data Type in use cannot be removed
   // **Validates: Requirements 6.1, 6.2**
-  it('removeType throws TYPE_IN_USE and keeps the type exactly when a port, Link or typed Resource references it', () => {
-    const usageArb = fc.constantFrom('none', 'componentPort', 'linkPort', 'resource')
+  it('removeType throws TYPE_IN_USE and keeps the type exactly when a component port or typed Resource references it', () => {
+    const usageArb = fc.constantFrom('none', 'componentPort', 'resource')
     fc.assert(
       fc.property(commandsArb, fc.array(fc.tuple(usageArb, fc.nat({ max: 1000 })), { minLength: 1, maxLength: 4 }), (commands, usages) => {
         const workspace = buildWorkspace(commands)
         // The generated content is untyped, so references to fresh types are added here.
         usages.forEach(([usage, pick], i) => {
           const type = workspace.addType(`t${i}`)
-          const diagrams = workspace.allDiagrams()
           if (usage === 'componentPort') {
             const owners = workspace.componentResources()
             if (owners.length === 0) return
             const owner = owners[pick % owners.length]
-            workspace.setPorts(owner.id, 'inputs', [...owner.definition!.details.inputs, { name: 'typed', typeId: type.id }])
-          } else if (usage === 'linkPort') {
-            const links = diagrams.flatMap((d) => [...d.links])
-            if (links.length === 0) return
-            const link = links[pick % links.length]
-            link.details.patch({ outputs: [...link.details.outputs, { id: `typed-${type.id}`, name: 'typed', typeId: type.id }] })
+            workspace.setPorts(owner.id, 'inputs', [...owner.definition!.inputs, { name: 'typed', typeId: type.id }])
           } else if (usage === 'resource') {
             const typed = workspace.resources.all.filter((r) => RESOURCE_KINDS[r.kind].typed)
             if (typed.length === 0) return
@@ -270,12 +263,10 @@ describe('resources properties', () => {
         const referenced = new Set<string>()
         const ports = (d: { inputs: { typeId: string | null }[]; outputs: { typeId: string | null }[] }): void =>
           [...d.inputs, ...d.outputs].forEach((p) => p.typeId && referenced.add(p.typeId))
-        snapshot.root.links.forEach((l) => ports(l.details))
         snapshot.resources.forEach((r) => {
           if (r.typeId) referenced.add(r.typeId)
           if (!r.component) return
-          ports(r.component.details)
-          r.component.diagram.links.forEach((l) => ports(l.details))
+          ports(r.component)
         })
 
         workspace.types.slice().forEach((type) => {

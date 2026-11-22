@@ -2,7 +2,6 @@ import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
 import type { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
-import { RESOURCE_KINDS } from './ResourceKinds'
 import { workspaceArb } from './testing/workspaceArbitrary'
 
 const pick = fc.nat({ max: 1000 })
@@ -11,7 +10,7 @@ const SIDES = ['top', 'right', 'bottom', 'left']
 // Every id a user could plausibly drop on an end: real ports, every fixed handle, and junk.
 function candidateIds(diagram: Diagram, nodeId: string): string[] {
   const definition = diagram.resourceOf(nodeId)?.definition
-  const ports = definition ? [...definition.details.inputs, ...definition.details.outputs].map((p) => p.id) : []
+  const ports = definition ? [...definition.inputs, ...definition.outputs].map((p) => p.id) : []
   return [...ports, ...SIDES, 'read', 'write', 'nope']
 }
 
@@ -21,20 +20,20 @@ function assertEndId(diagram: Diagram, nodeId: string, portId: string, role: 'so
   const resource = diagram.resourceOf(nodeId)!
   expect(resource).toBeDefined()
   if (resource.definition) {
-    const ports = role === 'source' ? resource.definition.details.outputs : resource.definition.details.inputs
+    const ports = role === 'source' ? resource.definition.outputs : resource.definition.inputs
     expect(ports.map((p) => p.id)).toContain(portId)
     return
   }
   if (resource.kind === 'database') expect(portId).toBe(role === 'source' ? 'read' : 'write')
   else expect(SIDES).toContain(portId)
-  expect(RESOURCE_KINDS[resource.kind][role === 'source' ? 'sourceIds' : 'targetIds']).toContain(portId)
+  expect(resource.handleIds(role)).toContain(portId)
 }
 
 // Requirement 2 restated independently of LinkRules: may this id be used on this node in this role?
 function endAllows(diagram: Diagram, nodeId: string, portId: string, role: 'source' | 'target'): boolean {
   const resource = diagram.resourceOf(nodeId)
   if (!resource) return false
-  if (resource.definition) return (role === 'source' ? resource.definition.details.outputs : resource.definition.details.inputs).some((p) => p.id === portId)
+  if (resource.definition) return (role === 'source' ? resource.definition.outputs : resource.definition.inputs).some((p) => p.id === portId)
   if (resource.kind === 'database') return portId === (role === 'source' ? 'read' : 'write')
   return SIDES.includes(portId)
 }

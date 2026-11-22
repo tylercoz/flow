@@ -24,7 +24,7 @@ export function toEdges(diagram: Diagram): Edge[] {
     // Port ids double as the Handle ids rendered by PortList and PlacementNode (including side ids like 'top').
     sourceHandle: l.sourcePortId,
     targetHandle: l.targetPortId,
-    // Selects LinkEdge, which reads the live name from Details so it can edit it in place.
+    // Selects LinkEdge, which reads the live name from the Link so it can edit it in place.
     type: 'link',
     // Marker size scales with the 3px edge stroke (index.css), so the default 12.5 would be oversized.
     markerEnd: { type: MarkerType.ArrowClosed, width: 9, height: 9 },
