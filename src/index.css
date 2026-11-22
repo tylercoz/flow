@@ -165,9 +165,10 @@ textarea:focus {
 
 /* Fills the React Flow node so a user-set size applies to the visible box, not just its wrapper. */
 .component-node {
-  /* Side boxes shrink to their longest port name; the name box takes the rest. */
+  /* Side boxes shrink to their longest port name, but never below a width that keeps an empty list in
+     proportion; the name box takes the rest. */
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(40px, auto) 1fr minmax(40px, auto);
   box-sizing: border-box;
   /* Grows across the flex wrapper and stretches to its height, so the box always matches the resize frame. */
   flex: 1;
@@ -187,7 +188,7 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 8px 24px;
+  padding: 12px 16px 28px;
   text-align: center;
   white-space: pre-wrap;
   /* The dividers belong to the name box so both show whatever the side lists hold. */

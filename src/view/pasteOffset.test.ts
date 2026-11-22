@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ComponentDto } from '../domain/WorkspaceSnapshot'
+import { NODE_SIZE } from './createAtPoint'
 import { offsetToCenter } from './pasteOffset'
 
 const component = (x: number, y: number, size?: { width: number; height: number }): ComponentDto => ({
@@ -25,6 +26,7 @@ describe('offsetToCenter', () => {
     expect(offsetToCenter({ components: [component(0, 0)], links: [] }, { x: 0, y: 0 }, measured)).toEqual({ x: -50, y: -100 })
   })
   it('falls back to the default size when none is stored', () => {
-    expect(offsetToCenter({ components: [component(0, 0)], links: [] }, { x: 40, y: 28 })).toEqual({ x: 0, y: 0 })
+    const centre = { x: NODE_SIZE.width / 2, y: NODE_SIZE.height / 2 }
+    expect(offsetToCenter({ components: [component(0, 0)], links: [] }, centre)).toEqual({ x: 0, y: 0 })
   })
 })
