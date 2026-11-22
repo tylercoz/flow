@@ -8,3 +8,11 @@ export function applyPortName(ports: readonly NewPort[], index: number, name: st
   if (ports[index].name === name) return undefined
   return ports.map((p, i) => (i === index ? { ...p, name } : p))
 }
+
+// Moves the port at `from` so it ends at index `to`. Returns undefined when nothing changes, so the caller records no empty undo step.
+export function movePort<T>(ports: readonly T[], from: number, to: number): T[] | undefined {
+  if (from === to || to < 0 || to >= ports.length) return undefined
+  const next = [...ports]
+  next.splice(to, 0, next.splice(from, 1)[0])
+  return next
+}
