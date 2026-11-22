@@ -59,7 +59,8 @@ export function ResourcePicker({ kind, diagram, position, onClose }: Props) {
           }}
         >
           <div className="field-row">
-            <input type="text" aria-label="New resource name" value={name} onChange={(e) => setName(e.target.value)} disabled={noTypes} />
+            {/* Focused on open so the user can name the new resource without clicking first. */}
+            <input type="text" aria-label="New resource name" value={name} onChange={(e) => setName(e.target.value)} disabled={noTypes} autoFocus />
           </div>
           {typed && (
             <div className="field-row">
