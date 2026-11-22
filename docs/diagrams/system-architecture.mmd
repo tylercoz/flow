@@ -23,6 +23,7 @@ flowchart TD
         ResourcePicker
         resourceIcons["resourceIcons: ResourceIcon per ResourceKind"]
         LinkEdge
+        linkPath["linkPath: rounded polyline path"]
         PortList
         portEdit["portEdit: applyPortName"]
         Level[Level, inside CanvasView]
@@ -124,6 +125,8 @@ flowchart TD
     CanvasView -->|"edgeTypes (module-level)"| LinkEdge
     LinkEdge -->|start; reads controller from| RenameController
     LinkEdge -->|renders| RenameInput
+    LinkEdge -->|"roundedPath, labelPoint, midpoint"| linkPath
+    LinkEdge -->|"drag release or bend double-click: link.setWaypoints"| Diagram
     PlacementNode -->|renders; reads controller from| RenameInput
     PlacementNode -->|"schedule, start, cancel, end; useStore; double-click starts a Rename for any kind"| RenameController
     PlacementNode -->|"component: renders inputs and outputs"| PortList

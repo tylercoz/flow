@@ -51,6 +51,29 @@ describe('WorkspaceSerializer', () => {
     expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
+  it('round-trips Link bend points and loads Links saved without them', () => {
+    let n = 0
+    const ws = Workspace.empty({ next: () => `id${++n}` })
+    const a = ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 0, y: 0 })
+    const b = ws.createPlacedResource(ws.root, { kind: 'component', name: 'b' }, { x: 5, y: 5 })
+    const link = connect(ws, ws.root, a, b)
+    expect(serializer.serialize(ws).root.links[0].waypoints).toBeUndefined()
+    link.setWaypoints([{ x: 1, y: 2 }, { x: 3, y: 4 }])
+    const snapshot = serializer.serialize(ws)
+    expect(snapshot.root.links[0].waypoints).toEqual([{ x: 1, y: 2 }, { x: 3, y: 4 }])
+    expect(serializer.deserialize(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot)
+  })
+
+  it('rejects malformed Link bend points', () => {
+    const a = componentResource('a', { outputs: [port('o')] })
+    const b = componentResource('b', { inputs: [port('i')] })
+    const link = { id: 'l', name: '', sourceId: 'p1', targetId: 'p2', sourcePortId: 'o', targetPortId: 'i' }
+    const ps = [placement('p1', 'a'), placement('p2', 'b')]
+    for (const bad of ['x', [1], [{ x: 1 }], [{ x: 1, y: 'y' }]]) {
+      expect(() => serializer.deserialize(valid(diagram('r', ps, [{ ...link, waypoints: bad }]), [a, b]))).toThrow(PersistenceError)
+    }
+  })
+
   it('round-trips a Placement size and loads data saved without one', () => {
     const resources = [componentResource('a')]
     const sized = { ...placement('p', 'a'), size: { width: 200, height: 80 } }

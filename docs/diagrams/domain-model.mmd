@@ -164,6 +164,8 @@ classDiagram
         sourceId, targetId: Placement ids in the same Diagram
         sourcePortId: output port id of the source Resource
         targetPortId: input port id of the target Resource
+        waypoints: list of Position, bend points from source to target, empty for the automatic curve
+        setWaypoints(points)
         setName(name)
     }
     class Port {

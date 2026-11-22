@@ -25,6 +25,7 @@ export function diagramToDto(d: Diagram, includeViewports: boolean): DiagramDto 
       targetId: l.targetId,
       sourcePortId: l.sourcePortId,
       targetPortId: l.targetPortId,
+      ...(l.waypoints.length > 0 && { waypoints: l.waypoints.map((p) => ({ x: p.x, y: p.y })) }),
     })),
   }
 }
@@ -37,7 +38,7 @@ export function buildDiagram(dto: DiagramDto, ctx: DiagramContext, viewports?: R
 }
 
 export function buildLink(l: LinkDto, ctx: DiagramContext): Link {
-  return new Link(l.id, l.name, ctx.onChange, l.sourceId, l.targetId, l.sourcePortId, l.targetPortId)
+  return new Link(l.id, l.name, ctx.onChange, l.sourceId, l.targetId, l.sourcePortId, l.targetPortId, l.waypoints)
 }
 
 export function resourceToDto(r: Resource, includeViewports: boolean): ResourceDto {

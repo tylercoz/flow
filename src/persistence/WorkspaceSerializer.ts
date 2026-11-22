@@ -232,5 +232,11 @@ function parseLink(v: unknown, path: string): LinkDto {
     targetId: asString(o.targetId, `${path}.targetId`),
     sourcePortId: asString(o.sourcePortId, `${path}.sourcePortId`),
     targetPortId: asString(o.targetPortId, `${path}.targetPortId`),
+    ...(o.waypoints !== undefined && {
+      waypoints: asArray(o.waypoints, `${path}.waypoints`).map((w, i) => {
+        const p = asObject(w, `${path}.waypoints[${i}]`)
+        return { x: asNumber(p.x, `${path}.waypoints[${i}].x`), y: asNumber(p.y, `${path}.waypoints[${i}].y`) }
+      }),
+    }),
   }
 }

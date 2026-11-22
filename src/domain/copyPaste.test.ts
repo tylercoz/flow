@@ -39,6 +39,16 @@ describe('Workspace copy and paste', () => {
     expect(root.links).toHaveLength(2)
   })
 
+  it('shifts the bend points of a pasted Link with its Placements', () => {
+    const { workspace, root, component } = setup()
+    const a = component()
+    const b = component(10)
+    connect(workspace, root, a, b).setWaypoints([{ x: 3, y: 4 }])
+    const { links } = workspace.paste(root, workspace.copy(root, new Set([a.id, b.id])), { x: 24, y: 24 })
+    expect(links[0].waypoints).toEqual([{ x: 27, y: 28 }])
+    expect(root.links[0].waypoints).toEqual([{ x: 3, y: 4 }])
+  })
+
   it('pastes a component Placement as another Placement of the same Resource, copying no Diagram', () => {
     const { workspace, root, component } = setup()
     const a = component()

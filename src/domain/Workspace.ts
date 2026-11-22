@@ -112,7 +112,8 @@ export class Workspace implements ObservableStore {
     const fresh = withFreshIds(fragment, this.ctx.ids)
     const shift = (p: Position): Position => ({ x: p.x + offset.x, y: p.y + offset.y })
     const placements = fresh.placements.map((p) => new Placement(p.id, p.resourceId, shift(p.position), this.ctx.onChange, p.size))
-    const links = fresh.links.map((l) => buildLink(l, this.ctx))
+    // Bend points are absolute, so they shift with the Placements or the pasted Link would stay anchored to the old spot.
+    const links = fresh.links.map((l) => buildLink({ ...l, waypoints: l.waypoints?.map(shift) }, this.ctx))
     diagram.addAll(placements, links)
     return { placements, links }
   }

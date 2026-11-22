@@ -566,6 +566,27 @@ form.dialog-fields button[type='submit'] {
 .link-label.selected {
   z-index: 1001;
 }
+/* Handles on a selected link: filled ones are bends, hollow ones sit on a segment and create a bend when dragged. */
+.link-bend {
+  position: absolute;
+  z-index: 1001;
+  pointer-events: all;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  cursor: grab;
+}
+.link-bend-new {
+  background: var(--surface);
+  border-color: var(--accent);
+  opacity: 0.7;
+}
+.link-bend:hover {
+  opacity: 1;
+}
 .link-label textarea,
 .link-label textarea:focus {
   display: block;

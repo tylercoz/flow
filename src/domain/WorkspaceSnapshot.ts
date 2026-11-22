@@ -14,6 +14,8 @@ export type LinkDto = {
   targetId: string
   sourcePortId: string
   targetPortId: string
+  // Optional, like PlacementDto.size, so data saved before bend points existed still loads.
+  waypoints?: Position[]
 }
 
 // The state only a component Resource has. Position and size belong to each Placement.
