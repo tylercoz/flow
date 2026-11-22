@@ -85,25 +85,27 @@ function Layout() {
             onSelectionChange={(s) => setSelection(s?.kind === 'placement' ? { diagramId: navigator.current.id, id: s.id } : null)}
           />
         </div>
-        {placement && (
-          <>
-            <div
-              className="sidebar-handle"
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize sidebar"
-              aria-valuemin={MIN_WIDTH}
-              aria-valuemax={MAX_WIDTH}
-              aria-valuenow={sidebarWidth}
-              tabIndex={0}
-              onPointerDown={startResize}
-              onPointerMove={moveResize}
-              onPointerUp={endResize}
-              onPointerCancel={endResize}
-              onKeyDown={resizeByKey}
-            />
-            <Inspector key={placement.id} item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />
-          </>
+        <div
+          className="sidebar-handle"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          aria-valuemin={MIN_WIDTH}
+          aria-valuemax={MAX_WIDTH}
+          aria-valuenow={sidebarWidth}
+          tabIndex={0}
+          onPointerDown={startResize}
+          onPointerMove={moveResize}
+          onPointerUp={endResize}
+          onPointerCancel={endResize}
+          onKeyDown={resizeByKey}
+        />
+        {placement ? (
+          <Inspector key={placement.id} item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />
+        ) : (
+          <aside className="inspector" style={{ width: sidebarWidth }} aria-label="Details">
+            <p className="inspector-empty">Select an item to see its details.</p>
+          </aside>
         )}
       </main>
       <ConfirmDialog deleteFlow={deleteFlow} />

@@ -373,6 +373,10 @@ textarea:focus {
   background: var(--surface);
   border-left: 1px solid var(--border);
 }
+.inspector-empty {
+  margin: 0;
+  color: var(--muted);
+}
 /* FocusGroup wrapper: keeps the aside's column and gap for the fields it holds. */
 .inspector-fields {
   display: flex;

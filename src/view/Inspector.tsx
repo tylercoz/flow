@@ -11,7 +11,7 @@ import { IdListEditor } from './IdListEditor'
 import { useStore } from './useStore'
 
 interface InspectorProps {
-  /** The selected Placement. App renders no Inspector when nothing is selected. */
+  /** The selected Placement. App renders an empty sidebar instead when nothing is selected. */
   item: Placement
   /** Sidebar width in px; owned by App so it survives selection changes. */
   width: number
