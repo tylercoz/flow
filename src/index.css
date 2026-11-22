@@ -202,6 +202,13 @@ textarea:focus {
 .react-flow__node.selected .placement-node {
   border-color: var(--accent);
 }
+/* Same hues as the component's own port lists, so a port node reads as the port it stands for. */
+.input-port-node {
+  border-left: 4px solid var(--input);
+}
+.output-port-node {
+  border-right: 4px solid var(--output);
+}
 .placement-text {
   display: flex;
   flex-direction: column;

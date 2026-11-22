@@ -20,6 +20,7 @@ import { useApp } from './AppProvider'
 import type { DeleteFlow } from './DeleteFlow'
 import { LinkEdge } from './LinkEdge'
 import { PlacementNode } from './PlacementNode'
+import { PortNode } from './PortNode'
 import { RenameContext } from './RenameInput'
 import { KIND_LABELS, ResourcePicker } from './ResourcePicker'
 import { ResourceIcon } from './resourceIcons'
@@ -40,7 +41,7 @@ function centreOf(el: HTMLElement | null): { x: number; y: number } | null {
 }
 
 // Must be module-level: a new object per render would make React Flow remount every node.
-const nodeTypes = { placement: PlacementNode }
+const nodeTypes = { placement: PlacementNode, port: PortNode }
 const edgeTypes = { link: LinkEdge }
 
 /** The single selected Placement or Link of the current Level, or null. */
@@ -78,7 +79,7 @@ interface Copied {
 }
 
 function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: LevelProps) {
-  const { workspace, scheduler } = useApp()
+  const { workspace, scheduler, navigator } = useApp()
   const [rename] = useState(() => new RenameController(scheduler))
   // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
   useEffect(
@@ -90,7 +91,9 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   )
   const lastSelection = useRef(selectionKey([], []))
   const version = useStore(workspace).getVersion()
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(toNodes(diagram))
+  // Null at the root. A Level is keyed by its Diagram, so the owner never changes while this Level is mounted.
+  const owner = navigator.currentComponent
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(toNodes(diagram, owner))
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(toEdges(diagram))
   const [syncedVersion, setSyncedVersion] = useState(version)
   const { screenToFlowPosition } = useReactFlow()
@@ -107,7 +110,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
     // Freshly created elements replace the previous selection.
     const selected = pendingFocus ?? new Set([...nodes, ...edges].filter((e) => e.selected).map((e) => e.id))
     setPendingFocus(null)
-    setNodes(toNodes(diagram).map((n) => ({ ...n, selected: selected.has(n.id) })))
+    setNodes(toNodes(diagram, owner).map((n) => ({ ...n, selected: selected.has(n.id) })))
     setEdges(toEdges(diagram).map((e) => ({ ...e, selected: selected.has(e.id) })))
   }
 
@@ -133,6 +136,11 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
     return false
   }
 
+  // A port node keeps its position on the component, so it moves on every Level that shows that component.
+  const savePosition = (n: Node) => {
+    if (n.type === 'port') owner?.setPortPosition(n.id, n.position)
+    else diagram.placement(n.id)?.setPosition(n.position)
+  }
   const openMenu = (e: { clientX: number; clientY: number }) =>
     setMenu({ screen: { x: e.clientX, y: e.clientY }, point: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
 
@@ -168,7 +176,8 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
         paste(fragment, offsetToCenter(fragment, screenToFlowPosition(screen), sizes))
         return
       }
-      const ids = new Set(nodes.filter((n) => n.selected).map((n) => n.id))
+      // A port node belongs to its component, so it is never copied or duplicated.
+      const ids = new Set(nodes.filter((n) => n.selected && n.type === 'placement').map((n) => n.id))
       // Acting on nothing keeps the previous copy instead of clearing it.
       if (ids.size === 0) return
       // Cmd+D is the browser's bookmark shortcut, so it is only taken over when it does something.
@@ -208,9 +217,9 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
           onEdgesChange={onEdgesChange}
           onNodeDragStart={() => rename.cancel()}
           // Dragging one member of a multi-selection moves all of them, so persist every moved node.
-          onNodeDragStop={(_, __, moved) => moved.forEach((n) => diagram.placement(n.id)?.setPosition(n.position))}
+          onNodeDragStop={(_, __, moved) => moved.forEach(savePosition)}
           onSelectionDragStart={() => rename.cancel()}
-          onSelectionDragStop={(_, moved) => moved.forEach((n) => diagram.placement(n.id)?.setPosition(n.position))}
+          onSelectionDragStop={(_, moved) => moved.forEach(savePosition)}
           // Loose mode lets a side handle (one source and one target Handle per side) start or end a Link.
           connectionMode={ConnectionMode.Loose}
           onPaneContextMenu={(e) => {
@@ -239,7 +248,8 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
             if (key === lastSelection.current) return
             lastSelection.current = key
             rename.cancel()
-            if (n.length + e.length !== 1) return onSelectionChange(null)
+            // A port node has nothing to inspect: it is edited on its component.
+            if (n.length + e.length !== 1 || n[0]?.type === 'port') return onSelectionChange(null)
             onSelectionChange(
               n.length ? { kind: 'placement', id: n[0].id } : { kind: 'link', id: e[0].id },
             )

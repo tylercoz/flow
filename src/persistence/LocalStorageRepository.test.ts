@@ -29,7 +29,7 @@ function fakeStorage(failOn?: 'getItem' | 'setItem'): Storage & { data: Map<stri
 }
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 11,
+  schemaVersion: 12,
   types: [],
   exceptions: [],
   environmentVariables: [],

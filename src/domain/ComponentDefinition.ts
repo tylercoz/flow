@@ -1,5 +1,6 @@
 import type { Diagram } from './Diagram'
-import type { Port } from './Port'
+import type { Position } from './NodeBounds'
+import type { Port, PortRole } from './Port'
 import type { ComponentDto } from './WorkspaceSnapshot'
 
 const copyPorts = (ports: readonly Port[]): Port[] => ports.map((p) => ({ ...p }))
@@ -9,6 +10,8 @@ export class ComponentDefinition {
   readonly diagram: Diagram
   private _inputs: Port[]
   private _outputs: Port[]
+  // Where each port's node sits on the child Diagram; a port with no entry gets a default slot in the view.
+  private _portPositions: Map<string, Position>
   private _notes: string
   // Ids into Workspace.exceptions.
   private _exceptionIds: string[]
@@ -20,10 +23,12 @@ export class ComponentDefinition {
     this.diagram = diagram
     this._inputs = copyPorts(initial.inputs ?? [])
     this._outputs = copyPorts(initial.outputs ?? [])
+    this._portPositions = new Map(Object.entries(initial.portPositions ?? {}).map(([id, p]) => [id, { x: p.x, y: p.y }]))
     this._notes = initial.notes ?? ''
     this._exceptionIds = [...(initial.exceptionIds ?? [])]
     this._environmentVariableIds = [...(initial.environmentVariableIds ?? [])]
     this.onChange = onChange
+    diagram.attachPortOwner(this)
   }
 
   get inputs(): readonly Port[] {
@@ -38,6 +43,21 @@ export class ComponentDefinition {
   setPorts(field: 'inputs' | 'outputs', ports: readonly Port[]): void {
     if (field === 'inputs') this._inputs = copyPorts(ports)
     else this._outputs = copyPorts(ports)
+    for (const id of this._portPositions.keys()) if (!this.portRole(id)) this._portPositions.delete(id)
+    this.onChange()
+  }
+  portRole(id: string): PortRole | undefined {
+    if (this._inputs.some((p) => p.id === id)) return 'input'
+    return this._outputs.some((p) => p.id === id) ? 'output' : undefined
+  }
+  portPosition(id: string): Readonly<Position> | undefined {
+    return this._portPositions.get(id)
+  }
+  get portPositions(): ReadonlyMap<string, Readonly<Position>> {
+    return this._portPositions
+  }
+  setPortPosition(id: string, p: Position): void {
+    this._portPositions.set(id, { x: p.x, y: p.y })
     this.onChange()
   }
 

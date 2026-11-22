@@ -22,6 +22,8 @@ export type LinkDto = {
 export type ComponentDto = {
   inputs: Port[]
   outputs: Port[]
+  // Keyed by port id; a port without an entry has not been moved from its default slot.
+  portPositions: Record<string, Position>
   notes: string
   exceptionIds: string[]
   environmentVariableIds: string[]
@@ -54,7 +56,7 @@ export type DiagramDto = {
 }
 
 export type WorkspaceSnapshot = {
-  schemaVersion: 11
+  schemaVersion: 12
   types: DataType[]
   exceptions: ExceptionType[]
   environmentVariables: EnvironmentVariable[]

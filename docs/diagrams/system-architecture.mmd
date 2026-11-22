@@ -21,6 +21,7 @@ flowchart TD
         NotificationBar
         DiagramProjector
         PlacementNode["PlacementNode: component or other kind"]
+        PortNode["PortNode: one port of the open component"]
         ResourcePicker
         resourceIcons["resourceIcons: ResourceIcon per ResourceKind"]
         LinkEdge
@@ -49,7 +50,9 @@ flowchart TD
         Diagram --> LinkRules
         Resource --> ResourceKinds
         LinkRules --> ResourceKinds
-        Navigator -->|"root; path of Placement ids via resourceOf"| Diagram
+        ComponentDefinition -->|"attachPortOwner: its port ids are nodes of the child Diagram"| Diagram
+        Diagram -->|"portNodeHandleIds for a port id"| Port
+        Navigator -->|"root; path of Placement ids via resourceOf; currentComponent"| Diagram
         History -->|"subscribes; capture, replaceContent"| Workspace
         History -->|reconcile after restore| Navigator
         Notifier --> Scheduler
@@ -61,7 +64,7 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
         WorkspaceSerializer -->|checkLink, handleIds, kindInvariantError| Domain
-        WorkspaceSerializer -->|"schemaVersion 11; findCycle rejects Reference_Cycle"| DiagramGraph
+        WorkspaceSerializer -->|"schemaVersion 12; findCycle rejects Reference_Cycle"| DiagramGraph
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
@@ -114,7 +117,12 @@ flowchart TD
     Level -->|classifies key events| clipboardShortcut
     Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
     Level -->|"Cmd/Ctrl+C, V, D: copy, paste, duplicate (copy then paste, skipping the copied Fragment)"| Workspace
-    CanvasView -->|"nodeTypes 'placement' (module-level), the only node type"| PlacementNode
+    CanvasView -->|"nodeTypes 'placement' and 'port' (module-level)"| PlacementNode
+    CanvasView -->|"nodeTypes 'port': only on a component's Level"| PortNode
+    PortNode -->|"reads the port live via navigator.currentComponent; Handles per side"| Navigator
+    PortNode -->|"shares SIDE_POSITIONS"| PlacementNode
+    DiagramProjector -->|"toNodes(diagram, owner): one port node per port, stored or default position"| Navigator
+    CanvasView -->|"drag a port node: setPortPosition"| ComponentDefinition
     CanvasView -->|"click on empty pane (not one that deselects) or right-click: pick a kind, component included"| ResourcePicker
     ResourcePicker -->|addPlacement| Diagram
     ResourcePicker -->|"createPlacedResource; lists resources.byKind without cyclic ones (wouldCreateCycle)"| Workspace

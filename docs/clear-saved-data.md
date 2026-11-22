@@ -4,7 +4,7 @@ Flow keeps the workspace in the browser's `localStorage` under the key `flow.wor
 
 While the project is in development there are no migrations. After a `schemaVersion` bump, the app cannot read the old save. It shows "Saved data could not be read. Starting empty; changes will not be saved." and does not overwrite the old data.
 
-The current `schemaVersion` is 11 (a database has four side handles like the other resource kinds, instead of `read` and `write`). Saves with `schemaVersion` 10 or lower cannot be read. Back up the old save if you want to keep it, then clear it.
+The current `schemaVersion` is 12 (a component stores a position for each port node, and Links inside a component may end at its port nodes). Saves with `schemaVersion` 11 or lower cannot be read. Back up the old save if you want to keep it, then clear it.
 
 Run these in the browser devtools console on the app's page.
 

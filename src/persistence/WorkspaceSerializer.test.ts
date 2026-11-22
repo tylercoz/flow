@@ -18,11 +18,11 @@ const componentResource = (id: string, over: Record<string, unknown> = {}, child
   kind: 'component',
   name: '',
   typeId: null,
-  component: { inputs: [], outputs: [], notes: '', exceptionIds: [], environmentVariableIds: [], diagram: child, ...over },
+  component: { inputs: [], outputs: [], portPositions: {}, notes: '', exceptionIds: [], environmentVariableIds: [], diagram: child, ...over },
 })
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 11,
+  schemaVersion: 12,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -47,7 +47,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(11)
+    expect(serializer.serialize(ws).schemaVersion).toBe(12)
     expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -115,18 +115,56 @@ describe('WorkspaceSerializer', () => {
     })
     expect(serializer.deserialize(raw)).toEqual(raw)
   })
+  describe('port nodes', () => {
+    const ports = { inputs: [port('in')], outputs: [port('out')] }
+    const link = (id: string, sourceId: string, targetId: string, sourcePortId: string, targetPortId: string) => ({
+      id,
+      name: '',
+      sourceId,
+      targetId,
+      sourcePortId,
+      targetPortId,
+    })
+    // Component `a` holds a database placed as `p`; its own ports are `in` and `out`.
+    const withLinks = (links: unknown[], over: Record<string, unknown> = {}) =>
+      valid(diagram('r'), [
+        componentResource('a', { ...ports, ...over }, diagram('a-d', [placement('p', 'db')], links)),
+        { id: 'db', kind: 'database', name: '', typeId: null, component: null },
+      ])
+    it('keeps port positions and Links on port nodes', () => {
+      const raw = withLinks([link('l1', 'in', 'p', 'right', 'left'), link('l2', 'p', 'out', 'right', 'left')], {
+        portPositions: { in: { x: 1, y: 2 } },
+      })
+      expect(serializer.deserialize(raw)).toEqual(raw)
+    })
+    it('rejects a Link whose end is neither a Placement nor a port of the component', () => {
+      expect(() => serializer.deserialize(withLinks([link('l', 'ghost', 'p', 'right', 'left')]))).toThrow(PersistenceError)
+    })
+    it('rejects a Link that ends at an input port or starts at an output port', () => {
+      expect(() => serializer.deserialize(withLinks([link('l', 'p', 'in', 'right', 'left')]))).toThrow(PersistenceError)
+      expect(() => serializer.deserialize(withLinks([link('l', 'out', 'p', 'right', 'left')]))).toThrow(PersistenceError)
+    })
+    it('rejects a port id as a node on the root', () => {
+      const raw = valid(diagram('r', [], [link('l', 'in', 'out', 'right', 'left')]), [componentResource('a', ports)])
+      expect(() => serializer.deserialize(raw)).toThrow(PersistenceError)
+    })
+    it('rejects a position for a port the component does not have', () => {
+      expect(() => serializer.deserialize(withLinks([], { portPositions: { ghost: { x: 0, y: 0 } } }))).toThrow(PersistenceError)
+    })
+  })
   it('rejects a component Resource that names a missing environment variable', () => {
     expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['ghost'] })]))).toThrow(PersistenceError)
   })
 
-  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [undefined], ['11']])('rejects schemaVersion %s', (schemaVersion) => {
+  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [undefined], ['12']])('rejects schemaVersion %s', (schemaVersion) => {
     expect(() => serializer.deserialize({ ...valid(), schemaVersion })).toThrow(PersistenceError)
   })
 
   it.each([
     ['null', null],
     ['array', []],
-    ['missing root', { schemaVersion: 11 }],
+    ['missing root', { schemaVersion: 12 }],
+    ['missing portPositions', valid(diagram('r'), [componentResource('c', { portPositions: undefined })])],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],
     ['non-array placements', valid({ ...diagram('r'), placements: {} } as never)],

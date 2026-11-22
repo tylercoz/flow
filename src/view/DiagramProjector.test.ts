@@ -26,6 +26,35 @@ describe('DiagramProjector', () => {
     expect(node).not.toHaveProperty('height')
   })
 
+  describe('port nodes', () => {
+    function component() {
+      const { workspace, diagram } = setup()
+      const p = workspace.createPlacedResource(diagram, { kind: 'component', name: 'A' }, { x: 0, y: 0 })
+      workspace.setPorts(p.resourceId, 'inputs', [{ name: 'a', typeId: null }, { name: 'b', typeId: null }])
+      workspace.setPorts(p.resourceId, 'outputs', [{ name: 'c', typeId: null }])
+      const def = workspace.resources.get(p.resourceId)!.definition!
+      return { def }
+    }
+    it('adds one undeletable node per port, in default columns, after the Placements', () => {
+      const { def } = component()
+      const nodes = toNodes(def.diagram, def)
+      expect(nodes.map((n) => [n.id, n.type, n.position])).toEqual([
+        [def.inputs[0].id, 'port', { x: 0, y: 0 }],
+        [def.inputs[1].id, 'port', { x: 0, y: 72 }],
+        [def.outputs[0].id, 'port', { x: 480, y: 0 }],
+      ])
+      expect(nodes.every((n) => n.deletable === false)).toBe(true)
+    })
+    it('uses a stored position over the default slot', () => {
+      const { def } = component()
+      def.setPortPosition(def.inputs[1].id, { x: 9, y: 8 })
+      expect(toNodes(def.diagram, def).find((n) => n.id === def.inputs[1].id)?.position).toEqual({ x: 9, y: 8 })
+    })
+    it('adds none at the root', () => {
+      const { def } = component()
+      expect(toNodes(def.diagram, null)).toEqual([])
+    })
+  })
   it('projects every Placement, whatever its Resource kind, as one placement node with empty data', () => {
     const { workspace, diagram } = setup()
     const a = workspace.createPlacedResource(diagram, { kind: 'component', name: 'A' }, { x: 1, y: 2 })

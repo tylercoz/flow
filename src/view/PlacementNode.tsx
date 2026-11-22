@@ -15,7 +15,7 @@ const DRAG_THRESHOLD_PX = 4
 // Smaller than a component's box: a non-component Resource has no port lists to fit.
 const MIN_SIZE = { width: 120, height: 48 }
 
-const SIDE_POSITIONS: Record<(typeof SIDE_PORTS)[number], Position> = {
+export const SIDE_POSITIONS: Record<(typeof SIDE_PORTS)[number], Position> = {
   top: Position.Top,
   right: Position.Right,
   bottom: Position.Bottom,

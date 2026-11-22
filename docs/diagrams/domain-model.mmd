@@ -54,6 +54,7 @@ classDiagram
     class Navigator {
         path: string[]  %% Placement ids
         current: Diagram  %% last component's child Diagram, or root
+        currentComponent: ComponentDefinition or null at the root
         trail() Resource[]
         open(placementId)
         navigateTo(index)
@@ -85,6 +86,8 @@ classDiagram
         removePlacement(id)
         dropPlacementsOf(resourceId)
         dropLinksOnPorts(resourceId, field, keptIds)
+        attachPortOwner(owner)  %% the component whose ports are nodes here
+        dropLinksOfNodes(ids)
         countPlacementsOf(resourceId)
         addAll(placements, links)
         addLink(sourceId, targetId, sourcePortId, targetPortId)
@@ -93,6 +96,10 @@ classDiagram
     class ComponentDefinition {
         inputs: list of Port
         outputs: list of Port
+        portPositions: Port id to Position of its port node on the child Diagram
+        portRole(id) input, output or undefined
+        portPosition(id)
+        setPortPosition(id, p)
         notes
         setPorts(field, ports)
         setNotes(notes)
@@ -163,18 +170,20 @@ classDiagram
     class Link {
         id
         name
-        sourceId, targetId: Placement ids in the same Diagram
-        sourcePortId: output port id of the source Resource
-        targetPortId: input port id of the target Resource
+        sourceId, targetId: Placement ids in the same Diagram, or port ids of the component that owns it
+        sourcePortId: output port id of the source Resource, or a side handle of an input port node
+        targetPortId: input port id of the target Resource, or a side handle of an output port node
         waypoints: list of Position, bend points from source to target, empty for the automatic curve
         setWaypoints(points)
         setName(name)
     }
     class Port {
-        <<type>>
+        <<module>>
         id
         name
         typeId: DataType id or null
+        PortRole: input or output
+        portNodeHandleIds(portRole, linkRole)  %% an input port node only starts Links, an output port node only ends them
     }
     class Catalog {
         all: list of entries
@@ -225,11 +234,11 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 11
+        schemaVersion: 12
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable
-        resources: list of ResourceDto, a component carries ComponentDto with its child DiagramDto
+        resources: list of ResourceDto, a component carries ComponentDto with its child DiagramDto and portPositions
         root: DiagramDto
     }
     class Fragment {
@@ -286,6 +295,8 @@ classDiagram
     Catalog o-- EnvironmentVariable
     ComponentDefinition ..> EnvironmentVariable : relies on, by id
     ComponentDefinition *-- Port
+    ComponentDefinition ..> Diagram : attachPortOwner(this), so addLink accepts its port ids
+    Diagram ..> Port : addLink resolves a port id with portNodeHandleIds
     Link ..> Port : joins an output to an input, by id
     Port ..> DataType : refers by id
     Workspace --> DomainError : TYPE_IN_USE

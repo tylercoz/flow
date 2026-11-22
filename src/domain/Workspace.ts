@@ -66,7 +66,7 @@ export class Workspace implements ObservableStore {
   toSnapshot(includeViewports = true): WorkspaceSnapshot {
     const entries = (c: Catalog) => c.all.map((e) => ({ id: e.id, name: e.name }))
     return {
-      schemaVersion: 11,
+      schemaVersion: 12,
       types: entries(this._types),
       exceptions: entries(this._exceptions),
       environmentVariables: entries(this._environmentVariables),
@@ -170,6 +170,9 @@ export class Workspace implements ObservableStore {
     const next = ports.map((p) => ({ ...p, id: p.id ?? this.ctx.ids.next() }))
     const kept = new Set(next.map((p) => p.id))
     this.allDiagrams().forEach((d) => d.dropLinksOnPorts(resourceId, field, kept))
+    // The ports' own nodes sit on the component's Level, so their Links go in the same change.
+    const removed = new Set(resource.definition[field].map((p) => p.id).filter((id) => !kept.has(id)))
+    resource.definition.diagram.dropLinksOfNodes(removed)
     resource.definition.setPorts(field, next)
   }
   // Every Diagram: the root plus the child Diagram of each component Resource, placed or not.

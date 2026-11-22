@@ -225,6 +225,43 @@ describe('Diagram', () => {
     expect(() => diagram.addPlacement(a.resourceId, { x: 9, y: 9 })).not.toThrow()
   })
 
+  describe('port nodes', () => {
+    // A component with one input and one output port, and an inner component to link them to.
+    function inside() {
+      const s = setup()
+      const outer = s.component()
+      const def = s.definitionOf(outer)
+      s.workspace.setPorts(outer.resourceId, 'inputs', [{ name: 'in', typeId: null }])
+      s.workspace.setPorts(outer.resourceId, 'outputs', [{ name: 'out', typeId: null }])
+      const level = s.childOf(outer)
+      const inner = level.addPlacement(s.component().resourceId, { x: 0, y: 0 })
+      const innerDef = s.definitionOf(inner)
+      s.workspace.setPorts(inner.resourceId, 'inputs', [{ name: 'a', typeId: null }])
+      s.workspace.setPorts(inner.resourceId, 'outputs', [{ name: 'b', typeId: null }])
+      return { ...s, outer, def, level, inner, innerDef, input: def.inputs[0].id, output: def.outputs[0].id }
+    }
+    it('links an input port node to an inner node and an inner node to an output port node', () => {
+      const { level, inner, innerDef, input, output } = inside()
+      expect(() => level.addLink(input, inner.id, 'right', innerDef.inputs[0].id)).not.toThrow()
+      expect(() => level.addLink(inner.id, output, innerDef.outputs[0].id, 'left')).not.toThrow()
+    })
+    it('links an input port node straight to an output port node', () => {
+      const { level, input, output } = inside()
+      expect(() => level.addLink(input, output, 'right', 'left')).not.toThrow()
+    })
+    it('rejects a Link that ends at an input port node or starts at an output port node', () => {
+      const { level, inner, innerDef, input, output } = inside()
+      expect(code(() => level.addLink(inner.id, input, innerDef.outputs[0].id, 'left'))).toBe('INVALID_PORT')
+      expect(code(() => level.addLink(output, inner.id, 'right', innerDef.inputs[0].id))).toBe('INVALID_PORT')
+    })
+    it('rejects a self Link and an id that is not a node of this Diagram', () => {
+      const { diagram, level, input, output } = inside()
+      expect(code(() => level.addLink(input, input, 'right', 'left'))).toBe('SELF_LINK')
+      expect(code(() => level.addLink('nope', output, 'right', 'left'))).toBe('NOT_IN_DIAGRAM')
+      // The root has no ports, so a port id is no node there.
+      expect(code(() => diagram.addLink(input, output, 'right', 'left'))).toBe('NOT_IN_DIAGRAM')
+    })
+  })
   it('removes a Link and stores the viewport', () => {
     const { workspace, diagram, component } = setup()
     const link = connect(workspace, diagram, component(), component({ x: 1, y: 1 }))

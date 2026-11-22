@@ -114,6 +114,14 @@ describe('Navigator', () => {
     })
   })
 
+  it('reports the component whose Level is shown, and null at the root', () => {
+    const { nav, a, b, ra, rb } = setup()
+    expect(nav.currentComponent).toBeNull()
+    nav.open(a.id)
+    expect(nav.currentComponent).toBe(ra.definition)
+    nav.open(b.id)
+    expect(nav.currentComponent).toBe(rb.definition)
+  })
   it('trail shows a renamed component', () => {
     const { nav, a, ra } = setup()
     nav.open(a.id)

@@ -12,7 +12,7 @@ sequenceDiagram
     alt data found
         R-->>L: raw
         L->>S: deserialize(raw)
-        Note over S: rejects schemaVersion other than 11, unknown resource or port, and Diagram cycles
+        Note over S: rejects schemaVersion other than 12, unknown resource or port, a Link end that is neither a Placement nor a port of its component, a wrong-direction port node Link, and Diagram cycles
         S-->>L: snapshot (plain data)
         L->>W: Workspace.restore(snapshot, ids)
     else none stored

@@ -1,7 +1,7 @@
 import fc from 'fast-check'
 import type { Position, Size } from '../NodeBounds'
 import type { Placement } from '../Placement'
-import type { Port } from '../Port'
+import { portNodeHandleIds, type Port } from '../Port'
 import { RESOURCE_KINDS, type ResourceKind } from '../ResourceKinds'
 import type { IdGenerator } from '../IdGenerator'
 import type { Viewport } from '../Viewport'
@@ -26,10 +26,12 @@ export const viewportArb: fc.Arbitrary<Viewport> = fc.record({
   zoom: fc.integer({ min: 1, max: 400 }).map((n) => n / 100),
 })
 // Generated workspaces have no ids to point at, so ports are untyped here; type references are covered by unit tests.
-const portArb = fc.record({ id: fc.nat({ max: 20 }).map((n) => `p${n}`), name: fc.string(), typeId: fc.constant(null) })
+// Inputs and outputs get different id prefixes: a port id names one node on its component's Level, so no id is both.
+const portArb = (prefix: string) =>
+  fc.record({ id: fc.nat({ max: 20 }).map((n) => `${prefix}${n}`), name: fc.string(), typeId: fc.constant(null) })
 export type ComponentPatch = { inputs?: Port[]; outputs?: Port[]; notes?: string }
 export const componentPatchArb: fc.Arbitrary<ComponentPatch> = fc.record(
-  { inputs: fc.array(portArb), outputs: fc.array(portArb), notes: fc.string() },
+  { inputs: fc.array(portArb('i')), outputs: fc.array(portArb('o')), notes: fc.string() },
   { requiredKeys: [] },
 )
 
@@ -40,6 +42,8 @@ const pick = fc.nat({ max: 1000 })
 export type Command =
   | { kind: 'addComponent'; diagram: number; position: { x: number; y: number } }
   | { kind: 'addLink'; diagram: number; source: number; target: number; sourcePort: number; targetPort: number }
+  | { kind: 'addPortLink'; diagram: number; source: number; target: number; sourceHandle: number; targetHandle: number }
+  | { kind: 'movePortNode'; component: number; port: number; position: Position }
   | { kind: 'removeLink'; diagram: number; link: number }
   | { kind: 'patchComponent'; component: number; patch: ComponentPatch }
   | { kind: 'patchLink'; diagram: number; link: number; name: string }
@@ -65,6 +69,8 @@ const sizeArb: fc.Arbitrary<Size> = fc.record({ width: fc.integer({ min: 1, max:
 export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addComponent' as const), diagram: pick, position: positionArb }), weight: 5 },
   { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick, sourcePort: pick, targetPort: pick }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('addPortLink' as const), diagram: pick, source: pick, target: pick, sourceHandle: pick, targetHandle: pick }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('movePortNode' as const), component: pick, port: pick, position: positionArb }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('removeLink' as const), diagram: pick, link: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('patchComponent' as const), component: pick, patch: componentPatchArb }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('patchLink' as const), diagram: pick, link: pick, name: fc.string() }), weight: 1 },
@@ -144,6 +150,12 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
       else if (rest.notes !== undefined) c.setNotes(rest.notes)
       return
     }
+    case 'movePortNode': {
+      const c = at(components, cmd.component)?.definition
+      const port = c && at([...c.inputs, ...c.outputs], cmd.port)
+      if (c && port) c.setPortPosition(port.id, cmd.position)
+      return
+    }
     case 'toggleEnvironmentVariable': {
       const c = at(components, cmd.component)?.definition
       const v = at(workspace.environmentVariables, cmd.variable)
@@ -199,6 +211,25 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
       const out = at(handleIds(workspace, source, 'source'), cmd.sourcePort)
       const inn = at(handleIds(workspace, target, 'target'), cmd.targetPort)
       if (out && inn) d.addLink(source.id, target.id, out, inn)
+      return
+    }
+    case 'addPortLink': {
+      // Only a component's own Level has port nodes; the root is skipped.
+      const owner = components.find((c) => c.definition?.diagram === d)?.definition
+      if (!owner) return
+      const nodes = [...owner.inputs.map((p) => p.id), ...owner.outputs.map((p) => p.id), ...d.placements.map((p) => p.id)]
+      const handlesOf = (id: string, role: 'source' | 'target') => {
+        const placement = d.placement(id)
+        if (placement) return handleIds(workspace, placement, role)
+        const portRole = owner.portRole(id)
+        return portRole ? portNodeHandleIds(portRole, role) : []
+      }
+      const source = at(nodes, cmd.source)
+      const target = at(nodes, cmd.target)
+      if (source === undefined || target === undefined || source === target) return
+      const out = at(handlesOf(source, 'source'), cmd.sourceHandle)
+      const inn = at(handlesOf(target, 'target'), cmd.targetHandle)
+      if (out && inn) d.addLink(source, target, out, inn)
       return
     }
     case 'removeLink': {

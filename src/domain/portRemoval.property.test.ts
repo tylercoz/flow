@@ -63,4 +63,33 @@ describe('port removal', () => {
       { numRuns: 100 },
     )
   })
+  it('setPorts leaves exactly the Links and positions of the kept ports on the component Level', () => {
+    fc.assert(
+      fc.property(
+        workspaceArb,
+        fc.constantFrom('inputs' as const, 'outputs' as const),
+        fc.array(fc.boolean(), { minLength: 2, maxLength: 2 }),
+        ({ workspace }, field, keep) => {
+          const placed = workspace.createPlacedResource(workspace.root, { kind: 'component', name: 'c' }, { x: 0, y: 0 })
+          const { definition } = workspace.resources.get(placed.resourceId)!
+          workspace.setPorts(placed.resourceId, 'inputs', [port('i1'), port('i2')])
+          workspace.setPorts(placed.resourceId, 'outputs', [port('o1'), port('o2')])
+          const inner = workspace.createPlacedResource(definition!.diagram, { kind: 'database', name: 'd' }, { x: 0, y: 0 })
+          for (const i of ['i1', 'i2']) definition!.diagram.addLink(i, inner.id, 'right', 'left')
+          for (const o of ['o1', 'o2']) definition!.diagram.addLink(inner.id, o, 'right', 'left')
+          for (const id of ['i1', 'i2', 'o1', 'o2']) definition!.setPortPosition(id, { x: 1, y: 2 })
+          const existing = field === 'inputs' ? ['i1', 'i2'] : ['o1', 'o2']
+          const kept = existing.filter((_, n) => keep[n])
+          workspace.setPorts(placed.resourceId, field, kept.map(port))
+          const live = new Set([...definition!.inputs, ...definition!.outputs].map((p) => p.id))
+          expect(definition!.diagram.links).toHaveLength(2 + kept.length)
+          for (const l of definition!.diagram.links) {
+            for (const end of [l.sourceId, l.targetId]) expect(end === inner.id || live.has(end)).toBe(true)
+          }
+          expect([...definition!.portPositions.keys()].sort()).toEqual([...live].sort())
+        },
+      ),
+      { numRuns: 100 },
+    )
+  })
 })

@@ -3,8 +3,10 @@ import type { IdGenerator } from './IdGenerator'
 import { Link } from './Link'
 import { checkLink } from './LinkRules'
 import type { Position } from './NodeBounds'
+import { portNodeHandleIds, type PortRole } from './Port'
 import { Placement } from './Placement'
 import type { Resource } from './Resource'
+import type { HandleRole } from './ResourceKinds'
 import { DEFAULT_VIEWPORT, type Viewport } from './Viewport'
 
 // Supplied by the Workspace so every Diagram shares one id source, one change signal and one cycle rule.
@@ -18,12 +20,16 @@ export type DiagramContext = {
   pruneOrphans: () => void
 }
 
+// The component whose ports this Diagram shows as nodes.
+export type PortOwner = { portRole(id: string): PortRole | undefined }
 export class Diagram {
   readonly id: string
   private readonly ctx: DiagramContext
   private _viewport: Viewport
   private _links: Link[]
   private _placements: Placement[]
+  // Null for the root, which has no ports. Set once by the ComponentDefinition that owns this Diagram.
+  private portOwner: PortOwner | null = null
 
   // Initial content lets Workspace.restore rebuild a stored Diagram without generating new ids.
   constructor(
@@ -59,6 +65,9 @@ export class Diagram {
     return placement && this.ctx.resources.get(placement.resourceId)
   }
 
+  attachPortOwner(owner: PortOwner): void {
+    this.portOwner = owner
+  }
   setViewport(v: Viewport): void {
     this._viewport = { x: v.x, y: v.y, zoom: v.zoom }
     this.ctx.onChange()
@@ -113,10 +122,10 @@ export class Diagram {
 
   addLink(sourceId: string, targetId: string, sourcePortId: string, targetPortId: string): Link {
     if (sourceId === targetId) throw new DomainError('SELF_LINK', 'A node cannot be linked to itself.')
-    const source = this.resourceOf(sourceId)
-    const target = this.resourceOf(targetId)
-    if (!source || !target) throw new DomainError('NOT_IN_DIAGRAM', 'Both nodes must be in the same diagram.')
-    const failure = checkLink(source.handleIds('source'), sourcePortId, target.handleIds('target'), targetPortId)
+    const sourceHandles = this.handlesOf(sourceId, 'source')
+    const targetHandles = this.handlesOf(targetId, 'target')
+    if (!sourceHandles || !targetHandles) throw new DomainError('NOT_IN_DIAGRAM', 'Both nodes must be in the same diagram.')
+    const failure = checkLink(sourceHandles, sourcePortId, targetHandles, targetPortId)
     if (failure) throw new DomainError(failure.code, failure.message)
     const link = new Link(this.ctx.ids.next(), '', this.ctx.onChange, sourceId, targetId, sourcePortId, targetPortId)
     this._links.push(link)
@@ -130,6 +139,17 @@ export class Diagram {
     this.ctx.onChange()
   }
 
+  // No notification, like dropLinksOnPorts: Workspace.setPorts drops the Links of removed port nodes in its own single change.
+  dropLinksOfNodes(ids: ReadonlySet<string>): void {
+    this._links = this._links.filter((l) => !ids.has(l.sourceId) && !ids.has(l.targetId))
+  }
+  // A node id is a Placement id or a port id of the owning component; undefined when it is neither.
+  private handlesOf(nodeId: string, role: HandleRole): readonly string[] | undefined {
+    const resource = this.resourceOf(nodeId)
+    if (resource) return resource.handleIds(role)
+    const portRole = this.portOwner?.portRole(nodeId)
+    return portRole && portNodeHandleIds(portRole, role)
+  }
   private dropNode(id: string): void {
     this._placements = this._placements.filter((p) => p.id !== id)
     this._links = this._links.filter((l) => !touches(l, id))

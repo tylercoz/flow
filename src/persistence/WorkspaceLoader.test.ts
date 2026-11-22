@@ -36,7 +36,7 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 11,
+  schemaVersion: 12,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -49,6 +49,7 @@ const stored = {
       component: {
         inputs: [],
         outputs: [],
+        portPositions: {},
         notes: '',
         exceptionIds: [],
         environmentVariableIds: [],

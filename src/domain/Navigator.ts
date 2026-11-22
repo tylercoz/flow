@@ -1,4 +1,5 @@
 import { ChangeSignal } from './ChangeSignal'
+import type { ComponentDefinition } from './ComponentDefinition'
 import type { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
 import type { ObservableStore } from './ObservableStore'
@@ -34,6 +35,12 @@ export class Navigator implements ObservableStore {
     return steps.length === 0 ? this.workspace.root : steps[steps.length - 1].diagram
   }
 
+  // The component whose Level is shown, or null at the root.
+  get currentComponent(): ComponentDefinition | null {
+    const steps = this.resolvePath()
+    if (!steps) throw new DomainError('NOT_IN_DIAGRAM', 'Path placement no longer exists.')
+    return steps.length === 0 ? null : steps[steps.length - 1].resource.definition
+  }
   open(placementId: string): void {
     const current = this.current
     if (!current.placement(placementId)) {

@@ -52,6 +52,7 @@ export function resourceToDto(r: Resource, includeViewports: boolean): ResourceD
     component: d && {
       inputs: d.inputs.map((p) => ({ ...p })),
       outputs: d.outputs.map((p) => ({ ...p })),
+      portPositions: Object.fromEntries([...d.portPositions].map(([id, p]) => [id, { x: p.x, y: p.y }])),
       notes: d.notes,
       exceptionIds: [...d.exceptionIds],
       environmentVariableIds: [...d.environmentVariableIds],
