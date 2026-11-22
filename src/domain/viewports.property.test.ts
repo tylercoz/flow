@@ -4,12 +4,17 @@ import type { Diagram } from './Diagram'
 import { Navigator } from './Navigator'
 import { viewportArb, workspaceArb } from './testing/workspaceArbitrary'
 
-// Every Diagram with the component-id path that opens it, root first.
+// Every reachable Diagram with a Placement-id path that opens it, root first. The Diagram graph may share a
+// child Diagram between several Placements, so the same Diagram can appear under more than one path.
+// Generated workspaces are acyclic, so the walk terminates.
 function diagramPaths(root: Diagram): { diagram: Diagram; path: string[] }[] {
   const out: { diagram: Diagram; path: string[] }[] = []
   const visit = (diagram: Diagram, path: string[]): void => {
     out.push({ diagram, path })
-    diagram.components.forEach((c) => visit(c.diagram, [...path, c.id]))
+    for (const p of diagram.placements) {
+      const definition = diagram.resourceOf(p.id)?.definition
+      if (definition) visit(definition.diagram, [...path, p.id])
+    }
   }
   visit(root, [])
   return out

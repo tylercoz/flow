@@ -1,6 +1,6 @@
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react'
 import { useApp } from './AppProvider'
-import { RenameInput, useRenameController } from './ComponentNode'
+import { RenameInput, useRenameController } from './PlacementNode'
 import { useStore } from './useStore'
 // Replaces React Flow's built-in label so the text can turn into an editor in place.
 export function LinkEdge({ id, markerEnd, selected, ...geometry }: EdgeProps) {

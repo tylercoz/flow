@@ -1,8 +1,8 @@
 import { ChangeSignal } from './ChangeSignal'
-import type { Component } from './Component'
 import type { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
 import type { ObservableStore } from './ObservableStore'
+import type { Resource } from './Resource'
 
 export class Navigator implements ObservableStore {
   private readonly signal = new ChangeSignal()
@@ -17,27 +17,32 @@ export class Navigator implements ObservableStore {
   subscribe = this.signal.subscribe
   getVersion = this.signal.getVersion
 
-  // Ids only: names are read from the live Components so renames show at once.
+  // Placement ids only: names are read from the live Resources so renames show at once.
   get path(): readonly string[] {
     return this._path
   }
 
-  trail(): readonly Component[] {
-    const components = this.resolvePath()
-    if (!components) throw new DomainError('NOT_IN_DIAGRAM', 'Path component no longer exists.')
-    return components
+  trail(): readonly Resource[] {
+    const steps = this.resolvePath()
+    if (!steps) throw new DomainError('NOT_IN_DIAGRAM', 'Path placement no longer exists.')
+    return steps.map((s) => s.resource)
   }
 
   get current(): Diagram {
-    const trail = this.trail()
-    return trail.length === 0 ? this.workspace.root : trail[trail.length - 1].diagram
+    const steps = this.resolvePath()
+    if (!steps) throw new DomainError('NOT_IN_DIAGRAM', 'Path placement no longer exists.')
+    return steps.length === 0 ? this.workspace.root : steps[steps.length - 1].diagram
   }
 
-  open(componentId: string): void {
-    if (!this.current.component(componentId)) {
-      throw new DomainError('NOT_IN_DIAGRAM', 'Component is not in the current diagram.')
+  open(placementId: string): void {
+    const current = this.current
+    if (!current.placement(placementId)) {
+      throw new DomainError('NOT_IN_DIAGRAM', 'Placement is not in the current diagram.')
     }
-    this._path = [...this._path, componentId]
+    if (!current.resourceOf(placementId)?.definition) {
+      throw new DomainError('NOT_A_COMPONENT', 'Only a component can be opened.')
+    }
+    this._path = [...this._path, placementId]
     this.signal.notify()
   }
 
@@ -59,15 +64,15 @@ export class Navigator implements ObservableStore {
   }
 
   // Undefined when an id on the path no longer exists.
-  private resolvePath(): Component[] | undefined {
-    const components: Component[] = []
+  private resolvePath(): { resource: Resource; diagram: Diagram }[] | undefined {
+    const steps: { resource: Resource; diagram: Diagram }[] = []
     let diagram = this.workspace.root
     for (const id of this._path) {
-      const component = diagram.component(id)
-      if (!component) return undefined
-      components.push(component)
-      diagram = component.diagram
+      const resource = diagram.resourceOf(id)
+      if (!resource?.definition) return undefined
+      diagram = resource.definition.diagram
+      steps.push({ resource, diagram })
     }
-    return components
+    return steps
   }
 }

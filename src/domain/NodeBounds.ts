@@ -1,13 +1,6 @@
-import type { Position, Size } from './Component'
+export type Position = { x: number; y: number }
 
-// What drag and resize need from any node on a canvas, whether Component or Placement.
-export interface Positioned {
-  readonly id: string
-  readonly position: Readonly<Position>
-  readonly size: Readonly<Size> | undefined
-  setPosition(p: Position): void
-  setBounds(p: Position, s: Size): void
-}
+export type Size = { width: number; height: number }
 
 export class NodeBounds {
   private _position: Position

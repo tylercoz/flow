@@ -6,7 +6,6 @@ import { ConfirmDialog } from './view/ConfirmDialog'
 import { DeleteFlow } from './view/DeleteFlow'
 import { HistoryControls } from './view/HistoryControls'
 import { Inspector } from './view/Inspector'
-import { ResourceInspector } from './view/ResourceInspector'
 import { EnvironmentVariablesDialog } from './view/EnvironmentVariablesDialog'
 import { ExceptionsDialog } from './view/ExceptionsDialog'
 import { TypesDialog } from './view/TypesDialog'
@@ -36,7 +35,7 @@ function Layout() {
   const [typesOpen, setTypesOpen] = useState(false)
   const [exceptionsOpen, setExceptionsOpen] = useState(false)
   const [environmentVariablesOpen, setEnvironmentVariablesOpen] = useState(false)
-  const [selection, setSelection] = useState<{ diagramId: string; kind: 'component' | 'placement'; id: string } | null>(null)
+  const [selection, setSelection] = useState<{ diagramId: string; id: string } | null>(null)
 
   const [sidebarWidth, setSidebarWidth] = useState(300)
   // The sidebar sits on the right, so dragging left (smaller x) widens it.
@@ -59,10 +58,8 @@ function Layout() {
   const diagram = navigator.current
   // Resolve the live item every render; a stale id (deleted item, other Level) means no selection.
   const live = selection?.diagramId === diagram.id ? selection : undefined
-  const component = live?.kind === 'component' ? diagram.component(live.id) : undefined
-  const placement = live?.kind === 'placement' ? diagram.placement(live.id) : undefined
-  if (selection && !component && !placement) setSelection(null)
-
+  const placement = live ? diagram.placement(live.id) : undefined
+  if (selection && !placement) setSelection(null)
 
   return (
     <div className="app">
@@ -84,13 +81,11 @@ function Layout() {
         <div className="app-canvas">
           <CanvasView
             deleteFlow={deleteFlow}
-            // Links carry only a label, edited on the canvas, so only Components and Placements get an Inspector.
-            onSelectionChange={(s) =>
-              setSelection(s?.kind === 'component' || s?.kind === 'placement' ? { diagramId: navigator.current.id, kind: s.kind, id: s.id } : null)
-            }
+            // Links carry only a label, edited on the canvas, so only Placements get an Inspector.
+            onSelectionChange={(s) => setSelection(s?.kind === 'placement' ? { diagramId: navigator.current.id, id: s.id } : null)}
           />
         </div>
-        {(component || placement) && (
+        {placement && (
           <>
             <div
               className="sidebar-handle"
@@ -107,8 +102,7 @@ function Layout() {
               onPointerCancel={endResize}
               onKeyDown={resizeByKey}
             />
-            {component && <Inspector key={component.id} item={component} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />}
-            {placement && <ResourceInspector key={placement.id} item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />}
+            <Inspector key={placement.id} item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />
           </>
         )}
       </main>

@@ -1,5 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
+import type { Diagram } from './Diagram'
 import { Navigator } from './Navigator'
 import { workspaceArb } from './testing/workspaceArbitrary'
 
@@ -11,15 +12,17 @@ describe('navigation', () => {
       fc.property(workspaceArb, fc.array(fc.nat({ max: 1000 }), { maxLength: 12 }), fc.nat({ max: 1000 }), ({ workspace }, picks, back) => {
         const nav = new Navigator(workspace)
         const opened: string[] = []
-        const diagrams = [workspace.root]
+        const diagrams: Diagram[] = [workspace.root]
         for (const pick of picks) {
-          const components = nav.current.components
+          const current = nav.current
+          const components = current.placements.filter((p) => current.resourceOf(p.id)?.definition)
           if (components.length === 0) break
-          const component = components[pick % components.length]
-          nav.open(component.id)
-          opened.push(component.id)
-          diagrams.push(component.diagram)
-          expect(nav.current).toBe(component.diagram)
+          const placement = components[pick % components.length]
+          const child = current.resourceOf(placement.id)!.definition!.diagram
+          nav.open(placement.id)
+          opened.push(placement.id)
+          diagrams.push(child)
+          expect(nav.current).toBe(child)
           expect(nav.path).toEqual(opened)
         }
 

@@ -1,46 +1,58 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import type { Diagram } from './Diagram'
-import { allComponents, allDiagrams, buildWorkspace, commandsArb } from './testing/workspaceArbitrary'
+import { History } from './History'
+import { Navigator } from './Navigator'
+import { buildWorkspace, commandsArb } from './testing/workspaceArbitrary'
 
 const pick = fc.nat({ max: 1000 })
 
-// The shared helpers start from a Workspace; the doomed subtree starts from one Diagram.
-const subtree = (d: Diagram): Diagram[] => [d, ...d.components.flatMap((c) => subtree(c.diagram))]
-
-// Feature: flow, Property 5: Deletion cascades and keeps references intact
-describe('Property 5: Deletion cascades and keeps references intact', () => {
-  // **Validates: Requirements 1.4**
-  it('removes the component, its child tree and attached links, leaving every link intact', () => {
+// Feature: components-as-resources, Property 9: Resource deletion removes only its own scope
+describe('Property 9: Resource deletion removes only its own scope', () => {
+  // **Validates: Requirements 6.3, 6.5**
+  it('removes the Resource, its Placements, their Links and its child Diagram, keeps every other Resource and is one undo step', () => {
     fc.assert(
-      fc.property(commandsArb, pick, pick, (commands, diagramPick, componentPick) => {
+      fc.property(commandsArb, pick, (commands, resourcePick) => {
         const workspace = buildWorkspace(commands)
-        const candidates = allDiagrams(workspace).filter((d) => d.components.length > 0)
-        fc.pre(candidates.length > 0)
-        const diagram = candidates[diagramPick % candidates.length]
-        const target = diagram.components[componentPick % diagram.components.length]
+        const resources = workspace.resources.all
+        fc.pre(resources.length > 0)
+        const target = resources[resourcePick % resources.length]
+        const doomedDiagram = target.definition?.diagram
 
-        const doomedDiagrams = subtree(target.diagram)
-        const doomedComponentIds = new Set([target.id, ...doomedDiagrams.flatMap((d) => d.components.map((c) => c.id))])
-        const doomedLinkIds = new Set([
-          ...doomedDiagrams.flatMap((d) => d.links.map((l) => l.id)),
-          ...diagram.links.filter((l) => l.sourceId === target.id || l.targetId === target.id).map((l) => l.id),
-        ])
-        const survivingComponents = allComponents(workspace).map((c) => c.id).filter((id) => !doomedComponentIds.has(id))
-        const survivingLinks = allDiagrams(workspace).flatMap((d) => d.links.map((l) => l.id)).filter((id) => !doomedLinkIds.has(id))
+        // Expected survivors, taken before deletion: a Link survives when neither end is a Placement of the target.
+        const touchesTarget = (d: ReturnType<typeof workspace.allDiagrams>[number], id: string): boolean =>
+          d.placement(id)?.resourceId === target.id
+        const survivingDiagrams = workspace.allDiagrams().filter((d) => d !== doomedDiagram)
+        const expectedPlacements = survivingDiagrams.map((d) => [d.id, d.placements.filter((p) => p.resourceId !== target.id).map((p) => p.id)])
+        const expectedLinks = survivingDiagrams.map((d) => [d.id, d.links.filter((l) => !touchesTarget(d, l.sourceId) && !touchesTarget(d, l.targetId)).map((l) => l.id)])
+        const survivingResourceIds = resources.filter((r) => r !== target).map((r) => r.id)
 
-        diagram.removeComponent(target.id)
+        const history = new History(workspace, new Navigator(workspace))
+        history.start()
+        const before = workspace.capture()
 
-        const after = allDiagrams(workspace)
-        expect(allComponents(workspace).map((c) => c.id)).toEqual(survivingComponents)
-        expect(after.flatMap((d) => d.links.map((l) => l.id))).toEqual(survivingLinks)
+        workspace.removeResource(target.id)
+
+        expect(workspace.resources.all.map((r) => r.id)).toEqual(survivingResourceIds)
+        const after = workspace.allDiagrams()
+        if (doomedDiagram) expect(after).not.toContain(doomedDiagram)
+        expect(after.map((d) => d.id)).toEqual(survivingDiagrams.map((d) => d.id))
+        expect(after.map((d) => [d.id, d.placements.map((p) => p.id)])).toEqual(expectedPlacements)
+        expect(after.map((d) => [d.id, d.links.map((l) => l.id)])).toEqual(expectedLinks)
         for (const d of after) {
+          for (const p of d.placements) expect(workspace.resources.get(p.resourceId)).toBeDefined()
           for (const l of d.links) {
-            expect(d.positioned(l.sourceId)).toBeDefined()
-            expect(d.positioned(l.targetId)).toBeDefined()
+            expect(d.placement(l.sourceId)).toBeDefined()
+            expect(d.placement(l.targetId)).toBeDefined()
           }
         }
+
+        // The removal always changes content (a Resource left the registry), so exactly one step is recorded.
+        expect(history.canUndo).toBe(true)
+        history.undo()
+        expect(workspace.capture()).toBe(before)
+        expect(history.canUndo).toBe(false)
       }),
+      { numRuns: 100 },
     )
   })
 })

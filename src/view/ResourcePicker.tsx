@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { DomainError } from '../domain/DomainError'
 import type { Diagram } from '../domain/Diagram'
-import type { Position } from '../domain/Component'
+import type { Position } from '../domain/NodeBounds'
 import { RESOURCE_KINDS, type ResourceKind } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
 import { ResourceIcon } from './resourceIcons'
@@ -12,6 +12,7 @@ export const KIND_LABELS: Record<ResourceKind, string> = {
   artifact: 'Artifact',
   user: 'User',
   'input-object': 'Input object',
+  component: 'Component',
 }
 
 type Props = { kind: ResourceKind; diagram: Diagram; position: Position; onClose: () => void }
@@ -40,7 +41,11 @@ export function ResourcePicker({ kind, diagram, position, onClose }: Props) {
     <div className="dialog-backdrop">
       <div className="dialog" role="dialog" aria-modal="true" aria-label={`${label} picker`}>
         <div className="dialog-fields">
-          {workspace.resources.byKind(kind).map((resource) => (
+          {/* A component that would contain this Diagram is hidden: placing it would close a reference cycle. */}
+          {workspace.resources
+            .byKind(kind)
+            .filter((resource) => !workspace.wouldCreateCycle(diagram, resource.id))
+            .map((resource) => (
             <button type="button" className="picker-item" key={resource.id} onClick={() => run(() => diagram.addPlacement(resource.id, position))}>
               <ResourceIcon kind={kind} /> {resource.name || 'Unnamed'}
             </button>

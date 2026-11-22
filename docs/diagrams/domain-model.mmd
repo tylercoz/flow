@@ -26,7 +26,12 @@ classDiagram
         environmentVariableUsage(id)
         removeEnvironmentVariable(id)
         resources: ResourceRegistry
+        allDiagrams() root plus each component's child Diagram
+        componentResources()
+        diagramGraph()
+        wouldCreateCycle(target, resourceId)
         createPlacedResource(diagram, spec, position)
+        setPorts(resourceId, field, ports)
         setResourceType(id, typeId)
         resourceImpact(id)
         removeResource(id)
@@ -42,12 +47,14 @@ classDiagram
         <<type>>
         ids: IdGenerator
         onChange()
+        resources: ResourceLookup
+        wouldCreateCycle(target, resourceId)
     }
     class Navigator {
-        path: string[]
-        current: Diagram
-        trail()
-        open(componentId)
+        path: string[]  %% Placement ids
+        current: Diagram  %% last component's child Diagram, or root
+        trail() Resource[]
+        open(placementId)
         navigateTo(index)
         reconcile()
     }
@@ -68,49 +75,33 @@ classDiagram
     class Diagram {
         id
         viewport
-        components
         placements
         links
-        component(id)
         placement(id)
-        positioned(id)
+        resourceOf(placementId)
         setViewport(v)
-        addComponent(position)
         addPlacement(resourceId, position)
         removePlacement(id)
         dropPlacementsOf(resourceId)
+        dropLinksOnPorts(resourceId, field, keptIds)
         countPlacementsOf(resourceId)
-        addAll(components, placements, links)
-        removeComponent(id)
-        deletionImpact(id)
-        setPorts(componentId, field, ports)
+        addAll(placements, links)
         addLink(sourceId, targetId, sourcePortId, targetPortId)
         removeLink(id)
     }
-    class Component {
-        id
-        position
-        size
+    class ComponentDefinition {
+        details
+        diagram: the one child Diagram, shared by every Placement
         exceptionIds: ExceptionType ids
         environmentVariableIds: EnvironmentVariable ids
-        details
-        diagram
-        setPosition(p)
-        setBounds(p, size)
         setExceptions(ids)
         dropException(id)
         setEnvironmentVariables(ids)
         dropEnvironmentVariable(id)
     }
-    class Positioned {
-        <<interface>>
-        id
-        position
-        size
-        setPosition(p)
-        setBounds(p, size)
-    }
     class NodeBounds {
+        Position
+        Size
         position
         size
         setPosition(p)
@@ -119,10 +110,18 @@ classDiagram
     class Placement {
         id
         resourceId
+        position
+        size
+    }
+    class DiagramGraph {
+        <<module>>
+        Diagram id to child Diagram ids
+        reaches(graph, from, to)
+        findCycle(graph)
     }
     class ResourceKinds {
         <<module>>
-        RESOURCE_KINDS: typed, sourceIds, targetIds per kind
+        RESOURCE_KINDS: typed, sourceIds, targetIds per kind (component handles come from its Details ports)
         DATABASE_PORTS
         SIDE_PORTS
         isResourceKind(v)
@@ -136,12 +135,13 @@ classDiagram
         kind: ResourceKind
         name
         typeId: DataType id or null
-        setName(name)
+        definition: ComponentDefinition, non-null only for component
+        setName(name)  %% a component's name lives in definition.details
         setType(typeId)
     }
     class ResourceKind {
         <<type>>
-        database, artifact, user or input-object
+        database, artifact, user, input-object or component
     }
     class ResourceRegistry {
         all
@@ -154,8 +154,9 @@ classDiagram
         id
         sourceId
         targetId
-        sourcePortId: output of source
-        targetPortId: input of target
+        sourceId, targetId: Placement ids in the same Diagram
+        sourcePortId: output port id of the source Resource
+        targetPortId: input port id of the target Resource
         details
     }
     class Details {
@@ -209,7 +210,7 @@ classDiagram
     }
     class UuidGenerator
     class DomainError {
-        code: SELF_LINK, NOT_IN_DIAGRAM, INVALID_PORT, TYPE_IN_USE, MISSING_RESOURCE, INVALID_RESOURCE, TYPE_REQUIRED, NO_TYPES or UNKNOWN_TYPE
+        code: SELF_LINK, NOT_IN_DIAGRAM, INVALID_PORT, TYPE_IN_USE, MISSING_RESOURCE, INVALID_RESOURCE, TYPE_REQUIRED, NO_TYPES, UNKNOWN_TYPE, REFERENCE_CYCLE or NOT_A_COMPONENT
     }
     class Viewport {
         x
@@ -218,16 +219,15 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 8
+        schemaVersion: 9
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable
-        resources: list of ResourceDto
+        resources: list of ResourceDto, a component carries ComponentDto with its child DiagramDto
         root: DiagramDto
     }
     class Fragment {
         <<plain data>>
-        components: list of ComponentDto
         placements: list of PlacementDto
         links: list of LinkDto
     }
@@ -253,14 +253,10 @@ classDiagram
     Diagram --> DomainError : throws
     Diagram *-- Viewport
     Workspace *-- Diagram : root
-    Diagram *-- Component
     Diagram *-- Link
     Diagram *-- Placement
     Diagram --> LinkRules : addLink calls checkLink
     Diagram --> ResourceRegistry : reads kind through ResourceLookup
-    Placement ..|> Positioned
-    Component ..|> Positioned
-    Component *-- NodeBounds
     Placement *-- NodeBounds
     Placement ..> Resource : shares one, by resourceId
     Workspace *-- ResourceRegistry
@@ -268,24 +264,28 @@ classDiagram
     Resource --> ResourceKind
     Resource --> ResourceKinds : typed or untyped
     LinkRules --> ResourceKinds : handle ids per kind
-    Component *-- Diagram : child
+    Resource *-- ComponentDefinition : component kind only
+    ComponentDefinition --> Diagram : one shared child, so Diagrams form a graph
+    Workspace --> DiagramGraph : wouldCreateCycle
+    Workspace --> DomainError : REFERENCE_CYCLE
+    Diagram --> DomainError : REFERENCE_CYCLE
+    Navigator --> DomainError : NOT_A_COMPONENT
     ResourceRegistry *-- Resource
     Resource ..> DataType : typed kinds refer by id
     Resource --> DomainError : INVALID_RESOURCE
     Workspace *-- DataType
     Workspace *-- ExceptionType
-    Component ..> ExceptionType : can return, by id
+    ComponentDefinition ..> ExceptionType : can return, by id
     Workspace *-- EnvironmentVariable
-    Component ..> EnvironmentVariable : relies on, by id
+    ComponentDefinition ..> EnvironmentVariable : relies on, by id
     Details *-- Port
     Link ..> Port : joins an output to an input, by id
     Port ..> DataType : refers by id
     Workspace --> DomainError : TYPE_IN_USE
-    Component *-- Details
+    ComponentDefinition *-- Details
     Link *-- Details
-    Component ..|> Describable
     Link ..|> Describable
-    Navigator --> Workspace : reads root
+    Navigator --> Diagram : reads root, follows Placement ids via resourceOf
     Notifier --> Scheduler
     TimerScheduler ..|> Scheduler
     UuidGenerator ..|> IdGenerator

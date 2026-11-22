@@ -3,44 +3,39 @@ import { describe, expect, it } from 'vitest'
 import type { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
 import { RESOURCE_KINDS } from './ResourceKinds'
-import { allDiagrams, workspaceArb } from './testing/workspaceArbitrary'
-import type { Workspace } from './Workspace'
+import { workspaceArb } from './testing/workspaceArbitrary'
 
 const pick = fc.nat({ max: 1000 })
 const SIDES = ['top', 'right', 'bottom', 'left']
 
 // Every id a user could plausibly drop on an end: real ports, every fixed handle, and junk.
 function candidateIds(diagram: Diagram, nodeId: string): string[] {
-  const component = diagram.component(nodeId)
-  const ports = component ? [...component.details.inputs, ...component.details.outputs].map((p) => p.id) : []
+  const definition = diagram.resourceOf(nodeId)?.definition
+  const ports = definition ? [...definition.details.inputs, ...definition.details.outputs].map((p) => p.id) : []
   return [...ports, ...SIDES, 'read', 'write', 'nope']
 }
 
 // The role rule of Requirement 2, restated independently of LinkRules.
-function assertEndId(workspace: Workspace, diagram: Diagram, nodeId: string, portId: string, role: 'source' | 'target'): void {
+function assertEndId(diagram: Diagram, nodeId: string, portId: string, role: 'source' | 'target'): void {
   expect(typeof portId).toBe('string')
-  const component = diagram.component(nodeId)
-  if (component) {
-    const ports = role === 'source' ? component.details.outputs : component.details.inputs
+  const resource = diagram.resourceOf(nodeId)!
+  expect(resource).toBeDefined()
+  if (resource.definition) {
+    const ports = role === 'source' ? resource.definition.details.outputs : resource.definition.details.inputs
     expect(ports.map((p) => p.id)).toContain(portId)
     return
   }
-  const placement = diagram.placement(nodeId)
-  expect(placement).toBeDefined()
-  const kind = workspace.resources.get(placement!.resourceId)!.kind
-  if (kind === 'database') expect(portId).toBe(role === 'source' ? 'read' : 'write')
+  if (resource.kind === 'database') expect(portId).toBe(role === 'source' ? 'read' : 'write')
   else expect(SIDES).toContain(portId)
-  expect(RESOURCE_KINDS[kind][role === 'source' ? 'sourceIds' : 'targetIds']).toContain(portId)
+  expect(RESOURCE_KINDS[resource.kind][role === 'source' ? 'sourceIds' : 'targetIds']).toContain(portId)
 }
 
 // Requirement 2 restated independently of LinkRules: may this id be used on this node in this role?
-function endAllows(workspace: Workspace, diagram: Diagram, nodeId: string, portId: string, role: 'source' | 'target'): boolean {
-  const component = diagram.component(nodeId)
-  if (component) return (role === 'source' ? component.details.outputs : component.details.inputs).some((p) => p.id === portId)
-  const placement = diagram.placement(nodeId)
-  if (!placement) return false
-  const kind = workspace.resources.get(placement.resourceId)!.kind
-  if (kind === 'database') return portId === (role === 'source' ? 'read' : 'write')
+function endAllows(diagram: Diagram, nodeId: string, portId: string, role: 'source' | 'target'): boolean {
+  const resource = diagram.resourceOf(nodeId)
+  if (!resource) return false
+  if (resource.definition) return (role === 'source' ? resource.definition.details.outputs : resource.definition.details.inputs).some((p) => p.id === portId)
+  if (resource.kind === 'database') return portId === (role === 'source' ? 'read' : 'write')
   return SIDES.includes(portId)
 }
 
@@ -52,14 +47,14 @@ describe('Rejected Links', () => {
     let rejectedPlacementEnd = 0
     fc.assert(
       fc.property(workspaceArb, fc.array(fc.tuple(pick, pick, pick, pick, pick, pick), { maxLength: 30 }), ({ workspace }, attempts) => {
-        const diagrams = allDiagrams(workspace)
+        const diagrams = workspace.allDiagrams()
         for (const [di, a, b, pa, pb, ownerPick] of attempts) {
           const diagram = diagrams[di % diagrams.length]
           // Ends may come from any Diagram, so foreign ends are exercised.
-          const owners = diagrams.filter((d) => d.components.length + d.placements.length > 0)
+          const owners = diagrams.filter((d) => d.placements.length > 0)
           if (owners.length === 0) continue
-          const pickNode = (n: number, owner: Diagram) => [...owner.components, ...owner.placements][n % (owner.components.length + owner.placements.length)]
-          const sourceOwner = ownerPick % 3 === 0 ? owners[a % owners.length] : diagram.components.length + diagram.placements.length > 0 ? diagram : owners[0]
+          const pickNode = (n: number, owner: Diagram) => owner.placements[n % owner.placements.length]
+          const sourceOwner = ownerPick % 3 === 0 ? owners[a % owners.length] : diagram.placements.length > 0 ? diagram : owners[0]
           const targetOwner = ownerPick % 5 === 0 ? owners[b % owners.length] : sourceOwner
           const source = pickNode(a, sourceOwner)
           const target = pickNode(b, targetOwner)
@@ -70,8 +65,8 @@ describe('Rejected Links', () => {
 
           const valid =
             source.id !== target.id &&
-            endAllows(workspace, diagram, source.id, sourcePortId, 'source') &&
-            endAllows(workspace, diagram, target.id, targetPortId, 'target')
+            endAllows(diagram, source.id, sourcePortId, 'source') &&
+            endAllows(diagram, target.id, targetPortId, 'target')
           if (valid) {
             diagram.addLink(source.id, target.id, sourcePortId, targetPortId)
             continue
@@ -83,7 +78,8 @@ describe('Rejected Links', () => {
           expect(workspace.capture()).toBe(before)
           expect(workspace.getVersion()).toBe(version)
           rejected++
-          if (diagram.placement(source.id) || diagram.placement(target.id)) rejectedPlacementEnd++
+          // A rejection involving a non-component end (a fixed-handle Resource).
+          if (!diagram.resourceOf(source.id)?.definition || !diagram.resourceOf(target.id)?.definition) rejectedPlacementEnd++
         }
       }),
     )
@@ -101,10 +97,13 @@ describe('Accepted Links', () => {
     let placementEnds = 0
     fc.assert(
       fc.property(workspaceArb, fc.array(fc.tuple(pick, pick, pick, pick, pick), { maxLength: 30 }), ({ workspace }, attempts) => {
-        const diagrams = allDiagrams(workspace)
+        const diagrams = workspace.allDiagrams()
+        // Random workspaces often lack two placed nodes in one Diagram, so seed enough that accepted Links are common.
+        const root = diagrams[0]
+        for (const kind of ['user', 'database', 'user'] as const) workspace.createPlacedResource(root, { kind, name: kind }, { x: 0, y: 0 })
         for (const [di, a, b, pa, pb] of attempts) {
           const diagram = diagrams[di % diagrams.length]
-          const nodes = [...diagram.components, ...diagram.placements]
+          const nodes = diagram.placements
           if (nodes.length === 0) continue
           const source = nodes[a % nodes.length]
           const target = nodes[b % nodes.length]
@@ -121,13 +120,13 @@ describe('Accepted Links', () => {
             continue
           }
           accepted++
-          if (diagram.placement(source.id) || diagram.placement(target.id)) placementEnds++
+          if (!diagram.resourceOf(source.id)?.definition || !diagram.resourceOf(target.id)?.definition) placementEnds++
           expect([link.sourcePortId, link.targetPortId]).toEqual([sourcePortId, targetPortId])
         }
         for (const diagram of diagrams) {
           for (const link of diagram.links) {
-            assertEndId(workspace, diagram, link.sourceId, link.sourcePortId, 'source')
-            assertEndId(workspace, diagram, link.targetId, link.targetPortId, 'target')
+            assertEndId(diagram, link.sourceId, link.sourcePortId, 'source')
+            assertEndId(diagram, link.targetId, link.targetPortId, 'target')
           }
         }
       }),

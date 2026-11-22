@@ -2,7 +2,7 @@ import fc from 'fast-check'
 import { describe, it, expect } from 'vitest'
 import { History } from './History'
 import { Navigator } from './Navigator'
-import { allComponents, allDiagrams, applyCommand, buildWorkspace, commandArb, commandsArb, viewportArb } from './testing/workspaceArbitrary'
+import { applyCommand, buildWorkspace, commandArb, commandsArb, viewportArb } from './testing/workspaceArbitrary'
 import type { Workspace } from './Workspace'
 
 // Shared by every property in this file: a started History (and its Navigator) over a Workspace.
@@ -126,10 +126,13 @@ describe('History properties', () => {
 
         for (const w of writes) {
           if (w.kind === 'viewport') {
-            const diagrams = allDiagrams(workspace)
+            const diagrams = workspace.allDiagrams()
             diagrams[w.diagram % diagrams.length].setViewport(w.viewport)
           } else {
-            const targets = [...allComponents(workspace).map((c) => c.details), ...allDiagrams(workspace).flatMap((d) => d.links.map((l) => l.details))]
+            const targets = [
+              ...workspace.componentResources().map((r) => r.definition!.details),
+              ...workspace.allDiagrams().flatMap((d) => d.links.map((l) => l.details)),
+            ]
             if (targets.length) {
               const details = targets[w.pick % targets.length]
               details.patch(details.toJSON())
@@ -221,13 +224,13 @@ describe('History properties', () => {
         fc.pre(workspace.capture() !== before)
 
         // Viewport writes record no step, so the edit stays the top of the undo stack.
-        const diagrams = allDiagrams(workspace)
+        const diagrams = workspace.allDiagrams()
         viewports.forEach((v, i) => diagrams[i % diagrams.length].setViewport(v))
-        const current = new Map(allDiagrams(workspace).map((d) => [d.id, { ...d.viewport }]))
+        const current = new Map(diagrams.map((d) => [d.id, { ...d.viewport }]))
 
         history.undo()
 
-        for (const d of allDiagrams(workspace)) {
+        for (const d of workspace.allDiagrams()) {
           const expected = current.get(d.id)
           if (expected) expect(d.viewport).toEqual(expected)
         }
@@ -239,20 +242,21 @@ describe('History properties', () => {
   // Feature: undo-redo-buttons, Property 7: Navigator stays valid after restore
   // **Validates: Requirements 4.3, 4.4**
   it('Property 7: after undo or redo the path is unchanged if it still resolves, otherwise empty, and never throws', () => {
-    // Independent of Navigator: walks the ids from the root.
+    // Independent of Navigator: walks the Placement ids from the root.
     const resolves = (workspace: Workspace, path: readonly string[]): boolean => {
       let diagram = workspace.root
       for (const id of path) {
-        const component = diagram.component(id)
-        if (!component) return false
-        diagram = component.diagram
+        const definition = diagram.resourceOf(id)?.definition
+        if (!definition) return false
+        diagram = definition.diagram
       }
       return true
     }
-    // Opens up to picks.length nested Components, stopping where a Diagram has none.
+    // Opens up to picks.length nested component Placements, stopping where a Diagram has none.
     const openPath = (navigator: Navigator, picks: readonly number[]): void => {
       for (const p of picks) {
-        const components = [...navigator.current.components]
+        const current = navigator.current
+        const components = current.placements.filter((pl) => current.resourceOf(pl.id)?.definition)
         if (components.length === 0) return
         navigator.open(components[p % components.length].id)
       }

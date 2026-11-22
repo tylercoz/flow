@@ -1,40 +1,42 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { allComponents, allDiagrams, workspaceArb } from './testing/workspaceArbitrary'
-import type { Workspace } from './Workspace'
+import { workspaceArb } from './testing/workspaceArbitrary'
+import type { Diagram } from './Diagram'
 
-const totals = (w: Workspace) => {
-  const diagrams = allDiagrams(w)
-  return {
-    // Placements count as contents, so they are totalled with components.
-    components: diagrams.reduce((n, d) => n + d.components.length + d.placements.length, 0),
-    links: diagrams.reduce((n, d) => n + d.links.length, 0),
-  }
-}
+const sizes = (diagrams: readonly Diagram[]) =>
+  new Map(diagrams.map((d) => [d.id, { placements: d.placements.length, links: d.links.length }]))
 
-describe('deletionImpact', () => {
-  // Feature: flow, Property 6: Deletion impact matches what is deleted
-  // **Validates: Requirements 1.5**
-  it('reports the links and subtree contents that removeComponent actually removes', () => {
+describe('resourceImpact', () => {
+  // Feature: components-as-resources, Property 8: Impact matches deletion
+  // **Validates: Requirements 6.2**
+  it('reports the Placements, Links and child Diagram contents that removeResource removes', () => {
     fc.assert(
       fc.property(workspaceArb, fc.nat({ max: 1000 }), ({ workspace }, pick) => {
-        const components = allComponents(workspace)
-        fc.pre(components.length > 0)
-        const target = components[pick % components.length]
-        const owner = allDiagrams(workspace).find((d) => d.component(target.id))!
+        const resources = workspace.resources.all
+        fc.pre(resources.length > 0)
+        const target = resources[pick % resources.length]
+        const child = target.definition?.diagram
 
-        const impact = owner.deletionImpact(target.id)
-        const before = totals(workspace)
-        const linksBefore = owner.links.length
-        owner.removeComponent(target.id)
-        const after = totals(workspace)
+        const impact = workspace.resourceImpact(target.id)
+        const before = sizes(workspace.allDiagrams())
+        const childBefore = child ? before.get(child.id) : undefined
+        workspace.removeResource(target.id)
+        const after = sizes(workspace.allDiagrams())
 
-        const removedLinksInDiagram = linksBefore - owner.links.length
-        const removedTotal = before.components - after.components + (before.links - after.links)
-        // The component itself is removed too but is not counted as "contents".
-        expect(impact.links).toBe(removedLinksInDiagram)
-        expect(impact.contents).toBe(removedTotal - removedLinksInDiagram - 1)
+        // The child Diagram leaves with its Resource; every other Diagram survives and is compared.
+        expect(child !== undefined && after.has(child.id)).toBe(false)
+        let placements = 0
+        let links = 0
+        for (const [id, now] of after) {
+          const was = before.get(id)!
+          placements += was.placements - now.placements
+          links += was.links - now.links
+        }
+        expect(impact.placements).toBe(placements)
+        expect(impact.links).toBe(links)
+        expect(impact.contents).toEqual(childBefore && { nodes: childBefore.placements, links: childBefore.links })
       }),
+      { numRuns: 100 },
     )
   })
 })

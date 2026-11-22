@@ -33,6 +33,12 @@ const ICONS: Record<ResourceKind, ReactElement> = {
       <path d="M5 21v-3a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v3z" />
     </svg>
   ),
+  // C4 component: a box with two port tabs on its left edge.
+  component: (
+    <svg {...SVG_PROPS}>
+      <path d="M7 4h13v16H7zM3 9h8M3 15h8" />
+    </svg>
+  ),
   'input-object': (
     <svg {...SVG_PROPS}>
       <path d="M4 5h16v14H4zM8 10h8M8 14h5" />

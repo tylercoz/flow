@@ -12,6 +12,7 @@ sequenceDiagram
     alt data found
         R-->>L: raw
         L->>S: deserialize(raw)
+        Note over S: rejects schemaVersion other than 9, unknown resource or port, and Diagram cycles
         S-->>L: snapshot (plain data)
         L->>W: Workspace.restore(snapshot, ids)
     else none stored

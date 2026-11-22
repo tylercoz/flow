@@ -1,15 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { ResourceRegistry } from './ResourceRegistry'
-import { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
 import { Navigator } from './Navigator'
+import { Workspace } from './Workspace'
+
+// `a` is placed in the root and `b` inside a's child Diagram. The same id sequence builds the same ids.
+function build() {
+  let n = 0
+  const workspace = Workspace.empty({ next: () => `id${++n}` })
+  const a = workspace.createPlacedResource(workspace.root, { kind: 'component', name: 'A' }, { x: 0, y: 0 })
+  const ra = workspace.resources.get(a.resourceId)!
+  const b = workspace.createPlacedResource(ra.definition!.diagram, { kind: 'component', name: 'B' }, { x: 0, y: 0 })
+  const rb = workspace.resources.get(b.resourceId)!
+  return { workspace, a, b, ra, rb }
+}
 
 function setup() {
-  let n = 0
-  const root = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {}, resources: new ResourceRegistry() })
-  const a = root.addComponent({ x: 0, y: 0 })
-  const b = a.diagram.addComponent({ x: 0, y: 0 })
-  return { root, a, b, nav: new Navigator({ root }) }
+  const built = build()
+  return { ...built, root: built.workspace.root, nav: new Navigator(built.workspace) }
 }
 
 describe('Navigator', () => {
@@ -20,21 +27,35 @@ describe('Navigator', () => {
     expect(nav.trail()).toEqual([])
   })
 
-  it('opens nested Components and notifies', () => {
-    const { nav, a, b } = setup()
+  it('opens nested components by Placement id and notifies', () => {
+    const { nav, a, b, ra, rb } = setup()
     let calls = 0
     nav.subscribe(() => calls++)
     nav.open(a.id)
     nav.open(b.id)
     expect(nav.path).toEqual([a.id, b.id])
-    expect(nav.current).toBe(b.diagram)
-    expect(nav.trail()).toEqual([a, b])
+    expect(nav.current).toBe(rb.definition!.diagram)
+    expect(nav.trail()).toEqual([ra, rb])
     expect(calls).toBe(2)
   })
 
-  it('rejects Components outside the current Diagram', () => {
+  it('opens the same Diagram from two Placements of one Resource', () => {
+    const { workspace, nav, a, ra } = setup()
+    const twin = workspace.root.addPlacement(a.resourceId, { x: 5, y: 5 })
+    nav.open(twin.id)
+    expect(nav.current).toBe(ra.definition!.diagram)
+  })
+
+  it('rejects Placements outside the current Diagram', () => {
     const { nav, b } = setup()
     expect(() => nav.open(b.id)).toThrow(DomainError)
+    expect(nav.path).toEqual([])
+  })
+
+  it('rejects a Placement of a Resource that is not a component', () => {
+    const { workspace, nav } = setup()
+    const user = workspace.createPlacedResource(workspace.root, { kind: 'user', name: 'U' }, { x: 0, y: 0 })
+    expect(() => nav.open(user.id)).toThrow(expect.objectContaining({ code: 'NOT_A_COMPONENT' }))
     expect(nav.path).toEqual([])
   })
 
@@ -53,20 +74,16 @@ describe('Navigator', () => {
   describe('reconcile', () => {
     // Swapping the root mimics Workspace.replaceContent building a new tree.
     function swappable() {
-      const { root, a, b } = setup()
-      const workspace = { root }
-      return { workspace, a, b, nav: new Navigator(workspace) }
+      const { a, b, root } = setup()
+      const holder = { root }
+      return { holder, a, b, nav: new Navigator(holder) }
     }
 
     it('keeps a valid path and does not notify', () => {
-      const { workspace, a, b, nav } = swappable()
+      const { holder, a, b, nav } = swappable()
       nav.open(a.id)
       nav.open(b.id)
-      // Same id sequence as setup(), so the new tree has the same ids, as after a restore.
-      let n = 0
-      const rebuilt = new Diagram('root', { ids: { next: () => `id${++n}` }, onChange: () => {}, resources: new ResourceRegistry() })
-      rebuilt.addComponent({ x: 0, y: 0 }).diagram.addComponent({ x: 0, y: 0 })
-      workspace.root = rebuilt
+      holder.root = build().workspace.root
       let calls = 0
       nav.subscribe(() => calls++)
       nav.reconcile()
@@ -76,14 +93,14 @@ describe('Navigator', () => {
     })
 
     it('resets a stale path to the root and notifies once', () => {
-      const { workspace, a, nav } = swappable()
+      const { holder, a, nav } = swappable()
       nav.open(a.id)
-      workspace.root = new Diagram('root', { ids: { next: () => 'y' }, onChange: () => {}, resources: new ResourceRegistry() })
+      holder.root = Workspace.empty({ next: () => 'y' }).root
       let calls = 0
       nav.subscribe(() => calls++)
       nav.reconcile()
       expect(nav.path).toEqual([])
-      expect(nav.current).toBe(workspace.root)
+      expect(nav.current).toBe(holder.root)
       expect(calls).toBe(1)
     })
 
@@ -97,10 +114,10 @@ describe('Navigator', () => {
     })
   })
 
-  it('trail shows a renamed Component', () => {
-    const { nav, a } = setup()
+  it('trail shows a renamed component', () => {
+    const { nav, a, ra } = setup()
     nav.open(a.id)
-    a.details.patch({ name: 'Renamed' })
-    expect(nav.trail()[0].details.name).toBe('Renamed')
+    ra.setName('Renamed')
+    expect(nav.trail()[0].name).toBe('Renamed')
   })
 })

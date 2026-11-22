@@ -13,6 +13,6 @@ Mermaid diagrams documenting the project. Each diagram lives in its own `.mmd` f
 
 | File | Type | Describes |
 | --- | --- | --- |
-| [system-architecture.mmd](system-architecture.mmd) | flowchart | Layers (view, domain, persistence, including resource nodes: PlacementNode, ResourcePicker, ResourceInspector), the `main.tsx` composition root, and how they connect |
-| [domain-model.mmd](domain-model.mmd) | classDiagram | Workspace, Diagram, Component, Placement, Resource and ResourceRegistry, NodeBounds, ResourceKinds, LinkRules, Link, Navigator, Notifier, History (undo and redo) and shared contracts (`src/domain`) |
+| [system-architecture.mmd](system-architecture.mmd) | flowchart | Layers (view, domain, persistence), the single `PlacementNode` for every Resource kind including component, ResourcePicker, `main.tsx` composition root, and how they connect |
+| [domain-model.mmd](domain-model.mmd) | classDiagram | Workspace, Diagram, Placement, Resource (component kind holds a ComponentDefinition and shared child Diagram), ResourceRegistry, DiagramGraph, NodeBounds, ResourceKinds, LinkRules, Link, Navigator, Notifier, History (undo and redo) and shared contracts (`src/domain`) |
 | [startup-and-save.mmd](startup-and-save.mmd) | sequence | Load on startup (`WorkspaceLoader`), `History` start, debounced autosave (including restores), `pagehide` flush, save-failure notice |

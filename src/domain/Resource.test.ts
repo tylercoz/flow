@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { DomainError } from './DomainError'
 import { Resource } from './Resource'
 import { ResourceRegistry } from './ResourceRegistry'
+import { Workspace } from './Workspace'
 import { DATABASE_PORTS, RESOURCE_KINDS, SIDE_PORTS, isResourceKind, type ResourceKind } from './ResourceKinds'
 
-const KINDS: ResourceKind[] = ['database', 'artifact', 'user', 'input-object']
+const KINDS: ResourceKind[] = ['database', 'artifact', 'user', 'input-object', 'component']
 const make = (id: string, kind: ResourceKind, onChange = () => {}) =>
-  new Resource(id, kind, id, RESOURCE_KINDS[kind].typed ? 't1' : null, onChange)
+  new Resource(id, kind, id, RESOURCE_KINDS[kind].typed ? 't1' : null, null, onChange)
 
 describe('ResourceKinds', () => {
   it('has an entry for every kind, typed only for artifact and input-object', () => {
@@ -32,11 +33,11 @@ describe('ResourceKinds', () => {
 describe('Resource', () => {
   it('rejects a typed kind without a type and an untyped kind with one', () => {
     const onChange = vi.fn()
-    expect(() => new Resource('r', 'artifact', 'A', null, onChange)).toThrow(DomainError)
-    expect(() => new Resource('r', 'input-object', 'A', null, onChange)).toThrow(DomainError)
-    expect(() => new Resource('r', 'database', 'A', 't1', onChange)).toThrow(DomainError)
-    expect(() => new Resource('r', 'user', 'A', 't1', onChange)).toThrow(DomainError)
-    expect(() => new Resource('r', 'user', 'A', null, onChange)).not.toThrow()
+    expect(() => new Resource('r', 'artifact', 'A', null, null, onChange)).toThrow(DomainError)
+    expect(() => new Resource('r', 'input-object', 'A', null, null, onChange)).toThrow(DomainError)
+    expect(() => new Resource('r', 'database', 'A', 't1', null, onChange)).toThrow(DomainError)
+    expect(() => new Resource('r', 'user', 'A', 't1', null, onChange)).toThrow(DomainError)
+    expect(() => new Resource('r', 'user', 'A', null, null, onChange)).not.toThrow()
   })
 
   it('setName and setType update the value and call onChange', () => {
@@ -47,6 +48,27 @@ describe('Resource', () => {
     expect(r.name).toBe('B')
     expect(r.typeId).toBe('t2')
     expect(onChange).toHaveBeenCalledTimes(2)
+  })
+
+  it('requires a definition for a component and forbids one for other kinds', () => {
+    const ws = Workspace.empty({ next: () => 'x' + Math.random() })
+    const placement = ws.createPlacedResource(ws.root, { kind: 'component', name: 'C' }, { x: 0, y: 0 })
+    const definition = ws.resources.get(placement.resourceId)!.definition!
+    const code = expect.objectContaining({ code: 'INVALID_RESOURCE' })
+    expect(() => new Resource('r', 'component', 'C', null, null, () => {})).toThrow(code)
+    expect(() => new Resource('r', 'user', 'U', null, definition, () => {})).toThrow(code)
+    expect(() => new Resource('r', 'component', 'C', null, definition, () => {})).not.toThrow()
+  })
+
+  it('reads and writes a component name through its Details, notifying once', () => {
+    const ws = Workspace.empty({ next: () => 'x' + Math.random() })
+    const placement = ws.createPlacedResource(ws.root, { kind: 'component', name: 'C' }, { x: 0, y: 0 })
+    const resource = ws.resources.get(placement.resourceId)!
+    const before = ws.getVersion()
+    resource.setName('D')
+    expect(resource.name).toBe('D')
+    expect(resource.definition!.details.name).toBe('D')
+    expect(ws.getVersion()).toBe(before + 1)
   })
 
   it('setType on an untyped kind throws INVALID_RESOURCE and does not notify', () => {

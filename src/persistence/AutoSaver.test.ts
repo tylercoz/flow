@@ -72,7 +72,7 @@ function setup() {
   const pageEvents = new EventTarget()
   const saver = new AutoSaver(workspace, new WorkspaceSerializer(), repository, notifier, scheduler, pageEvents)
   saver.start()
-  const edit = () => workspace.root.addComponent({ x: 0, y: 0 })
+  const edit = () => workspace.createPlacedResource(workspace.root, { kind: 'component', name: '' }, { x: 0, y: 0 })
   const saveMessage = () => notifier.messages.find((m) => m.key === 'save')
   return { workspace, scheduler, repository, notifier, pageEvents, saver, edit, saveMessage }
 }
@@ -99,7 +99,7 @@ describe('AutoSaver', () => {
     scheduler.advance(500)
     await settle()
     expect(repository.saves).toHaveLength(1)
-    expect(repository.saves[0].root.components).toHaveLength(3)
+    expect(repository.saves[0].root.placements).toHaveLength(3)
   })
 
   it('saves after 900 ms of continuous editing even though the debounce keeps resetting', async () => {
@@ -157,7 +157,7 @@ describe('AutoSaver', () => {
     edit()
     scheduler.advance(500)
     await settle()
-    expect(repository.saves[0].root.components).toHaveLength(2)
+    expect(repository.saves[0].root.placements).toHaveLength(2)
   })
 
   it('flushes a pending change immediately on pagehide', async () => {
@@ -199,13 +199,13 @@ describe('AutoSaver', () => {
     edit()
     scheduler.advance(500)
     await settle()
-    expect(repository.saves.at(-1)?.root.components).toHaveLength(1)
+    expect(repository.saves.at(-1)?.root.placements).toHaveLength(1)
 
     history.undo()
     scheduler.advance(500)
     await settle()
     expect(repository.saves).toHaveLength(2)
-    expect(repository.saves[1].root.components).toHaveLength(0)
+    expect(repository.saves[1].root.placements).toHaveLength(0)
   })
 
   it('stop() cancels pending timers and ignores later changes and pagehide', async () => {

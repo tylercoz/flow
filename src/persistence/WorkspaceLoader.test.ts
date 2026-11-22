@@ -36,25 +36,28 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 8,
+  schemaVersion: 9,
   types: [],
   exceptions: [],
   environmentVariables: [],
-  resources: [],
+  resources: [
+    {
+      id: 'r1',
+      kind: 'component',
+      name: 'A',
+      typeId: null,
+      component: {
+        details: { name: 'A', inputs: [], outputs: [], notes: '' },
+        exceptionIds: [],
+        environmentVariableIds: [],
+        diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, placements: [], links: [] },
+      },
+    },
+  ],
   root: {
     id: 'root',
     viewport: { x: 0, y: 0, zoom: 1 },
-    placements: [],
-    components: [
-      {
-        id: 'c1',
-        details: { name: 'A', inputs: [], outputs: [], notes: '' },
-        position: { x: 1, y: 2 },
-        exceptionIds: [],
-        environmentVariableIds: [],
-        diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, components: [], placements: [], links: [] },
-      },
-    ],
+    placements: [{ id: 'c1', resourceId: 'r1', position: { x: 1, y: 2 } }],
     links: [],
   },
 }
@@ -71,7 +74,7 @@ describe('WorkspaceLoader', () => {
     const { loader, notifier } = setup(() => null)
     const result = await loader.load()
     expect(result.canSave).toBe(true)
-    expect(result.workspace.root.components).toHaveLength(0)
+    expect(result.workspace.root.placements).toHaveLength(0)
     expect(notifier.messages).toHaveLength(0)
   })
 
@@ -80,7 +83,8 @@ describe('WorkspaceLoader', () => {
     const result = await loader.load()
     expect(result.canSave).toBe(true)
     expect(result.workspace.root.id).toBe('root')
-    expect(result.workspace.root.components.map((c) => c.id)).toEqual(['c1'])
+    expect(result.workspace.root.placements.map((p) => p.id)).toEqual(['c1'])
+    expect(result.workspace.resources.get('r1')?.name).toBe('A')
   })
 
   it('handles a PersistenceError from repository.load', async () => {
@@ -89,7 +93,7 @@ describe('WorkspaceLoader', () => {
     })
     const result = await loader.load()
     expect(result.canSave).toBe(false)
-    expect(result.workspace.root.components).toHaveLength(0)
+    expect(result.workspace.root.placements).toHaveLength(0)
     expect(notifier.messages).toEqual([expect.objectContaining({ key: 'load', kind: 'persistent' })])
     expect(repository.saveCalls).toBe(0)
   })
@@ -98,16 +102,16 @@ describe('WorkspaceLoader', () => {
     const { loader, notifier, repository } = setup(() => ({ schemaVersion: 99 }))
     const result = await loader.load()
     expect(result.canSave).toBe(false)
-    expect(result.workspace.root.components).toHaveLength(0)
+    expect(result.workspace.root.placements).toHaveLength(0)
     expect(notifier.messages).toEqual([expect.objectContaining({ key: 'load', kind: 'persistent' })])
     expect(repository.saveCalls).toBe(0)
   })
 
-  it('rejects a schemaVersion 7 save, starts empty and never writes over it', async () => {
-    const { loader, notifier, repository } = setup(() => ({ ...stored, resources: undefined, schemaVersion: 7 }))
+  it('rejects a schemaVersion 8 save, starts empty and never writes over it', async () => {
+    const { loader, notifier, repository } = setup(() => ({ ...stored, schemaVersion: 8 }))
     const result = await loader.load()
     expect(result.canSave).toBe(false)
-    expect(result.workspace.root.components).toHaveLength(0)
+    expect(result.workspace.root.placements).toHaveLength(0)
     expect(notifier.messages).toEqual([expect.objectContaining({ key: 'load', kind: 'persistent' })])
     expect(repository.saveCalls).toBe(0)
   })
@@ -117,6 +121,19 @@ describe('WorkspaceLoader', () => {
     const { loader, repository } = setup(() => ({ ...stored, root }))
     const result = await loader.load()
     expect(result.canSave).toBe(false)
+    expect(repository.saveCalls).toBe(0)
+  })
+
+  it('rejects a snapshot whose Diagrams contain a cycle, starts empty and never writes over it', async () => {
+    const resource = stored.resources[0]
+    const cyclic = {
+      ...resource,
+      component: { ...resource.component, diagram: { ...resource.component.diagram, placements: [{ id: 'p', resourceId: 'r1', position: { x: 0, y: 0 } }] } },
+    }
+    const { loader, repository } = setup(() => ({ ...stored, resources: [cyclic] }))
+    const result = await loader.load()
+    expect(result.canSave).toBe(false)
+    expect(result.workspace.root.placements).toHaveLength(0)
     expect(repository.saveCalls).toBe(0)
   })
 

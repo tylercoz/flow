@@ -1,9 +1,8 @@
-import type { Position, Size } from './Component'
-import { NodeBounds, type Positioned } from './NodeBounds'
+import { NodeBounds, type Position, type Size } from './NodeBounds'
 
 // A leaf node that shows one shared Resource in a Diagram. Name and type live on the Resource,
 // so a Placement has no Details and is not Describable.
-export class Placement implements Positioned {
+export class Placement {
   readonly id: string
   readonly resourceId: string
   private readonly bounds: NodeBounds

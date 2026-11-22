@@ -8,6 +8,8 @@ type DomainErrorCode =
   | 'TYPE_REQUIRED'
   | 'NO_TYPES'
   | 'UNKNOWN_TYPE'
+  | 'REFERENCE_CYCLE'
+  | 'NOT_A_COMPONENT'
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode

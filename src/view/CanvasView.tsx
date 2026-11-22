@@ -11,16 +11,15 @@ import {
   type Node,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { Size } from '../domain/Component'
+import type { Size } from '../domain/NodeBounds'
 import type { Diagram } from '../domain/Diagram'
 import { DomainError } from '../domain/DomainError'
 import type { Notifier } from '../domain/Notifier'
 import type { Fragment } from '../domain/WorkspaceSnapshot'
 import { useApp } from './AppProvider'
-import type { DeleteFlow, DeleteTarget } from './DeleteFlow'
-import { ComponentNode, RenameContext } from './ComponentNode'
+import type { DeleteFlow } from './DeleteFlow'
 import { LinkEdge } from './LinkEdge'
-import { PlacementNode } from './PlacementNode'
+import { PlacementNode, RenameContext } from './PlacementNode'
 import { KIND_LABELS, ResourcePicker } from './ResourcePicker'
 import { ResourceIcon } from './resourceIcons'
 import { RESOURCE_KINDS, type ResourceKind } from '../domain/ResourceKinds'
@@ -41,11 +40,11 @@ function centreOf(el: HTMLElement | null): { x: number; y: number } | null {
 }
 
 // Must be module-level: a new object per render would make React Flow remount every node.
-const nodeTypes = { component: ComponentNode, resource: PlacementNode }
+const nodeTypes = { placement: PlacementNode }
 const edgeTypes = { link: LinkEdge }
 
-/** The single selected Component, Placement or Link of the current Level, or null. */
-type CanvasSelection = DeleteTarget | null
+/** The single selected Placement or Link of the current Level, or null. */
+type CanvasSelection = { kind: 'placement' | 'link'; id: string } | null
 
 interface CanvasViewProps {
   /** Shared with ConfirmDialog; deletions from the Delete key go through it. */
@@ -72,7 +71,7 @@ interface LevelProps extends CanvasViewProps {
   clipboard: RefObject<Copied | null>
 }
 
-// Sizes are captured at copy time because the copied Components may be on another Level when pasted.
+// Sizes are captured at copy time because the copied Placements may be on another Level when pasted.
 interface Copied {
   fragment: Fragment
   sizes: ReadonlyMap<string, Size>
@@ -126,7 +125,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   // Deletion is routed through DeleteFlow (confirmation, cascade), so React Flow must not delete by itself.
   const onBeforeDelete = async ({ nodes: gone, edges: goneEdges }: { nodes: Node[]; edges: Edge[] }) => {
     const goneIds = new Set(gone.map((n) => n.id))
-    gone.forEach((n) => deleteFlow.request(diagram, { kind: n.type === 'resource' ? 'placement' : 'component', id: n.id }))
+    gone.forEach((n) => deleteFlow.request(diagram, { kind: 'placement', id: n.id }))
     // Edges attached to a deleted node are handled by the cascade, and must survive a pending confirmation.
     goneEdges
       .filter((e) => !goneIds.has(e.source) && !goneIds.has(e.target))
@@ -138,7 +137,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   const onDoubleClick = (e: MouseEvent) => {
     if (!isEmptyCanvas(e.target)) return
     const point = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    setPendingFocus(new Set([createComponentAt(diagram, point, rename).id]))
+    setPendingFocus(new Set([createComponentAt(workspace, diagram, point, rename).id]))
   }
 
   // Keyboard events carry no pointer position, so the last one seen over the canvas is kept for paste.
@@ -151,11 +150,11 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
       if (document.querySelector('[aria-modal="true"]')) return
       const action = clipboardAction(e, isMac)
       if (!action) return
-      // A rejected paste (MISSING_RESOURCE) changes nothing, so the reason is posted instead of thrown.
+      // A rejected paste (MISSING_RESOURCE, REFERENCE_CYCLE) changes nothing, so the reason is posted instead of thrown.
       const paste = (fragment: Fragment, offset: { x: number; y: number }) => {
         try {
           const added = workspace.paste(diagram, fragment, offset)
-          setPendingFocus(new Set([...added.components, ...added.placements, ...added.links].map((x) => x.id)))
+          setPendingFocus(new Set([...added.placements, ...added.links].map((x) => x.id)))
         } catch (err) {
           if (!(err instanceof DomainError)) throw err
           notifier.post('paste', err.message, 'transient')
@@ -214,9 +213,9 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
           onEdgesChange={onEdgesChange}
           onNodeDragStart={() => rename.cancel()}
           // Dragging one member of a multi-selection moves all of them, so persist every moved node.
-          onNodeDragStop={(_, __, moved) => moved.forEach((n) => diagram.positioned(n.id)?.setPosition(n.position))}
+          onNodeDragStop={(_, __, moved) => moved.forEach((n) => diagram.placement(n.id)?.setPosition(n.position))}
           onSelectionDragStart={() => rename.cancel()}
-          onSelectionDragStop={(_, moved) => moved.forEach((n) => diagram.positioned(n.id)?.setPosition(n.position))}
+          onSelectionDragStop={(_, moved) => moved.forEach((n) => diagram.placement(n.id)?.setPosition(n.position))}
           // Loose mode lets a side handle (one source and one target Handle per side) start or end a Link.
           connectionMode={ConnectionMode.Loose}
           onPaneContextMenu={(e) => {
@@ -241,10 +240,10 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
             rename.cancel()
             if (n.length + e.length !== 1) return onSelectionChange(null)
             onSelectionChange(
-              n.length ? { kind: n[0].type === 'resource' ? 'placement' : 'component', id: n[0].id } : { kind: 'link', id: e[0].id },
+              n.length ? { kind: 'placement', id: n[0].id } : { kind: 'link', id: e[0].id },
             )
           }}
-          // Double-click renames a Component or Link, or creates a Component, so it must not also zoom.
+          // Double-click renames a Placement or Link, or creates a Component, so it must not also zoom.
           zoomOnDoubleClick={false}
         >
           <Background />

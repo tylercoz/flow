@@ -1,0 +1,728 @@
+{
+  "pbtResults": {
+    "6.3 Write property test for Link validity and storage": {
+      "status": "passed",
+      "lastRunTimestamp": 1795321957859
+    },
+    "6.2 Write property test for private Placement bounds": {
+      "status": "passed",
+      "lastRunTimestamp": 1795321968399
+    },
+    "6.4 Write property test for paste referencing the same Resources": {
+      "status": "passed",
+      "lastRunTimestamp": 1795321970599
+    },
+    "6.5 Write property test for cycle rejection": {
+      "status": "passed",
+      "lastRunTimestamp": 1795321972138
+    },
+    "6.9 Rewrite deletionCascade property test": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322020776
+    },
+    "6.8 Rewrite deletionImpact property test": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322022944
+    },
+    "6.6 Write property test for port removal": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322023154
+    },
+    "6.10 Write property test for corrupt snapshots": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322031226
+    },
+    "6.7 Rewrite createdComponents test and write property test for Placement removal": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322032999
+    },
+    "6.11 Write property test for snapshot round trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322069865
+    },
+    "8.8 Write property test for double-click creation": {
+      "status": "passed",
+      "lastRunTimestamp": 1795322859640
+    }
+  },
+  "executionHistory": {
+    "1.1 Move geometry types and add error codes": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273528
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321279463
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321341295
+      }
+    ],
+    "1.2 Create DiagramGraph with unit tests": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273588
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321345111
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321381005
+      }
+    ],
+    "1.3 Add ComponentDefinition and extend Resource and ResourceKinds": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273611
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321345152
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321381894
+      }
+    ],
+    "1.4 Rework Diagram around Placements": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273630
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321384312
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321430295
+      }
+    ],
+    "1.5 Rework Workspace operations": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273648
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321432717
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321486378
+      }
+    ],
+    "1.6 Rework Navigator": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273665
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321490200
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321538229
+      }
+    ],
+    "2.1 Update snapshot types and Workspace snapshot read and write": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273719
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321490745
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321538919
+      }
+    ],
+    "2.2 Rework WorkspaceSerializer validation": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273737
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321541186
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321602365
+      }
+    ],
+    "3.1 Implement placement-only copy and paste": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273755
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321604795
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321642617
+      }
+    ],
+    "4.1 Update test support": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273773
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321645101
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321728600
+      }
+    ],
+    "4.2 Update domain example tests": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273789
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321731492
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321898283
+      }
+    ],
+    "4.3 Update persistence tests": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273808
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321732391
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321898811
+      }
+    ],
+    "4.4 Update existing property tests to the new command set": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273827
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321732636
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321899613
+      }
+    ],
+    "5. Checkpoint - domain and persistence": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273843
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321902025
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321922960
+      }
+    ],
+    "6.1 Write property test for resource edits visible through every Placement": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273860
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321930922
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321980770
+      }
+    ],
+    "6.2 Write property test for private Placement bounds": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273877
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321930987
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321981648
+      }
+    ],
+    "6.3 Write property test for Link validity and storage": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273920
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321931456
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321982122
+      }
+    ],
+    "6.4 Write property test for paste referencing the same Resources": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273954
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321932258
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321982972
+      }
+    ],
+    "6.5 Write property test for cycle rejection": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273971
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321932654
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321983779
+      }
+    ],
+    "6.6 Write property test for port removal": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321273989
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321986924
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322039109
+      }
+    ],
+    "6.7 Rewrite createdComponents test and write property test for Placement removal": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274005
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321987715
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322039825
+      }
+    ],
+    "6.8 Rewrite deletionImpact property test": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274023
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321988440
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322040637
+      }
+    ],
+    "6.9 Rewrite deletionCascade property test": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274039
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321989258
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322041432
+      }
+    ],
+    "6.10 Write property test for corrupt snapshots": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274058
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321989696
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322042231
+      }
+    ],
+    "6.11 Write property test for snapshot round trip": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274074
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322042741
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322076551
+      }
+    ],
+    "7. Checkpoint - domain and persistence fully green": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274094
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322079073
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322546754
+      }
+    ],
+    "8.1 Merge ComponentNode into PlacementNode": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274111
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322551174
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322758608
+      }
+    ],
+    "8.2 Merge ResourceInspector into Inspector": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274126
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322551240
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322759594
+      }
+    ],
+    "8.3 Add component to the Picker": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274143
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322551455
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322760210
+      }
+    ],
+    "8.4 Rework createAtPoint": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274162
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322552274
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322760750
+      }
+    ],
+    "8.5 Rework DeleteFlow and ConfirmDialog": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274182
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322552776
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322761643
+      }
+    ],
+    "8.6 Wire CanvasView, App and AppProvider": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274215
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322764230
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322827906
+      }
+    ],
+    "8.7 Update and add view tests": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274259
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322831868
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322906974
+      }
+    ],
+    "8.8 Write property test for double-click creation": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274275
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322831973
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322907823
+      }
+    ],
+    "9.1 Update diagrams": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274294
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322910549
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795323000798
+      }
+    ],
+    "9.2 Update clear-saved-data doc": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274310
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322911206
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795323001430
+      }
+    ],
+    "10. Final checkpoint - build, test and lint": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321274327
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795323004035
+      },
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795323027952
+      }
+    ],
+    "1. Domain model": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321538259
+      }
+    ],
+    "2. Snapshot and serializer (`schemaVersion` 9)": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321602390
+      }
+    ],
+    "3. Copy and paste": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321642649
+      }
+    ],
+    "4. Test support and existing tests": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795321899637
+      }
+    ],
+    "6. Property tests (fast-check, at least 100 runs, tagged `Feature: components-as-resources, Property N: ...`)": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322076594
+      }
+    ],
+    "8. View": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795322907848
+      }
+    ],
+    "9. Docs and diagrams": [
+      {
+        "executionId": "43c8ee97-7a18-43ec-9844-f6f6eed96885",
+        "chatSessionId": "sess_183fc099-47cf-4caf-aa1c-ad7504903e24",
+        "timestamp": 1795323001509
+      }
+    ]
+  }
+}

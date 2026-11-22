@@ -1,6 +1,9 @@
-import type { Component } from '../domain/Component'
+import type { ComponentDefinition } from '../domain/ComponentDefinition'
 import type { NewPort, Port } from '../domain/Details'
 import type { Diagram } from '../domain/Diagram'
+import type { Placement } from '../domain/Placement'
+import type { Resource } from '../domain/Resource'
+import { RESOURCE_KINDS } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
 import type { DeleteFlow } from './DeleteFlow'
 import { availableEnvironmentVariables } from './environmentVariableEdit'
@@ -9,8 +12,8 @@ import { FocusGroup } from './FocusGroup'
 import { useStore } from './useStore'
 
 interface InspectorProps {
-  /** The selected Component. App renders no Inspector when nothing is selected. */
-  item: Component
+  /** The selected Placement. App renders no Inspector when nothing is selected. */
+  item: Placement
   /** Sidebar width in px; owned by App so it survives selection changes. */
   width: number
   /** The Diagram that contains `item`; DeleteFlow removes it from here. */
@@ -18,34 +21,22 @@ interface InspectorProps {
   deleteFlow: DeleteFlow
 }
 
-type Field = 'name' | 'notes'
 type ListField = 'inputs' | 'outputs'
 
 export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) {
   // Re-render on every model change so the inputs always show the live values.
   const { workspace } = useApp()
   useStore(workspace)
-  const { details } = item
+  const resource = workspace.resources.get(item.resourceId)
+  // A removed Resource drops its Placements in the same step, so this only guards a stale render.
+  if (!resource) return null
+  const definition = resource.definition
   const idPrefix = `inspector-${item.id}`
 
-  const input = (field: Field, label: string, multiline: boolean) => {
-    const common = {
-      id: `${idPrefix}-${field}`,
-      value: details[field],
-      onChange: (e: { target: { value: string } }) => details.patch({ [field]: e.target.value }),
-    }
-    return (
-      <div>
-        <label htmlFor={common.id}>{label}</label>
-        {multiline ? <textarea {...common} rows={4} /> : <input type="text" {...common} />}
-      </div>
-    )
-  }
-
-  // Edits replace the whole list; Diagram.setPorts also drops the Links of removed ports.
-  const list = (field: ListField, label: string, noun: string) => {
-    const ports = details[field]
-    const set = (next: NewPort[]) => diagram.setPorts(item.id, field, next)
+  // Edits replace the whole list; Workspace.setPorts also drops the Links of removed ports.
+  const list = (res: Resource, def: ComponentDefinition, field: ListField, label: string, noun: string) => {
+    const ports = def.details[field]
+    const set = (next: NewPort[]) => workspace.setPorts(res.id, field, next)
     const update = (i: number, change: Partial<Port>) => set(ports.map((p, j) => (j === i ? { ...p, ...change } : p)))
     return (
       <div>
@@ -72,19 +63,19 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
       </div>
     )
   }
-  const exceptions = () => {
+  const exceptions = (def: ComponentDefinition) => {
     const names = new Map(workspace.exceptions.map((e) => [e.id, e.name]))
-    const available = availableExceptions(workspace.exceptions, item.exceptionIds)
+    const available = availableExceptions(workspace.exceptions, def.exceptionIds)
     return (
       <div>
         <label htmlFor={`${idPrefix}-add-exception`}>Exceptions</label>
-        {item.exceptionIds.map((id, i) => (
+        {def.exceptionIds.map((id, i) => (
           <div className="field-row" key={id}>
             <span>{names.get(id) || 'Unnamed exception'}</span>
             <button
               type="button"
               aria-label={`Remove exception ${i + 1}`}
-              onClick={() => item.setExceptions(item.exceptionIds.filter((e) => e !== id))}
+              onClick={() => def.setExceptions(def.exceptionIds.filter((e) => e !== id))}
             >
               ×
             </button>
@@ -95,7 +86,7 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
           id={`${idPrefix}-add-exception`}
           value=""
           disabled={available.length === 0}
-          onChange={(e) => item.setExceptions([...item.exceptionIds, e.target.value])}
+          onChange={(e) => def.setExceptions([...def.exceptionIds, e.target.value])}
         >
           <option value="">Add exception</option>
           {available.map((e) => (
@@ -107,19 +98,19 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
       </div>
     )
   }
-  const environmentVariables = () => {
+  const environmentVariables = (def: ComponentDefinition) => {
     const names = new Map(workspace.environmentVariables.map((v) => [v.id, v.name]))
-    const available = availableEnvironmentVariables(workspace.environmentVariables, item.environmentVariableIds)
+    const available = availableEnvironmentVariables(workspace.environmentVariables, def.environmentVariableIds)
     return (
       <div>
         <label htmlFor={`${idPrefix}-add-environment-variable`}>Environment variables</label>
-        {item.environmentVariableIds.map((id, i) => (
+        {def.environmentVariableIds.map((id, i) => (
           <div className="field-row" key={id}>
             <span>{names.get(id) || 'Unnamed environment variable'}</span>
             <button
               type="button"
               aria-label={`Remove environment variable ${i + 1}`}
-              onClick={() => item.setEnvironmentVariables(item.environmentVariableIds.filter((v) => v !== id))}
+              onClick={() => def.setEnvironmentVariables(def.environmentVariableIds.filter((v) => v !== id))}
             >
               ×
             </button>
@@ -130,7 +121,7 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
           id={`${idPrefix}-add-environment-variable`}
           value=""
           disabled={available.length === 0}
-          onChange={(e) => item.setEnvironmentVariables([...item.environmentVariableIds, e.target.value])}
+          onChange={(e) => def.setEnvironmentVariables([...def.environmentVariableIds, e.target.value])}
         >
           <option value="">Add environment variable</option>
           {available.map((v) => (
@@ -143,17 +134,51 @@ export function Inspector({ item, diagram, deleteFlow, width }: InspectorProps) 
     )
   }
   return (
-    <aside className="inspector" style={{ width }} aria-label="Component details">
+    <aside className="inspector" style={{ width }} aria-label="Details">
       <FocusGroup className="inspector-fields">
-        {input('name', 'Name', false)}
-        {list('inputs', 'Inputs', 'input')}
-        {list('outputs', 'Outputs', 'output')}
-        {exceptions()}
-        {environmentVariables()}
-        {input('notes', 'Notes', true)}
+        <div>
+          <label htmlFor={`${idPrefix}-name`}>Name</label>
+          <input id={`${idPrefix}-name`} type="text" value={resource.name} onChange={(e) => resource.setName(e.target.value)} />
+        </div>
+        {RESOURCE_KINDS[resource.kind].typed && (
+          <div>
+            <label htmlFor={`${idPrefix}-type`}>Data Type</label>
+            <select
+              id={`${idPrefix}-type`}
+              value={resource.typeId ?? ''}
+              onChange={(e) => workspace.setResourceType(resource.id, e.target.value)}
+            >
+              {workspace.types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name || 'Unnamed type'}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {definition && (
+          <>
+            {list(resource, definition, 'inputs', 'Inputs', 'input')}
+            {list(resource, definition, 'outputs', 'Outputs', 'output')}
+            {exceptions(definition)}
+            {environmentVariables(definition)}
+            <div>
+              <label htmlFor={`${idPrefix}-notes`}>Notes</label>
+              <textarea
+                id={`${idPrefix}-notes`}
+                rows={4}
+                value={definition.details.notes}
+                onChange={(e) => definition.details.patch({ notes: e.target.value })}
+              />
+            </div>
+          </>
+        )}
       </FocusGroup>
-      <button type="button" className="btn-danger" onClick={() => deleteFlow.request(diagram, { kind: 'component', id: item.id })}>
-        Delete component
+      <button type="button" className="btn-danger" onClick={() => deleteFlow.request(diagram, { kind: 'placement', id: item.id })}>
+        Delete
+      </button>
+      <button type="button" className="btn-danger" onClick={() => deleteFlow.request(diagram, { kind: 'resource', id: resource.id })}>
+        Delete resource
       </button>
     </aside>
   )

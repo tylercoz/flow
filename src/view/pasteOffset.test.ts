@@ -1,48 +1,38 @@
 import { describe, expect, it } from 'vitest'
-import type { ComponentDto, PlacementDto } from '../domain/WorkspaceSnapshot'
+import type { PlacementDto } from '../domain/WorkspaceSnapshot'
 import { NODE_SIZE } from './createAtPoint'
 import { offsetToCenter } from './pasteOffset'
 
-const component = (x: number, y: number, size?: { width: number; height: number }): ComponentDto => ({
-  id: 'c',
-  details: { name: '', inputs: [], outputs: [], notes: '' },
-  position: { x, y },
-  size,
-  exceptionIds: [],
-  environmentVariableIds: [],
-  diagram: { id: 'd', viewport: { x: 0, y: 0, zoom: 1 }, components: [], placements: [], links: [] },
-})
-
-const placement = (x: number, y: number, size?: { width: number; height: number }): PlacementDto => ({
-  id: 'p',
+const placement = (x: number, y: number, size?: { width: number; height: number }, id = 'p'): PlacementDto => ({
+  id,
   resourceId: 'r',
   position: { x, y },
   size,
 })
+const fragment = (...placements: PlacementDto[]) => ({ placements, links: [] })
 
 describe('offsetToCenter', () => {
+  it('is zero for an empty Fragment', () => {
+    expect(offsetToCenter(fragment(), { x: 40, y: 40 })).toEqual({ x: 0, y: 0 })
+  })
+
   it('centres a Placement with a default size when none is stored', () => {
     const centre = { x: NODE_SIZE.width / 2, y: NODE_SIZE.height / 2 }
-    expect(offsetToCenter({ components: [], placements: [placement(0, 0)], links: [] }, centre)).toEqual({ x: 0, y: 0 })
+    expect(offsetToCenter(fragment(placement(0, 0)), centre)).toEqual({ x: 0, y: 0 })
   })
-  it('includes Placements in the bounding box with Components', () => {
-    const fragment = { components: [component(0, 0, { width: 10, height: 10 })], placements: [placement(90, 90, { width: 10, height: 10 })], links: [] }
-    expect(offsetToCenter(fragment, { x: 0, y: 0 })).toEqual({ x: -50, y: -50 })
-  })
-  it('centres a single Component on the target', () => {
-    const offset = offsetToCenter({ components: [component(0, 0, { width: 100, height: 50 })], placements: [], links: [] }, { x: 200, y: 200 })
+
+  it('centres a single Placement on the target', () => {
+    const offset = offsetToCenter(fragment(placement(0, 0, { width: 100, height: 50 })), { x: 200, y: 200 })
     expect(offset).toEqual({ x: 150, y: 175 })
   })
-  it('centres the bounding box of several Components', () => {
-    const fragment = { components: [component(0, 0, { width: 10, height: 10 }), component(90, 90, { width: 10, height: 10 })], placements: [], links: [] }
-    expect(offsetToCenter(fragment, { x: 0, y: 0 })).toEqual({ x: -50, y: -50 })
+
+  it('centres the bounding box of several Placements', () => {
+    const f = fragment(placement(0, 0, { width: 10, height: 10 }, 'a'), placement(90, 90, { width: 10, height: 10 }, 'b'))
+    expect(offsetToCenter(f, { x: 0, y: 0 })).toEqual({ x: -50, y: -50 })
   })
+
   it('prefers the measured size over the stored and default ones', () => {
-    const measured = new Map([['c', { width: 100, height: 200 }]])
-    expect(offsetToCenter({ components: [component(0, 0)], placements: [], links: [] }, { x: 0, y: 0 }, measured)).toEqual({ x: -50, y: -100 })
-  })
-  it('falls back to the default size when none is stored', () => {
-    const centre = { x: NODE_SIZE.width / 2, y: NODE_SIZE.height / 2 }
-    expect(offsetToCenter({ components: [component(0, 0)], placements: [], links: [] }, centre)).toEqual({ x: 0, y: 0 })
+    const measured = new Map([['p', { width: 100, height: 200 }]])
+    expect(offsetToCenter(fragment(placement(0, 0)), { x: 0, y: 0 }, measured)).toEqual({ x: -50, y: -100 })
   })
 })

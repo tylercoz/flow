@@ -4,7 +4,7 @@ import { DomainError } from './DomainError'
 import { RESOURCE_KINDS, type ResourceKind } from './ResourceKinds'
 import { Workspace } from './Workspace'
 import type { WorkspaceSnapshot } from './WorkspaceSnapshot'
-import { allDiagrams, buildWorkspace, CounterIds, commandsArb, positionArb } from './testing/workspaceArbitrary'
+import { buildWorkspace, CounterIds, commandsArb, positionArb } from './testing/workspaceArbitrary'
 
 const kindArb = fc.constantFrom<ResourceKind>(...(Object.keys(RESOURCE_KINDS) as ResourceKind[]))
 
@@ -88,12 +88,84 @@ describe('resources properties', () => {
           } else {
             resource.setName(newName)
             entry.name = newName
+            // A component's name lives in its details, so the snapshot holds it in both places.
+            if (entry.component) entry.component.details.name = newName
           }
 
           const after = JSON.parse(workspace.capture()) as WorkspaceSnapshot
           expect(after).toEqual({ ...before, resources: expected })
-          const placements = allDiagrams(workspace).flatMap((d) => d.placements.filter((p) => p.resourceId === resource.id))
+          const placements = workspace.allDiagrams().flatMap((d) => d.placements.filter((p) => p.resourceId === resource.id))
           placements.forEach((p) => expect(workspace.resources.get(p.resourceId)).toBe(resource))
+        },
+      ),
+      { numRuns: 100 },
+    )
+  })
+
+  // Feature: components-as-resources, Property 1: Resource edits are visible through every Placement
+  // **Validates: Requirements 1.4**
+  it('an edit to a component Resource changes only its snapshot entry, and every Placement of it sees the edit', () => {
+    const editArb = fc.constantFrom('name', 'notes', 'inputs', 'outputs', 'exception', 'variable')
+    fc.assert(
+      fc.property(
+        commandsArb,
+        fc.nat({ max: 1000 }),
+        fc.array(fc.nat({ max: 1000 }), { minLength: 1, maxLength: 3 }),
+        editArb,
+        fc.string(),
+        (commands, resourcePick, diagramPicks, edit, text) => {
+          const workspace = buildWorkspace(commands)
+          const components = workspace.componentResources()
+          if (components.length === 0) return
+          const resource = components[resourcePick % components.length]
+          const definition = resource.definition!
+
+          // Several Placements of one Resource, wherever a cycle would not result.
+          // The root is never inside a component, so it always accepts one; the Resource may have been unplaced.
+          workspace.root.addPlacement(resource.id, { x: 0, y: 0 })
+          const diagrams = workspace.allDiagrams()
+          diagramPicks.forEach((pick, i) => {
+            const target = diagrams[pick % diagrams.length]
+            if (!workspace.wouldCreateCycle(target, resource.id)) target.addPlacement(resource.id, { x: i, y: i })
+          })
+          // Catalog entries are created before the snapshot so the edit itself is the only change.
+          const exception = workspace.addException('e')
+          const variable = workspace.addEnvironmentVariable('v')
+
+          const before = JSON.parse(workspace.capture()) as WorkspaceSnapshot
+          const portsBefore = { inputs: definition.details.inputs, outputs: definition.details.outputs }
+
+          // Ports are only appended, because removal also prunes Links elsewhere (covered by the port-removal property).
+          if (edit === 'name') resource.setName(text)
+          else if (edit === 'notes') definition.details.patch({ notes: text })
+          else if (edit === 'inputs' || edit === 'outputs') {
+            workspace.setPorts(resource.id, edit, [...portsBefore[edit], { name: text, typeId: null }])
+          } else if (edit === 'exception') definition.setExceptions([...definition.exceptionIds, exception.id])
+          else definition.setEnvironmentVariables([...definition.environmentVariableIds, variable.id])
+
+          const after = JSON.parse(workspace.capture()) as WorkspaceSnapshot
+          const others = (s: WorkspaceSnapshot) => ({ ...s, resources: s.resources.filter((r) => r.id !== resource.id) })
+          expect(others(after)).toEqual(others(before))
+
+          const entry = after.resources.find((r) => r.id === resource.id)!.component!
+          const entryBefore = before.resources.find((r) => r.id === resource.id)!.component!
+          if (edit === 'name') expect(entry.details.name).toBe(text)
+          if (edit === 'notes') expect(entry.details.notes).toBe(text)
+          if (edit === 'inputs' || edit === 'outputs') {
+            expect(entry.details[edit]).toHaveLength(entryBefore.details[edit].length + 1)
+            expect(entry.details[edit].slice(0, -1)).toEqual(entryBefore.details[edit])
+          }
+          if (edit === 'exception') expect(entry.exceptionIds).toEqual([...entryBefore.exceptionIds, exception.id])
+          if (edit === 'variable') expect(entry.environmentVariableIds).toEqual([...entryBefore.environmentVariableIds, variable.id])
+
+          // Every Placement resolves to the one live Resource, so the edit is visible through each of them.
+          const placed = workspace.allDiagrams().flatMap((d) => d.placements.filter((p) => p.resourceId === resource.id).map((p) => ({ d, p })))
+          expect(placed.length).toBeGreaterThan(0)
+          placed.forEach(({ d, p }) => {
+            const seen = d.resourceOf(p.id)
+            expect(seen).toBe(resource)
+            expect(seen!.definition!.details.toJSON()).toEqual(entry.details)
+          })
         },
       ),
       { numRuns: 100 },
@@ -113,7 +185,7 @@ describe('resources properties', () => {
         fc.option(fc.record({ width: dimension, height: dimension }), { nil: undefined }),
         (commands, pick, position, size) => {
           const workspace = buildWorkspace(commands)
-          const placements = allDiagrams(workspace).flatMap((d) => [...d.placements])
+          const placements = workspace.allDiagrams().flatMap((d) => [...d.placements])
           if (placements.length === 0) return
           const placement = placements[pick % placements.length]
           const before = JSON.parse(workspace.capture()) as WorkspaceSnapshot
@@ -123,12 +195,7 @@ describe('resources properties', () => {
           else placement.setPosition(position)
 
           const expected = structuredClone(before)
-          const dtos: { id: string; position: unknown; size?: unknown }[] = []
-          const collect = (diagram: { placements: typeof dtos; components: { diagram?: unknown }[] }): void => {
-            dtos.push(...diagram.placements)
-            diagram.components.forEach((c) => c.diagram && collect(c.diagram as typeof diagram))
-          }
-          collect(expected.root as unknown as Parameters<typeof collect>[0])
+          const dtos = [...expected.root.placements, ...expected.resources.flatMap((r) => r.component?.diagram.placements ?? [])]
           const dto = dtos.find((d) => d.id === placement.id)!
           dto.position = position
           if (size) dto.size = size
@@ -148,12 +215,12 @@ describe('resources properties', () => {
     fc.assert(
       fc.property(commandsArb, fc.nat({ max: 1000 }), (commands, pick) => {
         const workspace = buildWorkspace(commands)
-        const owned = allDiagrams(workspace).flatMap((d) => d.placements.map((p) => ({ diagram: d, placement: p })))
+        const owned = workspace.allDiagrams().flatMap((d) => d.placements.map((p) => ({ diagram: d, placement: p })))
         if (owned.length === 0) return
         const { diagram, placement } = owned[pick % owned.length]
 
-        const nodeIds = () => allDiagrams(workspace).flatMap((d) => [...d.components.map((c) => c.id), ...d.placements.map((p) => p.id)])
-        const linkIds = () => allDiagrams(workspace).flatMap((d) => d.links.map((l) => l.id))
+        const nodeIds = () => workspace.allDiagrams().flatMap((d) => d.placements.map((p) => p.id))
+        const linkIds = () => workspace.allDiagrams().flatMap((d) => d.links.map((l) => l.id))
         const resourcesBefore = JSON.stringify(workspace.resources.all.map((r) => [r.id, r.kind, r.name, r.typeId]))
         const nodesBefore = nodeIds()
         const attached = diagram.links.filter((l) => l.sourceId === placement.id || l.targetId === placement.id).map((l) => l.id)
@@ -180,12 +247,12 @@ describe('resources properties', () => {
         // The generated content is untyped, so references to fresh types are added here.
         usages.forEach(([usage, pick], i) => {
           const type = workspace.addType(`t${i}`)
-          const diagrams = allDiagrams(workspace)
+          const diagrams = workspace.allDiagrams()
           if (usage === 'componentPort') {
-            const owners = diagrams.flatMap((d) => d.components.map((c) => ({ d, c })))
+            const owners = workspace.componentResources()
             if (owners.length === 0) return
-            const { d, c } = owners[pick % owners.length]
-            d.setPorts(c.id, 'inputs', [...c.details.inputs, { name: 'typed', typeId: type.id }])
+            const owner = owners[pick % owners.length]
+            workspace.setPorts(owner.id, 'inputs', [...owner.definition!.details.inputs, { name: 'typed', typeId: type.id }])
           } else if (usage === 'linkPort') {
             const links = diagrams.flatMap((d) => [...d.links])
             if (links.length === 0) return
@@ -203,15 +270,13 @@ describe('resources properties', () => {
         const referenced = new Set<string>()
         const ports = (d: { inputs: { typeId: string | null }[]; outputs: { typeId: string | null }[] }): void =>
           [...d.inputs, ...d.outputs].forEach((p) => p.typeId && referenced.add(p.typeId))
-        const visit = (d: WorkspaceSnapshot['root']): void => {
-          d.links.forEach((l) => ports(l.details))
-          d.components.forEach((c) => {
-            ports(c.details)
-            visit(c.diagram)
-          })
-        }
-        visit(snapshot.root)
-        snapshot.resources.forEach((r) => r.typeId && referenced.add(r.typeId))
+        snapshot.root.links.forEach((l) => ports(l.details))
+        snapshot.resources.forEach((r) => {
+          if (r.typeId) referenced.add(r.typeId)
+          if (!r.component) return
+          ports(r.component.details)
+          r.component.diagram.links.forEach((l) => ports(l.details))
+        })
 
         workspace.types.slice().forEach((type) => {
           const versionBefore = workspace.getVersion()
@@ -240,25 +305,18 @@ describe('resources properties', () => {
         positionArb,
         (commands, pick, mask, offset) => {
           const workspace = buildWorkspace(commands)
-          const diagrams = allDiagrams(workspace)
+          const diagrams = workspace.allDiagrams()
           const diagram = diagrams[pick % diagrams.length]
-          const nodes = [...diagram.components, ...diagram.placements]
-          const selected = new Set(nodes.filter((_, i) => mask[i % mask.length]).map((n) => n.id))
-          const components = diagram.components.filter((c) => selected.has(c.id))
+          const selected = new Set(diagram.placements.filter((_, i) => mask[i % mask.length]).map((n) => n.id))
           const placements = diagram.placements.filter((p) => selected.has(p.id))
           const inner = diagram.links.filter((l) => selected.has(l.sourceId) && selected.has(l.targetId))
 
           const fragment = workspace.copy(diagram, selected)
-          expect(fragment.components.map((c) => c.id)).toEqual(components.map((c) => c.id))
           expect(fragment.placements.map((p) => p.id)).toEqual(placements.map((p) => p.id))
           expect(fragment.links.map((l) => l.id)).toEqual(inner.map((l) => l.id))
 
           const treeIds = () =>
-            allDiagrams(workspace).flatMap((d) => [
-              ...d.components.map((c) => c.id),
-              ...d.placements.map((p) => p.id),
-              ...d.links.map((l) => l.id),
-            ])
+            workspace.allDiagrams().flatMap((d) => [...d.placements.map((p) => p.id), ...d.links.map((l) => l.id)])
           const idsBefore = new Set(treeIds())
           const resourcesBefore = workspace.resources.all.map((r) => [r.id, r.kind, r.name, r.typeId])
 
@@ -273,13 +331,10 @@ describe('resources properties', () => {
           // Every id in the tree stays unique, so the pasted ones are all new.
           const idsAfter = treeIds()
           expect(new Set(idsAfter).size).toBe(idsAfter.length)
-          const added = [...pasted.components, ...pasted.placements, ...pasted.links].map((n) => n.id)
+          const added = [...pasted.placements, ...pasted.links].map((n) => n.id)
           added.forEach((id) => expect(idsBefore.has(id)).toBe(false))
 
-          const renamed = new Map<string, string>([
-            ...components.map((c, i) => [c.id, pasted.components[i].id] as [string, string]),
-            ...placements.map((p, i) => [p.id, pasted.placements[i].id] as [string, string]),
-          ])
+          const renamed = new Map<string, string>(placements.map((p, i) => [p.id, pasted.placements[i].id] as [string, string]))
           expect(pasted.links).toHaveLength(inner.length)
           inner.forEach((original, i) => {
             const copy = pasted.links[i]
@@ -307,23 +362,17 @@ describe('resources properties', () => {
         positionArb,
         (commands, sourcePick, mask, resourcePick, targetPick, offset) => {
           const workspace = buildWorkspace(commands)
-          const diagrams = allDiagrams(workspace)
-          const source = diagrams[sourcePick % diagrams.length]
-          const nodes = [...source.components, ...source.placements]
-          const selected = new Set(nodes.filter((_, i) => mask[i % mask.length]).map((n) => n.id))
+          const source = workspace.allDiagrams()[sourcePick % workspace.allDiagrams().length]
+          const selected = new Set(source.placements.filter((_, i) => mask[i % mask.length]).map((n) => n.id))
           const fragment = workspace.copy(source, selected)
 
-          // Placements nested inside copied Components count too.
-          const resourceIds: string[] = []
-          const collect = (d: { placements: { resourceId: string }[]; components?: { diagram?: unknown }[] }): void => {
-            resourceIds.push(...d.placements.map((p) => p.resourceId))
-            d.components?.forEach((c) => c.diagram && collect(c.diagram as typeof d))
-          }
-          collect(fragment as unknown as Parameters<typeof collect>[0])
+          const resourceIds = fragment.placements.map((p) => p.resourceId)
           if (resourceIds.length === 0) return
 
           workspace.removeResource(resourceIds[resourcePick % resourceIds.length])
-          const destination = diagrams[targetPick % diagrams.length]
+          // Chosen after the removal: removing a component also removes its child Diagram.
+          const remaining = workspace.allDiagrams()
+          const destination = remaining[targetPick % remaining.length]
           const before = workspace.capture()
           const versionBefore = workspace.getVersion()
           let notifications = 0
@@ -350,19 +399,23 @@ describe('resources properties', () => {
         if (resources.length === 0) return
         const target = resources[pick % resources.length]
 
+        // A component's child Diagram goes with it, so its contents are not expected to survive.
+        const child = target.definition?.diagram
+        const survivors = () => workspace.allDiagrams().filter((d) => d !== child)
         const doomed = () =>
-          allDiagrams(workspace).flatMap((d) => d.placements.filter((p) => p.resourceId === target.id).map((p) => ({ d, id: p.id })))
-        const nodeIds = () => allDiagrams(workspace).flatMap((d) => [...d.components.map((c) => c.id), ...d.placements.map((p) => p.id)])
-        const linkIds = () => allDiagrams(workspace).flatMap((d) => d.links.map((l) => l.id))
+          workspace.allDiagrams().flatMap((d) => d.placements.filter((p) => p.resourceId === target.id).map((p) => ({ d, id: p.id })))
+        const nodeIds = () => survivors().flatMap((d) => d.placements.map((p) => p.id))
+        const linkIds = () => survivors().flatMap((d) => d.links.map((l) => l.id))
 
         const impact = workspace.resourceImpact(target.id)
         const placementsGone = doomed()
         const doomedIds = new Set(placementsGone.map((x) => x.id))
-        const linksGone = allDiagrams(workspace).flatMap((d) =>
+        const linksGone = survivors().flatMap((d) =>
           d.links.filter((l) => doomedIds.has(l.sourceId) || doomedIds.has(l.targetId)).map((l) => l.id),
         )
         const nodesBefore = nodeIds()
         const linksBefore = linkIds()
+        const contents = child ? { nodes: child.placements.length, links: child.links.length } : undefined
         const otherResources = workspace.resources.all.filter((r) => r.id !== target.id).map((r) => r.id)
 
         let notifications = 0
@@ -370,7 +423,7 @@ describe('resources properties', () => {
         workspace.removeResource(target.id)
         unsubscribe()
 
-        expect(impact).toEqual({ placements: placementsGone.length, links: linksGone.length })
+        expect(impact).toEqual({ placements: placementsGone.length, links: linksGone.length, contents })
         expect(nodeIds()).toEqual(nodesBefore.filter((id) => !doomedIds.has(id)))
         expect(linkIds()).toEqual(linksBefore.filter((id) => !linksGone.includes(id)))
         expect(doomed()).toEqual([])

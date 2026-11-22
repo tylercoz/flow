@@ -15,10 +15,8 @@ flowchart TD
         environmentVariableEdit["environmentVariableEdit: availableEnvironmentVariables"]
         NotificationBar
         DiagramProjector
-        ComponentNode
-        PlacementNode
+        PlacementNode["PlacementNode: component or other kind"]
         ResourcePicker
-        ResourceInspector
         resourceIcons["resourceIcons: ResourceIcon per ResourceKind"]
         LinkEdge
         PortList
@@ -35,15 +33,20 @@ flowchart TD
         pasteOffset["pasteOffset: offsetToCenter"]
     end
     subgraph Domain[Domain, no React]
-        Workspace --> Diagram --> Component --> Diagram
+        Workspace --> Diagram
         Diagram --> Link
         Diagram --> Placement --> NodeBounds
-        Component --> NodeBounds
         Workspace --> ResourceRegistry --> Resource
+        Resource -->|"component kind only"| ComponentDefinition
+        ComponentDefinition --> Details
+        ComponentDefinition -->|"one child Diagram, shared by every Placement"| Diagram
+        Workspace -->|"diagramGraph, wouldCreateCycle"| DiagramGraph
+        Diagram -->|"addPlacement asks Workspace.wouldCreateCycle"| Workspace
+        Diagram -->|"resourceOf, endShape: reads Resource live"| ResourceRegistry
         Diagram --> LinkRules
         Resource --> ResourceKinds
         LinkRules --> ResourceKinds
-        Navigator --> Workspace
+        Navigator -->|"root; path of Placement ids via resourceOf"| Diagram
         History -->|"subscribes; capture, replaceContent"| Workspace
         History -->|reconcile after restore| Navigator
         Notifier --> Scheduler
@@ -55,6 +58,7 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
         WorkspaceSerializer -->|checkLink, kinds| Domain
+        WorkspaceSerializer -->|"schemaVersion 9; findCycle rejects Reference_Cycle"| DiagramGraph
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
@@ -67,9 +71,9 @@ flowchart TD
     AppProvider --> App
     App -->|owns one instance| DeleteFlow
     App --> Breadcrumb
+    Breadcrumb -->|trail| Navigator
     App --> CanvasView
     App --> Inspector
-    App -->|Placement selected| ResourceInspector
     App --> ConfirmDialog
     App -->|Types button in header| TypesDialog
     App -->|Exceptions button in header| ExceptionsDialog
@@ -86,10 +90,7 @@ flowchart TD
     FocusGroup -->|filters targets| shortcutAction
     App -->|passes deleteFlow| CanvasView
     App -->|passes deleteFlow| Inspector
-    App -->|passes deleteFlow| ResourceInspector
-    ResourceInspector --> FocusGroup
-    ResourceInspector -->|setName, setResourceType| Workspace
-    ResourceInspector -->|request: placement or resource| DeleteFlow
+    Inspector -->|setName, setResourceType, setPorts| Workspace
     ConfirmDialog -->|reads pending| DeleteFlow
     CanvasView --> DiagramProjector
     CanvasView -->|onMoveEnd: setViewport| Diagram
@@ -101,43 +102,42 @@ flowchart TD
     Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
     Level -->|"Cmd/Ctrl+C, V, D: copy, paste, duplicate (copy then paste, skipping the copied Fragment)"| Workspace
     Level -->|"double-click on pane: isEmptyCanvas, createComponentAt"| createAtPoint
-    createAtPoint -->|addComponent| Diagram
+    createAtPoint -->|createPlacedResource| Workspace
     createAtPoint -->|start| RenameController
-    CanvasView -->|"nodeTypes (module-level)"| ComponentNode
-    CanvasView -->|"nodeTypes 'resource' (module-level)"| PlacementNode
-    CanvasView -->|"pane context menu: pick a kind"| ResourcePicker
+    CanvasView -->|"nodeTypes 'placement' (module-level), the only node type"| PlacementNode
+    CanvasView -->|"pane context menu: pick a kind, component included"| ResourcePicker
     ResourcePicker -->|addPlacement| Diagram
-    ResourcePicker -->|"createPlacedResource; lists resources.byKind"| Workspace
+    ResourcePicker -->|"createPlacedResource; lists resources.byKind without cyclic ones (wouldCreateCycle)"| Workspace
     ResourcePicker --> resourceIcons
     PlacementNode --> resourceIcons
-    PlacementNode -->|"Handles: read, write or top, right, bottom, left"| ResourceKinds
-    PlacementNode -->|"reads Resource by resourceId; useApp"| AppProvider
+    PlacementNode -->|"non-component Handles: read, write or top, right, bottom, left"| ResourceKinds
+    PlacementNode -->|"resolves Resource with diagram.resourceOf; useApp"| AppProvider
+    PlacementNode -->|"resize: placement(id).setBounds"| Diagram
     CanvasView -->|"onConnect: addLink with handle ids; errors to Notifier"| Diagram
-    CanvasView -->|"drag, resize: positioned(id)"| Diagram
+    CanvasView -->|"drag: placement(id).setPosition"| Diagram
     CanvasView -->|"edgeTypes (module-level)"| LinkEdge
     LinkEdge -->|start; reads controller from| RenameController
-    LinkEdge -->|reuses RenameInput| ComponentNode
-    ComponentNode -->|reads controller from| RenameContext
-    ComponentNode -->|schedule, cancel, end; useStore| RenameController
-    ComponentNode -->|useApp for workspace, navigator| AppProvider
-    ComponentNode -->|renders inputs and outputs| PortList
+    LinkEdge -->|reuses RenameInput| PlacementNode
+    PlacementNode -->|reads controller from| RenameContext
+    PlacementNode -->|schedule, cancel, end; useStore| RenameController
+    PlacementNode -->|"component: renders inputs and outputs"| PortList
     PortList -->|applyPortName| portEdit
-    PortList -->|"onChange: ports, Handle per port"| ComponentNode
-    ComponentNode -->|setPorts| Diagram
-    Inspector -->|setPorts| Diagram
+    PortList -->|"onChange: ports, Handle per port"| PlacementNode
+    PlacementNode -->|"component: setPorts(resourceId)"| Workspace
+    PlacementNode -->|"component: open button"| Navigator
     RenameController -.implements.-> ObservableStore
     RenameController --> Scheduler
     DeleteFlow -->|resourceImpact, removeResource| Workspace
     CanvasView -->|request| DeleteFlow
-    Inspector -->|request| DeleteFlow
+    Inspector -->|request: placement or resource| DeleteFlow
     TypesDialog -->|add, rename, remove types| Workspace
     TypesDialog -->|remove refused| Notifier
     ExceptionsDialog -->|"add, rename, exceptionUsage, removeException (after confirmation)"| Workspace
     Inspector -->|"setExceptions; offers availableExceptions"| exceptionEdit
-    Inspector -->|setExceptions| Component
+    Inspector -->|setExceptions| ComponentDefinition
     EnvironmentVariablesDialog -->|"add, rename, environmentVariableUsage, removeEnvironmentVariable (after confirmation)"| Workspace
     Inspector -->|"setEnvironmentVariables; offers availableEnvironmentVariables"| environmentVariableEdit
-    Inspector -->|setEnvironmentVariables| Component
+    Inspector -->|setEnvironmentVariables| ComponentDefinition
     View -->|useStore| Domain
     View -->|commands| Domain
     AutoSaver -->|subscribes| Workspace

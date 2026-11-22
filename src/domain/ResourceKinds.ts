@@ -1,4 +1,4 @@
-export type ResourceKind = 'database' | 'artifact' | 'user' | 'input-object'
+export type ResourceKind = 'database' | 'artifact' | 'user' | 'input-object' | 'component'
 
 export const DATABASE_PORTS = { read: 'read', write: 'write' } as const
 export const SIDE_PORTS = ['top', 'right', 'bottom', 'left'] as const
@@ -14,6 +14,8 @@ export const RESOURCE_KINDS: Record<ResourceKind, KindSpec> = {
   artifact: { typed: true, sourceIds: SIDE_PORTS, targetIds: SIDE_PORTS },
   user: { typed: false, sourceIds: SIDE_PORTS, targetIds: SIDE_PORTS },
   'input-object': { typed: true, sourceIds: SIDE_PORTS, targetIds: SIDE_PORTS },
+  // Handles come from the definition's Details ports, so the id lists are never read.
+  component: { typed: false, sourceIds: [], targetIds: [] },
 }
 
 // Own-property check so inherited keys such as "toString" are not treated as kinds.

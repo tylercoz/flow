@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { NodeBounds, type Positioned } from './NodeBounds'
+import { NodeBounds } from './NodeBounds'
 import { Placement } from './Placement'
 
 describe('NodeBounds', () => {
@@ -47,7 +47,7 @@ describe('Placement', () => {
 
   it('delegates setPosition and setBounds and notifies each time', () => {
     const onChange = vi.fn()
-    const p: Positioned = new Placement('p1', 'r1', { x: 0, y: 0 }, onChange)
+    const p = new Placement('p1', 'r1', { x: 0, y: 0 }, onChange)
     p.setPosition({ x: 3, y: 4 })
     expect(p.position).toEqual({ x: 3, y: 4 })
     p.setBounds({ x: 5, y: 6 }, { width: 7, height: 8 })
