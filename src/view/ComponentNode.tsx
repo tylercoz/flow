@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react'
-import { Handle, NodeResizer, Position, type NodeProps, type ResizeParams } from '@xyflow/react'
+import { NodeResizer, useUpdateNodeInternals, type NodeProps, type ResizeParams } from '@xyflow/react'
 import type { Details } from '../domain/Details'
-import type { Side } from '../domain/Link'
 import { useApp } from './AppProvider'
 import { NODE_SIZE } from './createAtPoint'
+import { PortList } from './PortList'
 import type { RenameController } from './RenameController'
 import { useStore } from './useStore'
 
@@ -23,21 +23,27 @@ const DRAG_THRESHOLD_PX = 4
 // Gives React Flow about a sixth of a second to measure a new node before we stop retrying focus.
 const MAX_FOCUS_FRAMES = 10
 
-// Ids match domain Side values. All Handles are `source` and CanvasView uses loose connection mode,
-// so a Link can start or end on any side.
-const SIDE_HANDLES: [Side, Position][] = [
-  ['top', Position.Top],
-  ['right', Position.Right],
-  ['bottom', Position.Bottom],
-  ['left', Position.Left],
-]
 
-export function ComponentNode({ id, selected }: NodeProps) {
+export function ComponentNode({ id, selected, width, height }: NodeProps) {
   const { navigator, workspace } = useApp()
   useStore(workspace)
   const controller = useRenameController()
   useStore(controller)
-  const details = navigator.current.component(id)?.details
+  const diagram = navigator.current
+  const component = diagram.component(id)
+  const details = component?.details
+  // The node has a width and height only while NodeResizer drags it (DiagramProjector never sets them), so the
+  // box follows the drag and otherwise keeps the stored size as a floor it can grow past when ports are added.
+  const floor = {
+    minWidth: Math.max(NODE_SIZE.width, width ?? component?.size?.width ?? 0),
+    minHeight: Math.max(NODE_SIZE.height, height ?? component?.size?.height ?? 0),
+  }
+  const inputs = details?.inputs ?? []
+  const outputs = details?.outputs ?? []
+  const updateNodeInternals = useUpdateNodeInternals()
+  const portKey = [...inputs, ...outputs].map((p) => p.id).join()
+  // React Flow measures Handles only when told; without this a new or removed port keeps stale connection points.
+  useEffect(() => updateNodeInternals(id), [id, portKey, updateNodeInternals])
 
   // React Flow selects a node on click. Capturing `selected` at pointerdown is still correct because
   // pointerdown precedes click, so the previous Focus is still visible.
@@ -52,6 +58,13 @@ export function ComponentNode({ id, selected }: NodeProps) {
     if (e.detail === 1 && wasFocused && !dragged) controller.schedule(id)
   }
 
+  // The smallest box that still fits the ports and name. Measured when a resize starts, because ports and
+  // the name change between resizes and a fixed minimum let the user shrink the box past its content.
+  const box = useRef<HTMLDivElement>(null)
+  const [minSize, setMinSize] = useState(NODE_SIZE)
+  const onResizeStart = () => {
+    if (box.current) setMinSize(measureMinSize(box.current))
+  }
   const onResizeEnd = (_: unknown, { x, y, width, height }: ResizeParams) =>
     navigator.current.component(id)?.setBounds({ x, y }, { width, height })
   return (
@@ -59,40 +72,57 @@ export function ComponentNode({ id, selected }: NodeProps) {
       {/* Outside the clickable div so a resize drag is never mistaken for a click that starts a Rename. */}
       <NodeResizer
         isVisible={selected}
-        minWidth={NODE_SIZE.width}
-        minHeight={NODE_SIZE.height}
+        minWidth={minSize.width}
+        minHeight={minSize.height}
+        onResizeStart={onResizeStart}
         onResizeEnd={onResizeEnd}
       />
       <div
-        style={{ minWidth: NODE_SIZE.width, minHeight: NODE_SIZE.height }}
-        onPointerDown={onPointerDown}
-        onClick={onClick}
-        onDoubleClick={() => controller.start(id)}
+        ref={box}
+        style={floor}
         className="component-node"
       >
-        {SIDE_HANDLES.map(([id, position]) => (
-          <Handle key={id} id={id} type="source" position={position} />
-        ))}
-        {/* Stops the press and click so opening is not mistaken for a drag or a Rename start. */}
-        <button
-          className="open-button nodrag nopan"
-          aria-label="Open component"
-          title="Open"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            navigator.open(id)
-          }}
-          onDoubleClick={(e) => e.stopPropagation()}
-        />
-        {details && controller.editingId === id ? (
-          <RenameInput details={details} controller={controller} />
-        ) : (
-          details?.name
-        )}
+        <PortList ports={inputs} field="inputs" onChange={(next) => diagram.setPorts(id, 'inputs', next)} />
+        {/* Only the name box starts a Rename, so clicking a port name does not. */}
+        <div
+          className="component-body"
+          onPointerDown={onPointerDown}
+          onClick={onClick}
+          onDoubleClick={() => controller.start(id)}
+        >
+          {/* Stops the press and click so opening is not mistaken for a drag or a Rename start. */}
+          <button
+            className="open-button nodrag nopan"
+            aria-label="Open component"
+            title="Open"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation()
+              navigator.open(id)
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+          />
+          {details && controller.editingId === id ? (
+            <RenameInput details={details} controller={controller} />
+          ) : (
+            details?.name
+          )}
+        </div>
+        <PortList ports={outputs} field="outputs" onChange={(next) => diagram.setPorts(id, 'outputs', next)} />
       </div>
     </>
   )
+}
+
+// Lays the box out at its min-content size, reads it, and restores it in the same task, so nothing is painted.
+// offsetWidth/offsetHeight ignore the viewport's zoom transform, so the result is already in flow units.
+// The stored-size floor is lifted too, or the result would be the current size rather than the content's.
+function measureMinSize(el: HTMLElement): { width: number; height: number } {
+  const { flex, width, height, minWidth, minHeight } = el.style
+  Object.assign(el.style, { flex: 'none', width: 'min-content', height: 'min-content', minWidth: '0', minHeight: '0' })
+  const size = { width: Math.max(NODE_SIZE.width, el.offsetWidth), height: Math.max(NODE_SIZE.height, el.offsetHeight) }
+  Object.assign(el.style, { flex, width, height, minWidth, minHeight })
+  return size
 }
 
 export function RenameInput({ details, controller }: { details: Details; controller: RenameController }) {

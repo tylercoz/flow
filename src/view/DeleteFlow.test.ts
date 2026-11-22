@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Diagram } from '../domain/Diagram'
 import { DomainError } from '../domain/DomainError'
+import { connect } from '../domain/testing/connect'
 import { DeleteFlow } from './DeleteFlow'
 
 function setup() {
@@ -31,7 +32,7 @@ describe('DeleteFlow', () => {
     const { diagram, flow } = setup()
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
-    diagram.addLink(a.id, b.id, 'bottom', 'top')
+    connect(diagram, a, b)
     flow.request(diagram, { kind: 'component', id: a.id })
     expect(diagram.components).toEqual([b])
     expect(diagram.links).toHaveLength(0)
@@ -43,7 +44,7 @@ describe('DeleteFlow', () => {
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
     a.diagram.addComponent({ x: 0, y: 0 })
-    diagram.addLink(a.id, b.id, 'bottom', 'top')
+    connect(diagram, a, b)
     flow.request(diagram, { kind: 'component', id: a.id })
     flow.confirm()
     expect(diagram.components).toEqual([b])
@@ -66,7 +67,7 @@ describe('DeleteFlow', () => {
     const { diagram, flow } = setup()
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
-    const link = diagram.addLink(a.id, b.id, 'bottom', 'top')
+    const link = connect(diagram, a, b)
     flow.request(diagram, { kind: 'link', id: link.id })
     expect(diagram.links).toHaveLength(0)
     expect(flow.pending).toBeNull()

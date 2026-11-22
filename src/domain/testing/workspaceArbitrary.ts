@@ -3,7 +3,6 @@ import type { Component } from '../Component'
 import type { DetailsDto } from '../Details'
 import type { Diagram } from '../Diagram'
 import type { IdGenerator } from '../IdGenerator'
-import { SIDES, type Side } from '../Link'
 import type { Viewport } from '../Viewport'
 import { Workspace } from '../Workspace'
 
@@ -26,7 +25,7 @@ export const viewportArb: fc.Arbitrary<Viewport> = fc.record({
   zoom: fc.integer({ min: 1, max: 400 }).map((n) => n / 100),
 })
 // Generated workspaces have no ids to point at, so ports are untyped here; type references are covered by unit tests.
-const portArb = fc.record({ name: fc.string(), typeId: fc.constant(null) })
+const portArb = fc.record({ id: fc.nat({ max: 20 }).map((n) => `p${n}`), name: fc.string(), typeId: fc.constant(null) })
 export const detailsPatchArb: fc.Arbitrary<Partial<DetailsDto>> = fc.record(
   { name: fc.string(), inputs: fc.array(portArb), outputs: fc.array(portArb), notes: fc.string() },
   { requiredKeys: [] },
@@ -35,26 +34,31 @@ export const detailsPatchArb: fc.Arbitrary<Partial<DetailsDto>> = fc.record(
 // Picks are raw numbers resolved modulo the live tree, so every command is valid for any workspace shape
 // and shrinking a sequence never invalidates the remaining commands.
 const pick = fc.nat({ max: 1000 })
-const sideArb = fc.constantFrom(...SIDES)
 
 export type Command =
   | { kind: 'addComponent'; diagram: number; position: { x: number; y: number } }
-  | { kind: 'addLink'; diagram: number; source: number; target: number; sourceSide: Side; targetSide: Side }
+  | { kind: 'addLink'; diagram: number; source: number; target: number; sourcePort: number; targetPort: number }
   | { kind: 'removeComponent'; diagram: number; component: number }
   | { kind: 'removeLink'; diagram: number; link: number }
   | { kind: 'patchComponent'; diagram: number; component: number; patch: Partial<DetailsDto> }
   | { kind: 'patchLink'; diagram: number; link: number; patch: Partial<DetailsDto> }
   | { kind: 'setViewport'; diagram: number; viewport: Viewport }
+  | { kind: 'addException'; name: string }
+  | { kind: 'toggleException'; diagram: number; component: number; exception: number }
+  | { kind: 'removeException'; exception: number }
 
 // Weighted toward additions so sequences build nested, non-trivial trees.
 export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addComponent' as const), diagram: pick, position: positionArb }), weight: 5 },
-  { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick, sourceSide: sideArb, targetSide: sideArb }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick, sourcePort: pick, targetPort: pick }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('removeComponent' as const), diagram: pick, component: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('removeLink' as const), diagram: pick, link: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('patchComponent' as const), diagram: pick, component: pick, patch: detailsPatchArb }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('patchLink' as const), diagram: pick, link: pick, patch: detailsPatchArb }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('setViewport' as const), diagram: pick, viewport: viewportArb }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('addException' as const), name: fc.string() }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('toggleException' as const), diagram: pick, component: pick, exception: pick }), weight: 3 },
+  { arbitrary: fc.record({ kind: fc.constant('removeException' as const), exception: pick }), weight: 1 },
 )
 
 export const commandsArb = fc.array(commandArb, { maxLength: 40 })
@@ -78,6 +82,16 @@ const at = <T>(items: readonly T[], i: number): T | undefined => (items.length ?
 
 // Commands that have no valid target (empty diagram, self-link pick) are skipped, not errors.
 export function applyCommand(workspace: Workspace, cmd: Command): void {
+  // Workspace-level commands have no target diagram.
+  if (cmd.kind === 'addException') {
+    workspace.addException(cmd.name)
+    return
+  }
+  if (cmd.kind === 'removeException') {
+    const e = at(workspace.exceptions, cmd.exception)
+    if (e) workspace.removeException(e.id)
+    return
+  }
   const diagrams = allDiagrams(workspace)
   const d = diagrams[cmd.diagram % diagrams.length]
   switch (cmd.kind) {
@@ -87,7 +101,9 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
     case 'addLink': {
       const source = at(d.components, cmd.source)
       const target = at(d.components, cmd.target)
-      if (source && target && source !== target) d.addLink(source.id, target.id, cmd.sourceSide, cmd.targetSide)
+      const output = source && at(source.details.outputs, cmd.sourcePort)
+      const input = target && at(target.details.inputs, cmd.targetPort)
+      if (source && target && output && input && source !== target) d.addLink(source.id, target.id, output.id, input.id)
       return
     }
     case 'removeComponent': {
@@ -100,15 +116,30 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
       if (l) d.removeLink(l.id)
       return
     }
-    case 'patchComponent':
-      at(d.components, cmd.component)?.details.patch(cmd.patch)
+    case 'patchComponent': {
+      const c = at(d.components, cmd.component)
+      if (!c) return
+      // Port lists go through the Diagram so Links on removed ports are dropped, as in the app. A command must
+      // be one change notification (History records one step per notification), so it applies one operation.
+      const { inputs, outputs, ...rest } = cmd.patch
+      if (inputs) d.setPorts(c.id, 'inputs', inputs)
+      else if (outputs) d.setPorts(c.id, 'outputs', outputs)
+      else c.details.patch(rest)
       return
+    }
     case 'patchLink':
       at(d.links, cmd.link)?.details.patch(cmd.patch)
       return
     case 'setViewport':
       d.setViewport(cmd.viewport)
       return
+    case 'toggleException': {
+      const c = at(d.components, cmd.component)
+      const e = at(workspace.exceptions, cmd.exception)
+      if (!c || !e) return
+      c.setExceptions(c.exceptionIds.includes(e.id) ? c.exceptionIds.filter((id) => id !== e.id) : [...c.exceptionIds, e.id])
+      return
+    }
   }
 }
 

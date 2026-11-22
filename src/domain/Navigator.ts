@@ -23,14 +23,8 @@ export class Navigator implements ObservableStore {
   }
 
   trail(): readonly Component[] {
-    const components: Component[] = []
-    let diagram = this.workspace.root
-    for (const id of this._path) {
-      const component = diagram.component(id)
-      if (!component) throw new DomainError('NOT_IN_DIAGRAM', 'Path component no longer exists.')
-      components.push(component)
-      diagram = component.diagram
-    }
+    const components = this.resolvePath()
+    if (!components) throw new DomainError('NOT_IN_DIAGRAM', 'Path component no longer exists.')
     return components
   }
 
@@ -47,19 +41,11 @@ export class Navigator implements ObservableStore {
     this.signal.notify()
   }
 
-  // Called after the Workspace content is replaced. Walks the path without trail(),
-  // which throws on a stale path; falls back to the root if any id is gone.
+  // Called after the Workspace content is replaced; falls back to the root if any path id is gone.
   reconcile(): void {
-    let diagram = this.workspace.root
-    for (const id of this._path) {
-      const component = diagram.component(id)
-      if (!component) {
-        this._path = []
-        this.signal.notify()
-        return
-      }
-      diagram = component.diagram
-    }
+    if (this.resolvePath()) return
+    this._path = []
+    this.signal.notify()
   }
 
   // Index 0 is the root; index i keeps the first i path elements.
@@ -70,5 +56,18 @@ export class Navigator implements ObservableStore {
     if (index === this._path.length) return
     this._path = this._path.slice(0, index)
     this.signal.notify()
+  }
+
+  // Undefined when an id on the path no longer exists.
+  private resolvePath(): Component[] | undefined {
+    const components: Component[] = []
+    let diagram = this.workspace.root
+    for (const id of this._path) {
+      const component = diagram.component(id)
+      if (!component) return undefined
+      components.push(component)
+      diagram = component.diagram
+    }
+    return components
   }
 }

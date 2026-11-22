@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react'
 import {
   Background,
-  ConnectionMode,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -11,10 +10,11 @@ import {
   type Node,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import type { Size } from '../domain/Component'
 import type { Diagram } from '../domain/Diagram'
 import { DomainError } from '../domain/DomainError'
-import { isSide } from '../domain/Link'
 import type { Notifier } from '../domain/Notifier'
+import type { Fragment } from '../domain/WorkspaceSnapshot'
 import { useApp } from './AppProvider'
 import type { DeleteFlow, DeleteTarget } from './DeleteFlow'
 import { ComponentNode, RenameContext } from './ComponentNode'
@@ -22,17 +22,27 @@ import { LinkEdge } from './LinkEdge'
 import { toEdges, toNodes } from './DiagramProjector'
 import { createComponentAt, isEmptyCanvas } from './createAtPoint'
 import { RenameController } from './RenameController'
+import { DUPLICATE_OFFSET, clipboardAction } from './clipboardShortcut'
+import { offsetToCenter } from './pasteOffset'
 import { selectionKey } from './selectionKey'
 import { useStore } from './useStore'
+
+const isMac = /Mac|iPhone|iPad/.test(navigator.userAgent)
+
+function centreOf(el: HTMLElement | null): { x: number; y: number } | null {
+  if (!el) return null
+  const r = el.getBoundingClientRect()
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+}
 
 // Must be module-level: a new object per render would make React Flow remount every node.
 const nodeTypes = { component: ComponentNode }
 const edgeTypes = { link: LinkEdge }
 
 /** The single selected Component or Link of the current Level, or null. */
-export type CanvasSelection = DeleteTarget | null
+type CanvasSelection = DeleteTarget | null
 
-export interface CanvasViewProps {
+interface CanvasViewProps {
   /** Shared with ConfirmDialog; deletions from the Delete key go through it. */
   deleteFlow: DeleteFlow
   /** Called whenever the selection changes, including when it is cleared (e.g. after a Level change or deletion). */
@@ -42,17 +52,28 @@ export interface CanvasViewProps {
 export function CanvasView({ deleteFlow, onSelectionChange }: CanvasViewProps) {
   const { navigator, notifier } = useApp()
   useStore(navigator)
+  // Lives here, not in Level, so a copy survives navigating to another Level.
+  const clipboard = useRef<Copied | null>(null)
   const diagram = navigator.current
   // Keyed by Diagram id so each Level remounts and applies its own saved defaultViewport.
-  return <Level key={diagram.id} diagram={diagram} notifier={notifier} deleteFlow={deleteFlow} onSelectionChange={onSelectionChange} />
+  return (
+    <Level key={diagram.id} diagram={diagram} notifier={notifier} clipboard={clipboard} deleteFlow={deleteFlow} onSelectionChange={onSelectionChange} />
+  )
 }
 
 interface LevelProps extends CanvasViewProps {
   diagram: Diagram
   notifier: Notifier
+  clipboard: RefObject<Copied | null>
 }
 
-function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps) {
+// Sizes are captured at copy time because the copied Components may be on another Level when pasted.
+interface Copied {
+  fragment: Fragment
+  sizes: ReadonlyMap<string, Size>
+}
+
+function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: LevelProps) {
   const { workspace, scheduler } = useApp()
   const [rename] = useState(() => new RenameController(scheduler))
   // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
@@ -69,25 +90,23 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(toEdges(diagram))
   const [syncedVersion, setSyncedVersion] = useState(version)
   const { screenToFlowPosition } = useReactFlow()
-  // Id of a Component just created by double-click; selected on the next model sync (state, not a ref, because the sync runs during render).
-  const [pendingFocus, setPendingFocus] = useState<string | null>(null)
+  // Ids of elements just created by double-click or paste; selected on the next model sync (state, not a ref, because the sync runs during render).
+  const [pendingFocus, setPendingFocus] = useState<ReadonlySet<string> | null>(null)
 
   // React Flow needs local state to animate drags and selection, so rebuild it from the model
   // whenever the model changes, carrying `selected` over so a rename doesn't drop the selection.
   if (syncedVersion !== version) {
     setSyncedVersion(version)
-    // A freshly created Component replaces the previous selection so Focus stays single-element.
-    const selected = pendingFocus
-      ? new Set([pendingFocus])
-      : new Set([...nodes, ...edges].filter((e) => e.selected).map((e) => e.id))
+    // Freshly created elements replace the previous selection.
+    const selected = pendingFocus ?? new Set([...nodes, ...edges].filter((e) => e.selected).map((e) => e.id))
     setPendingFocus(null)
     setNodes(toNodes(diagram).map((n) => ({ ...n, selected: selected.has(n.id) })))
     setEdges(toEdges(diagram).map((e) => ({ ...e, selected: selected.has(e.id) })))
   }
 
   const onConnect = ({ source, target, sourceHandle, targetHandle }: Connection) => {
-    // Only ComponentNode's side Handles exist, so any other id is a wiring bug.
-    if (!isSide(sourceHandle) || !isSide(targetHandle)) throw new Error('Connection used an unknown Handle')
+    // Every Handle is a port, so a missing id is a wiring bug.
+    if (!sourceHandle || !targetHandle) throw new Error('Connection used an unknown Handle')
     try {
       diagram.addLink(source, target, sourceHandle, targetHandle)
     } catch (e) {
@@ -111,12 +130,63 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
   const onDoubleClick = (e: MouseEvent) => {
     if (!isEmptyCanvas(e.target)) return
     const point = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    setPendingFocus(createComponentAt(diagram, point, rename).id)
+    setPendingFocus(new Set([createComponentAt(diagram, point, rename).id]))
   }
+
+  // Keyboard events carry no pointer position, so the last one seen over the canvas is kept for paste.
+  const cursor = useRef<{ x: number; y: number } | null>(null)
+  const canvas = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Dialogs sit over the canvas and own the keyboard.
+      if (document.querySelector('[aria-modal="true"]')) return
+      const action = clipboardAction(e, isMac)
+      if (!action) return
+      const select = (added: { components: { id: string }[]; links: { id: string }[] }) =>
+        setPendingFocus(new Set([...added.components, ...added.links].map((x) => x.id)))
+      if (action === 'paste') {
+        const copied = clipboard.current
+        if (!copied) return
+        e.preventDefault()
+        rename.cancel()
+        // Before the pointer has moved over the canvas there is no cursor to aim at, so the canvas centre stands in.
+        const screen = cursor.current ?? centreOf(canvas.current)
+        if (!screen) return
+        const { fragment, sizes } = copied
+        select(workspace.paste(diagram, fragment, offsetToCenter(fragment, screenToFlowPosition(screen), sizes)))
+        return
+      }
+      const ids = new Set(nodes.filter((n) => n.selected).map((n) => n.id))
+      // Acting on nothing keeps the previous copy instead of clearing it.
+      if (ids.size === 0) return
+      // Cmd+D is the browser's bookmark shortcut, so it is only taken over when it does something.
+      e.preventDefault()
+      const fragment = workspace.copy(diagram, ids)
+      if (action === 'copy') {
+        const sizes = new Map<string, Size>()
+        for (const n of nodes) if (ids.has(n.id) && n.measured?.width && n.measured.height) sizes.set(n.id, { width: n.measured.width, height: n.measured.height })
+        clipboard.current = { fragment, sizes }
+        return
+      }
+      // Duplicate bypasses the clipboard so it doesn't overwrite what the user copied.
+      rename.cancel()
+      select(workspace.paste(diagram, fragment, { x: DUPLICATE_OFFSET, y: DUPLICATE_OFFSET }))
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [nodes, clipboard, workspace, diagram, rename, screenToFlowPosition])
 
   return (
     <RenameContext.Provider value={rename}>
-      <div style={{ width: '100%', height: '100%' }} onDoubleClick={onDoubleClick}>
+      <div
+        ref={canvas}
+        style={{ width: '100%', height: '100%' }}
+        onDoubleClick={onDoubleClick}
+        onPointerMove={(e) => {
+          cursor.current = { x: e.clientX, y: e.clientY }
+        }}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -127,10 +197,15 @@ function Level({ diagram, notifier, deleteFlow, onSelectionChange }: LevelProps)
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStart={() => rename.cancel()}
-          onNodeDragStop={(_, node) => diagram.component(node.id)?.setPosition(node.position)}
+          // Dragging one member of a multi-selection moves all of them, so persist every moved node.
+          onNodeDragStop={(_, __, moved) => moved.forEach((n) => diagram.component(n.id)?.setPosition(n.position))}
+          onSelectionDragStart={() => rename.cancel()}
+          onSelectionDragStop={(_, moved) => moved.forEach((n) => diagram.component(n.id)?.setPosition(n.position))}
+          // Left-drag on empty canvas draws a selection box; pan moves to middle/right mouse (and scroll/trackpad).
+          selectionOnDrag
+          panOnDrag={[1, 2]}
+          panOnScroll
           onMoveEnd={(_, viewport) => diagram.setViewport(viewport)}
-          // Every Handle is a `source`, so loose mode lets a Link end on any side.
-          connectionMode={ConnectionMode.Loose}
           onConnect={onConnect}
           onBeforeDelete={onBeforeDelete}
           onSelectionChange={({ nodes: n, edges: e }) => {

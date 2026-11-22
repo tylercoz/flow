@@ -6,6 +6,7 @@ import { ConfirmDialog } from './view/ConfirmDialog'
 import { DeleteFlow } from './view/DeleteFlow'
 import { HistoryControls } from './view/HistoryControls'
 import { Inspector } from './view/Inspector'
+import { ExceptionsDialog } from './view/ExceptionsDialog'
 import { TypesDialog } from './view/TypesDialog'
 import { NotificationBar } from './view/NotificationBar'
 import { useApp } from './view/AppProvider'
@@ -31,6 +32,7 @@ function Layout() {
   // One instance: the Delete key, the Inspector and ConfirmDialog must share the pending confirmation.
   const [deleteFlow] = useState(() => new DeleteFlow())
   const [typesOpen, setTypesOpen] = useState(false)
+  const [exceptionsOpen, setExceptionsOpen] = useState(false)
   const [selection, setSelection] = useState<{ diagramId: string; componentId: string } | null>(null)
 
   const [sidebarWidth, setSidebarWidth] = useState(300)
@@ -65,6 +67,9 @@ function Layout() {
         <button type="button" onClick={() => setTypesOpen(true)}>
           Types
         </button>
+        <button type="button" onClick={() => setExceptionsOpen(true)}>
+          Exceptions
+        </button>
       </header>
       <NotificationBar />
       <main className="app-main">
@@ -98,6 +103,7 @@ function Layout() {
       </main>
       <ConfirmDialog deleteFlow={deleteFlow} />
       {typesOpen && <TypesDialog onClose={() => setTypesOpen(false)} />}
+      {exceptionsOpen && <ExceptionsDialog onClose={() => setExceptionsOpen(false)} />}
     </div>
   )
 }

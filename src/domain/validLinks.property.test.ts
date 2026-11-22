@@ -1,5 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
+import { connect } from './testing/connect'
 import { allDiagrams, workspaceArb } from './testing/workspaceArbitrary'
 
 const pick = fc.nat({ max: 1000 })
@@ -18,12 +19,12 @@ describe('Diagram links', () => {
         const target = diagram.components[(a + 1 + (b % (diagram.components.length - 1))) % diagram.components.length]
 
         const before = diagram.links.map((l) => l.id)
-        const link = diagram.addLink(source.id, target.id, 'right', 'left')
+        const link = connect(diagram, source, target)
 
         expect(diagram.links).toHaveLength(before.length + 1)
         expect(diagram.links.filter((l) => !before.includes(l.id))).toEqual([link])
         expect([link.sourceId, link.targetId]).toEqual([source.id, target.id])
-        expect([link.sourceSide, link.targetSide]).toEqual(['right', 'left'])
+        expect([link.sourcePortId, link.targetPortId]).toEqual([source.details.outputs.at(-1)?.id, target.details.inputs.at(-1)?.id])
 
         diagram.removeLink(link.id)
         expect(diagram.links.map((l) => l.id)).toEqual(before)

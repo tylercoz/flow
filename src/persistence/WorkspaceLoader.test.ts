@@ -36,8 +36,9 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 4,
+  schemaVersion: 6,
   types: [],
+  exceptions: [],
   root: {
     id: 'root',
     viewport: { x: 0, y: 0, zoom: 1 },
@@ -46,6 +47,7 @@ const stored = {
         id: 'c1',
         details: { name: 'A', inputs: [], outputs: [], notes: '' },
         position: { x: 1, y: 2 },
+        exceptionIds: [],
         diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, components: [], links: [] },
       },
     ],

@@ -9,10 +9,14 @@ flowchart TD
         Inspector
         ConfirmDialog
         TypesDialog
+        ExceptionsDialog
+        exceptionEdit["exceptionEdit: availableExceptions"]
         NotificationBar
         DiagramProjector
         ComponentNode
         LinkEdge
+        PortList
+        portEdit["portEdit: applyPortName"]
         Level[Level, inside CanvasView]
         RenameContext
         RenameController
@@ -21,6 +25,8 @@ flowchart TD
         HistoryControls
         FocusGroup
         shortcutAction["shortcutAction, isTextInput"]
+        clipboardShortcut["clipboardShortcut: clipboardAction, DUPLICATE_OFFSET"]
+        pasteOffset["pasteOffset: offsetToCenter"]
     end
     subgraph Domain[Domain, no React]
         Workspace --> Diagram --> Component --> Diagram
@@ -52,12 +58,14 @@ flowchart TD
     App --> Inspector
     App --> ConfirmDialog
     App -->|Types button in header| TypesDialog
+    App -->|Exceptions button in header| ExceptionsDialog
     App --> NotificationBar
     App -->|Undo and Redo buttons in header| HistoryControls
     HistoryControls -->|"undo, redo; useStore"| History
     HistoryControls -->|classifies key events| shortcutAction
     Inspector --> FocusGroup
     TypesDialog --> FocusGroup
+    ExceptionsDialog --> FocusGroup
     FocusGroup -->|"beginGroup on focus, endGroup on blur"| History
     FocusGroup -->|filters targets| shortcutAction
     App -->|passes deleteFlow| CanvasView
@@ -68,6 +76,10 @@ flowchart TD
     CanvasView -->|keyed by Diagram id| Level
     Level -->|owns one, built from AppServices.scheduler| RenameController
     Level -->|provides it through| RenameContext
+    CanvasView -->|holds the copied Fragment, so it survives Level changes| Level
+    Level -->|classifies key events| clipboardShortcut
+    Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
+    Level -->|"Cmd/Ctrl+C, V, D: copy, paste, duplicate (copy then paste, skipping the copied Fragment)"| Workspace
     Level -->|"double-click on pane: isEmptyCanvas, createComponentAt"| createAtPoint
     createAtPoint -->|addComponent| Diagram
     createAtPoint -->|start| RenameController
@@ -78,12 +90,20 @@ flowchart TD
     ComponentNode -->|reads controller from| RenameContext
     ComponentNode -->|schedule, cancel, end; useStore| RenameController
     ComponentNode -->|useApp for workspace, navigator| AppProvider
+    ComponentNode -->|renders inputs and outputs| PortList
+    PortList -->|applyPortName| portEdit
+    PortList -->|"onChange: ports, Handle per port"| ComponentNode
+    ComponentNode -->|setPorts| Diagram
+    Inspector -->|setPorts| Diagram
     RenameController -.implements.-> ObservableStore
     RenameController --> Scheduler
     CanvasView -->|request| DeleteFlow
     Inspector -->|request| DeleteFlow
     TypesDialog -->|add, rename, remove types| Workspace
     TypesDialog -->|remove refused| Notifier
+    ExceptionsDialog -->|"add, rename, exceptionUsage, removeException (after confirmation)"| Workspace
+    Inspector -->|"setExceptions; offers availableExceptions"| exceptionEdit
+    Inspector -->|setExceptions| Component
     View -->|useStore| Domain
     View -->|commands| Domain
     AutoSaver -->|subscribes| Workspace

@@ -10,6 +10,9 @@
   --on-accent: #fbf1c7;
   --accent-soft: rgba(180, 113, 9, 0.2);
   --danger: #c14a4a;
+  /* Saturated pure hues, shared by both themes: the muted Gruvbox red and green turned muddy when tinted. */
+  --input: #e5303a;
+  --output: #1fb35a;
   --shadow: 0 1px 2px rgba(101, 71, 53, 0.1), 0 4px 12px rgba(101, 71, 53, 0.1);
   font-family: 'Roboto Mono Variable', ui-monospace, Menlo, monospace;
   font-size: 14px;
@@ -162,20 +165,103 @@ textarea:focus {
 
 /* Fills the React Flow node so a user-set size applies to the visible box, not just its wrapper. */
 .component-node {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Side boxes shrink to their longest port name; the name box takes the rest. */
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  padding: 6px 8px 24px;
-  text-align: center;
-  white-space: pre-wrap;
+  /* Grows across the flex wrapper and stretches to its height, so the box always matches the resize frame. */
+  flex: 1;
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 0;
   box-shadow: var(--shadow);
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+/* The node has a set size only during a resize drag; flex stretches the box to it so box and frame match.
+   Otherwise the wrapper sizes to the box. The resizer's controls are absolute, so they are not flex items. */
+.react-flow__node-component {
+  display: flex;
+}
+.component-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px 24px;
+  text-align: center;
+  white-space: pre-wrap;
+  /* The dividers belong to the name box so both show whatever the side lists hold. */
+  border: solid var(--border);
+  border-width: 0 1.5px;
+}
+.component-ports {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+/* Padding sits on the rows, not the list, so each separator line spans the column's full width. */
+/* A tint over the surface keeps the text readable in both themes. */
+.input-ports {
+  background: color-mix(in srgb, var(--input) 30%, var(--surface));
+}
+.output-ports {
+  background: color-mix(in srgb, var(--output) 30%, var(--surface));
+}
+/* Positioned so each port's Handle centers on its own row's outer edge. */
+.component-ports li {
+  position: relative;
+  min-height: 1lh;
+  padding: 6px 8px;
+}
+/* Same look as the static name, so editing a port does not resize the row. */
+.component-ports input {
+  width: auto;
+  field-sizing: content;
+  /* An empty input sizes to zero width, which leaves the caret nowhere to draw. */
+  min-width: 1ch;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.component-ports input:focus {
+  box-shadow: none;
+}
+/* Always takes its space, so the box does not resize when the control appears on hover. */
+.add-port button,
+.remove-port {
+  padding: 0 4px;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  opacity: 0;
+}
+.react-flow__node:hover .add-port button,
+.react-flow__node.selected .add-port button,
+.add-port button:focus-visible,
+.react-flow__node:hover .remove-port,
+.react-flow__node.selected .remove-port,
+.remove-port:focus-visible {
+  opacity: 0.7;
+}
+/* The auto margin pushes the × to the column's right edge; the row gap keeps it off the longest name. */
+.component-ports li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.remove-port {
+  margin-left: auto;
+}
+.add-port button:hover,
+.remove-port:hover {
+  opacity: 1;
+}
+.component-ports li + li {
+  border-top: 1.5px solid var(--border);
 }
 .component-node:hover {
   border-color: var(--accent);

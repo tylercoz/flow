@@ -1,6 +1,7 @@
 import fc from 'fast-check'
 import { describe, it, expect } from 'vitest'
 import type { Describable } from './Describable'
+import { connect } from './testing/connect'
 import { allDiagrams, detailsPatchArb, positionArb, workspaceArb } from './testing/workspaceArbitrary'
 
 describe('edits', () => {
@@ -13,7 +14,7 @@ describe('edits', () => {
         const root = workspace.root
         const a = root.addComponent({ x: 0, y: 0 })
         const b = root.addComponent({ x: 1, y: 1 })
-        root.addLink(a.id, b.id, 'bottom', 'top')
+        connect(root, a, b)
 
         const targets: Describable[] = allDiagrams(workspace).flatMap((d) => [...d.components, ...d.links])
         const target = targets[pickIndex % targets.length]

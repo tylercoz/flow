@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Diagram } from '../domain/Diagram'
+import { connect } from '../domain/testing/connect'
 import { toEdges, toNodes } from './DiagramProjector'
 
 function setup() {
@@ -14,15 +15,13 @@ describe('DiagramProjector', () => {
     expect(toEdges(diagram)).toEqual([])
   })
 
-  it('projects width and height only for a resized Component', () => {
+  it('never fixes a node size, so a resized Component can still grow with its content', () => {
     const diagram = setup()
-    const a = diagram.addComponent({ x: 0, y: 0 })
-    const b = diagram.addComponent({ x: 0, y: 0 })
-    b.setBounds({ x: 5, y: 6 }, { width: 200, height: 80 })
-    const [nodeA, nodeB] = toNodes(diagram)
-    expect(nodeA.id).toBe(a.id)
-    expect(nodeA).not.toHaveProperty('width')
-    expect(nodeB).toMatchObject({ position: { x: 5, y: 6 }, width: 200, height: 80 })
+    diagram.addComponent({ x: 0, y: 0 }).setBounds({ x: 5, y: 6 }, { width: 200, height: 80 })
+    const [node] = toNodes(diagram)
+    expect(node.position).toEqual({ x: 5, y: 6 })
+    expect(node).not.toHaveProperty('width')
+    expect(node).not.toHaveProperty('height')
   })
   it('projects one node per Component with matching id and position, and no label', () => {
     const diagram = setup()
@@ -43,8 +42,8 @@ describe('DiagramProjector', () => {
     const diagram = setup()
     const a = diagram.addComponent({ x: 0, y: 0 })
     const b = diagram.addComponent({ x: 1, y: 1 })
-    const named = diagram.addLink(a.id, b.id, 'right', 'left')
-    const unnamed = diagram.addLink(b.id, a.id, 'bottom', 'top')
+    const named = connect(diagram, a, b)
+    const unnamed = connect(diagram, b, a)
     named.details.patch({ name: 'calls' })
 
     const edges = toEdges(diagram)

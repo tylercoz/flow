@@ -1,4 +1,4 @@
-export type DomainErrorCode = 'SELF_LINK' | 'NOT_IN_DIAGRAM' | 'TYPE_IN_USE'
+type DomainErrorCode = 'SELF_LINK' | 'NOT_IN_DIAGRAM' | 'INVALID_PORT' | 'TYPE_IN_USE'
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode

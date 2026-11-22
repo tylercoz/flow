@@ -2,9 +2,9 @@ import { ChangeSignal } from './ChangeSignal'
 import type { ObservableStore } from './ObservableStore'
 import type { Scheduler, TimerHandle } from './Scheduler'
 
-export type MessageKind = 'transient' | 'persistent'
+type MessageKind = 'transient' | 'persistent'
 
-export interface Message {
+interface Message {
   readonly key: string
   readonly text: string
   readonly kind: MessageKind

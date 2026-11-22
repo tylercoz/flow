@@ -1,8 +1,8 @@
 import { Component, type Position } from './Component'
-import { Details } from './Details'
+import { Details, type NewPort } from './Details'
 import { DomainError } from './DomainError'
 import type { IdGenerator } from './IdGenerator'
-import { Link, type Side } from './Link'
+import { Link } from './Link'
 import { DEFAULT_VIEWPORT, type Viewport } from './Viewport'
 
 // Supplied by the Workspace so every Diagram in the tree shares one id source and one change signal.
@@ -57,6 +57,12 @@ export class Diagram {
     return component
   }
 
+  // One change for the whole batch, so a paste is a single undo step.
+  addAll(components: readonly Component[], links: readonly Link[]): void {
+    this._components.push(...components)
+    this._links.push(...links)
+    this.ctx.onChange()
+  }
   removeComponent(id: string): void {
     this.require(id)
     this._components = this._components.filter((c) => c.id !== id)
@@ -72,12 +78,28 @@ export class Diagram {
     }
   }
 
-  addLink(sourceId: string, targetId: string, sourceSide: Side, targetSide: Side): Link {
+  // Replaces one port list. Links on a removed port go in the same change, so undo restores both in one step.
+  setPorts(componentId: string, field: 'inputs' | 'outputs', ports: readonly NewPort[]): void {
+    const component = this.require(componentId)
+    const next = ports.map((p) => ({ ...p, id: p.id ?? this.ctx.ids.next() }))
+    const kept = new Set(next.map((p) => p.id))
+    this._links = this._links.filter((l) =>
+      field === 'outputs'
+        ? l.sourceId !== componentId || kept.has(l.sourcePortId)
+        : l.targetId !== componentId || kept.has(l.targetPortId),
+    )
+    component.details.patch({ [field]: next })
+  }
+
+  addLink(sourceId: string, targetId: string, sourcePortId: string, targetPortId: string): Link {
     if (sourceId === targetId) throw new DomainError('SELF_LINK', 'A component cannot be linked to itself.')
-    if (!this.component(sourceId) || !this.component(targetId)) {
-      throw new DomainError('NOT_IN_DIAGRAM', 'Both components must be in the same diagram.')
+    const source = this.component(sourceId)
+    const target = this.component(targetId)
+    if (!source || !target) throw new DomainError('NOT_IN_DIAGRAM', 'Both components must be in the same diagram.')
+    if (!source.details.outputs.some((p) => p.id === sourcePortId) || !target.details.inputs.some((p) => p.id === targetPortId)) {
+      throw new DomainError('INVALID_PORT', 'A link must go from an output to an input.')
     }
-    const link = new Link(this.ctx.ids.next(), new Details(this.ctx.onChange), sourceId, targetId, sourceSide, targetSide)
+    const link = new Link(this.ctx.ids.next(), new Details(this.ctx.onChange), sourceId, targetId, sourcePortId, targetPortId)
     this._links.push(link)
     this.ctx.onChange()
     return link

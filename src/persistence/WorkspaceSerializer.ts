@@ -1,6 +1,6 @@
 import type { DataType } from '../domain/DataType'
 import type { DetailsDto, Port } from '../domain/Details'
-import { isSide, type Side } from '../domain/Link'
+import type { ExceptionType } from '../domain/ExceptionType'
 import type { Workspace } from '../domain/Workspace'
 import type { ComponentDto, DiagramDto, LinkDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
 import { PersistenceError } from './PersistenceError'
@@ -16,13 +16,15 @@ export class WorkspaceSerializer {
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
     // No migrations while in development: data from any other version is rejected and must be cleared.
-    if (obj.schemaVersion !== 4) {
+    if (obj.schemaVersion !== 6) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
     const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
+    const exceptions = asArray(obj.exceptions, 'exceptions').map((e, i) => parseType(e, `exceptions[${i}]`))
     const root = parseDiagram(obj.root, 'root')
     assertTypesExist(root, new Set(types.map((t) => t.id)))
-    return { schemaVersion: 4, types, root }
+    assertExceptionsExist(root, new Set(exceptions.map((e) => e.id)))
+    return { schemaVersion: 6, types, exceptions, root }
   }
 }
 
@@ -45,23 +47,19 @@ function asString(v: unknown, path: string): string {
   return v
 }
 
-function asSide(v: unknown, path: string): Side {
-  if (!isSide(v)) throw malformed(path)
-  return v
-}
-
 function asNumber(v: unknown, path: string): number {
   if (typeof v !== 'number' || !Number.isFinite(v)) throw malformed(path)
   return v
 }
 
-function parseType(v: unknown, path: string): DataType {
+// DataType and ExceptionType have the same shape.
+function parseType(v: unknown, path: string): DataType & ExceptionType {
   const o = asObject(v, path)
   return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`) }
 }
 function parsePort(v: unknown, path: string): Port {
   const o = asObject(v, path)
-  return { name: asString(o.name, `${path}.name`), typeId: o.typeId === null ? null : asString(o.typeId, `${path}.typeId`) }
+  return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`), typeId: o.typeId === null ? null : asString(o.typeId, `${path}.typeId`) }
 }
 // A port naming a missing type could never be shown or fixed, so reject it at load.
 function assertTypesExist(d: DiagramDto, typeIds: ReadonlySet<string>): void {
@@ -74,6 +72,14 @@ function assertTypesExist(d: DiagramDto, typeIds: ReadonlySet<string>): void {
   d.components.forEach((c) => {
     check(c)
     assertTypesExist(c.diagram, typeIds)
+  })
+}
+// Same reasoning as for types: a dangling exception id could never be shown or fixed.
+function assertExceptionsExist(d: DiagramDto, exceptionIds: ReadonlySet<string>): void {
+  d.components.forEach((c) => {
+    const missing = c.exceptionIds.find((id) => !exceptionIds.has(id))
+    if (missing !== undefined) throw new PersistenceError(`Component uses unknown exception ${missing}`)
+    assertExceptionsExist(c.diagram, exceptionIds)
   })
 }
 function parsePorts(o: Obj, key: string, path: string): Port[] {
@@ -102,6 +108,12 @@ function parseDiagram(v: unknown, path: string): DiagramDto {
     if (!componentIds.has(link.sourceId) || !componentIds.has(link.targetId)) {
       throw new PersistenceError(`Link ${link.id} has an endpoint outside its diagram`)
     }
+    // Matches the domain's addLink rule, so a stored Link can never point at a missing port.
+    const source = components.find((c) => c.id === link.sourceId)
+    const target = components.find((c) => c.id === link.targetId)
+    if (!source?.details.outputs.some((p) => p.id === link.sourcePortId) || !target?.details.inputs.some((p) => p.id === link.targetPortId)) {
+      throw new PersistenceError(`Link ${link.id} has an endpoint that is not an output and an input`)
+    }
   }
   return {
     id: asString(o.id, `${path}.id`),
@@ -124,6 +136,7 @@ function parseComponent(v: unknown, path: string): ComponentDto {
     details: parseDetails(o.details, `${path}.details`),
     position: { x: asNumber(pos.x, `${path}.position.x`), y: asNumber(pos.y, `${path}.position.y`) },
     ...(size && { size: { width: asNumber(size.width, `${path}.size.width`), height: asNumber(size.height, `${path}.size.height`) } }),
+    exceptionIds: asArray(o.exceptionIds, `${path}.exceptionIds`).map((id, i) => asString(id, `${path}.exceptionIds[${i}]`)),
     diagram: parseDiagram(o.diagram, `${path}.diagram`),
   }
 }
@@ -135,7 +148,7 @@ function parseLink(v: unknown, path: string): LinkDto {
     details: parseDetails(o.details, `${path}.details`),
     sourceId: asString(o.sourceId, `${path}.sourceId`),
     targetId: asString(o.targetId, `${path}.targetId`),
-    sourceSide: asSide(o.sourceSide, `${path}.sourceSide`),
-    targetSide: asSide(o.targetSide, `${path}.targetSide`),
+    sourcePortId: asString(o.sourcePortId, `${path}.sourcePortId`),
+    targetPortId: asString(o.targetPortId, `${path}.targetPortId`),
   }
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DomainError } from './DomainError'
+import { History } from './History'
+import { connect } from './testing/connect'
 import { Workspace } from './Workspace'
 import type { DiagramDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
 
@@ -8,16 +10,17 @@ const viewport = { x: 0, y: 0, zoom: 1 }
 const emptyDiagram = (id: string): DiagramDto => ({ id, viewport, components: [], links: [] })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 4,
+  schemaVersion: 6,
   types: [],
+  exceptions: [],
   root: {
     id: 'r',
     viewport,
     components: [
-      { id: 'a', details: details('A'), position: { x: 1, y: 2 }, diagram: {
+      { id: 'a', details: details('A'), position: { x: 1, y: 2 }, exceptionIds: [], diagram: {
         id: 'ad',
         viewport,
-        components: [{ id: 'b', details: details('B'), position: { x: 3, y: 4 }, diagram: emptyDiagram('bd') }],
+        components: [{ id: 'b', details: details('B'), position: { x: 3, y: 4 }, exceptionIds: [], diagram: emptyDiagram('bd') }],
         links: [],
       } },
     ],
@@ -78,14 +81,15 @@ describe('Workspace types', () => {
   it('refuses to remove a type used by a nested component port or a link port', () => {
     const ws = empty()
     const [number, string] = ws.types
-    const nested = ws.root.addComponent({ x: 0, y: 0 }).diagram.addComponent({ x: 0, y: 0 })
-    nested.details.patch({ inputs: [{ name: 'a', typeId: number.id }] })
+    const parent = ws.root.addComponent({ x: 0, y: 0 })
+    const nested = parent.diagram.addComponent({ x: 0, y: 0 })
+    parent.diagram.setPorts(nested.id, 'inputs', [{ name: 'a', typeId: number.id }])
     const other = ws.root.addComponent({ x: 1, y: 1 })
-    const link = ws.root.addLink(other.id, ws.root.components[0].id, 'bottom', 'top')
-    link.details.patch({ outputs: [{ name: 'b', typeId: string.id }] })
+    const link = connect(ws.root, other, ws.root.components[0])
+    link.details.patch({ outputs: [{ id: 'lp', name: 'b', typeId: string.id }] })
     expect(() => ws.removeType(number.id)).toThrow(DomainError)
     expect(() => ws.removeType(string.id)).toThrow(DomainError)
-    nested.details.patch({ inputs: [] })
+    parent.diagram.setPorts(nested.id, 'inputs', [])
     ws.removeType(number.id)
     expect(ws.types.some((t) => t.id === number.id)).toBe(false)
   })
@@ -138,5 +142,68 @@ describe('Workspace snapshots', () => {
     ws.replaceContent(withComponent)
     const restored = ws.root.components.find((c) => c.diagram.id === nestedId)
     expect(restored?.diagram.viewport).toEqual({ x: 0, y: 0, zoom: 1 })
+  })
+})
+
+describe('Workspace exceptions', () => {
+  const setup = () => {
+    let n = 0
+    const workspace = Workspace.empty({ next: () => `x${++n}` })
+    const outer = workspace.root.addComponent({ x: 0, y: 0 })
+    const other = workspace.root.addComponent({ x: 1, y: 1 })
+    const inner = outer.diagram.addComponent({ x: 2, y: 2 })
+    return { workspace, outer, other, inner }
+  }
+
+  it('adds and renames catalog entries', () => {
+    const { workspace } = setup()
+    const e = workspace.addException('NotFound')
+    workspace.renameException(e.id, 'Missing')
+    expect(workspace.exceptions).toEqual([{ id: e.id, name: 'Missing' }])
+  })
+
+  it('stores each exception once per Component and notifies once', () => {
+    const { workspace, outer } = setup()
+    const e = workspace.addException('NotFound')
+    const before = workspace.getVersion()
+    outer.setExceptions([e.id, e.id])
+    expect(outer.exceptionIds).toEqual([e.id])
+    expect(workspace.getVersion()).toBe(before + 1)
+  })
+
+  it('counts and removes uses at every nesting level', () => {
+    const { workspace, outer, other, inner } = setup()
+    const e = workspace.addException('Timeout')
+    const keep = workspace.addException('Keep')
+    ;[outer, other, inner].forEach((c) => c.setExceptions([e.id, keep.id]))
+    expect(workspace.exceptionUsage(e.id)).toBe(3)
+    workspace.removeException(e.id)
+    expect(workspace.exceptionUsage(e.id)).toBe(0)
+    expect(workspace.exceptions.map((x) => x.id)).toEqual([keep.id])
+    expect([outer, other, inner].map((c) => c.exceptionIds)).toEqual([[keep.id], [keep.id], [keep.id]])
+  })
+
+  it('removes an exception from many Components as one undo step', () => {
+    const { workspace, outer, other, inner } = setup()
+    const e = workspace.addException('Timeout')
+    ;[outer, other, inner].forEach((c) => c.setExceptions([e.id]))
+    const history = new History(workspace, { reconcile: () => {} })
+    history.start()
+    workspace.removeException(e.id)
+    history.undo()
+    // History started after the setup, so an empty stack means the removal was exactly one step.
+    expect(history.canUndo).toBe(false)
+    expect(workspace.exceptions).toEqual([e])
+    expect(workspace.exceptionUsage(e.id)).toBe(3)
+  })
+
+  it('reverts setExceptions with undo', () => {
+    const { workspace, outer } = setup()
+    const e = workspace.addException('NotFound')
+    const history = new History(workspace, { reconcile: () => {} })
+    history.start()
+    outer.setExceptions([e.id])
+    history.undo()
+    expect(workspace.root.components[0].exceptionIds).toEqual([])
   })
 })

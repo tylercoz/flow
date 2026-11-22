@@ -4,7 +4,7 @@ import type { ObservableStore } from '../domain/ObservableStore'
 
 export type DeleteTarget = { kind: 'component' | 'link'; id: string }
 
-export interface PendingDelete {
+interface PendingDelete {
   readonly diagram: Diagram
   readonly componentId: string
   readonly contents: number

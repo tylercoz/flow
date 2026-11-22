@@ -5,7 +5,7 @@ import { PersistenceError } from './PersistenceError'
 import type { Repository } from './Repository'
 import type { WorkspaceSerializer } from './WorkspaceSerializer'
 
-export interface LoadResult {
+interface LoadResult {
   readonly workspace: Workspace
   readonly canSave: boolean
 }

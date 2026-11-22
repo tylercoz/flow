@@ -6,6 +6,7 @@
 
 - `.kiro/` - Kiro specs, steering, and hooks
 - `docs/diagrams/` - Mermaid diagrams (`.mmd`), indexed in `docs/diagrams/README.md`. Keep them current when code, specs, or structure change.
+- `docs/clear-saved-data.md` - Console commands to back up or clear the saved workspace after a `schemaVersion` bump.
 
 ## Naming Conventions
 

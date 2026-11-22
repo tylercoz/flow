@@ -1,5 +1,7 @@
-// A null typeId means the port has no type yet.
-export type Port = { name: string; typeId: string | null }
+// A null typeId means the port has no type yet. The id lets a Link keep its endpoint when ports are renamed or removed.
+export type Port = { id: string; name: string; typeId: string | null }
+// A port not yet in the model; Diagram.setPorts assigns its id.
+export type NewPort = Omit<Port, 'id'> & { id?: string }
 export type DetailsDto = { name: string; inputs: Port[]; outputs: Port[]; notes: string }
 const copyPorts = (ports: readonly Port[]): Port[] => ports.map((p) => ({ ...p }))
 export class Details {
@@ -16,6 +18,7 @@ export class Details {
     this.outputs = copyPorts(initial.outputs ?? [])
     this.notes = initial.notes ?? ''
   }
+  // Component ports must change through Diagram.setPorts, which also removes the Links of removed ports.
   // Skips undefined values so a partial update cannot blank a field by accident.
   patch(partial: Partial<DetailsDto>): void {
     if (partial.name !== undefined) this.name = partial.name

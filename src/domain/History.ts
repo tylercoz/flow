@@ -9,7 +9,7 @@ export interface Restorable extends ObservableStore {
   replaceContent(snapshot: Snapshot): void
 }
 
-export const HISTORY_LIMIT = 100
+const HISTORY_LIMIT = 100
 
 export class History implements ObservableStore {
   private readonly signal = new ChangeSignal()

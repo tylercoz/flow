@@ -1,4 +1,4 @@
-export type ShortcutEvent = {
+type ShortcutEvent = {
   key: string
   metaKey: boolean
   ctrlKey: boolean

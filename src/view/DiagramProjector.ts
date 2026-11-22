@@ -9,8 +9,8 @@ export function toNodes(diagram: Diagram): Node[] {
     // Selects the custom ComponentNode registered in CanvasView's nodeTypes.
     type: 'component',
     position: { x: c.position.x, y: c.position.y },
-    // Omitted when never resized, so React Flow measures the node from its content.
-    ...(c.size && { width: c.size.width, height: c.size.height }),
+    // No width or height: a fixed node size cannot grow when ports are added, so React Flow always measures the
+    // node from its content and ComponentNode applies the stored size as a minimum.
     // ComponentNode reads the live name from Details, so no label is copied here.
     data: {},
   }))
@@ -21,9 +21,9 @@ export function toEdges(diagram: Diagram): Edge[] {
     id: l.id,
     source: l.sourceId,
     target: l.targetId,
-    // Side names double as the Handle ids rendered by ComponentNode.
-    sourceHandle: l.sourceSide,
-    targetHandle: l.targetSide,
+    // Port ids double as the Handle ids rendered by PortList.
+    sourceHandle: l.sourcePortId,
+    targetHandle: l.targetPortId,
     // Selects LinkEdge, which reads the live name from Details so it can edit it in place.
     type: 'link',
     // Marker size scales with the 3px edge stroke (index.css), so the default 12.5 would be oversized.

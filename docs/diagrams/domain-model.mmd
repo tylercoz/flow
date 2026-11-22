@@ -15,6 +15,13 @@ classDiagram
         addType(name)
         renameType(id, name)
         removeType(id)
+        exceptions: list of ExceptionType
+        addException(name)
+        renameException(id, name)
+        exceptionUsage(id)
+        removeException(id)
+        copy(diagram, componentIds)
+        paste(diagram, fragment, offset)
         toSnapshot(includeViewports)
         capture()
         replaceContent(snapshot)
@@ -56,26 +63,31 @@ classDiagram
         component(id)
         setViewport(v)
         addComponent(position)
+        addAll(components, links)
         removeComponent(id)
         deletionImpact(id)
-        addLink(sourceId, targetId, sourceSide, targetSide)
+        setPorts(componentId, field, ports)
+        addLink(sourceId, targetId, sourcePortId, targetPortId)
         removeLink(id)
     }
     class Component {
         id
         position
         size
+        exceptionIds: ExceptionType ids
         details
         diagram
         setPosition(p)
         setBounds(p, size)
+        setExceptions(ids)
+        dropException(id)
     }
     class Link {
         id
         sourceId
         targetId
-        sourceSide: top, right, bottom or left
-        targetSide: top, right, bottom or left
+        sourcePortId: output of source
+        targetPortId: input of target
         details
     }
     class Details {
@@ -88,10 +100,16 @@ classDiagram
     }
     class Port {
         <<type>>
+        id
         name
         typeId: DataType id or null
     }
     class DataType {
+        <<type>>
+        id
+        name
+    }
+    class ExceptionType {
         <<type>>
         id
         name
@@ -118,7 +136,7 @@ classDiagram
     }
     class UuidGenerator
     class DomainError {
-        code: SELF_LINK or NOT_IN_DIAGRAM
+        code: SELF_LINK, NOT_IN_DIAGRAM, INVALID_PORT or TYPE_IN_USE
     }
     class Viewport {
         x
@@ -129,8 +147,16 @@ classDiagram
         <<plain data>>
         schemaVersion
         types: list of DataType
+        exceptions: list of ExceptionType
         root: DiagramDto
     }
+    class Fragment {
+        <<plain data>>
+        components: list of ComponentDto
+        links: list of LinkDto
+    }
+    Workspace ..> Fragment : copy returns, paste reads with fresh ids
+    Workspace ..> Diagram : paste calls addAll
     ChangeSignal ..|> ObservableStore
     Workspace ..|> ObservableStore
     Navigator ..|> ObservableStore
@@ -155,7 +181,10 @@ classDiagram
     Diagram *-- Link
     Component *-- Diagram : child
     Workspace *-- DataType
+    Workspace *-- ExceptionType
+    Component ..> ExceptionType : can return, by id
     Details *-- Port
+    Link ..> Port : joins an output to an input, by id
     Port ..> DataType : refers by id
     Workspace --> DomainError : TYPE_IN_USE
     Component *-- Details
