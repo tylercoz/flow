@@ -408,6 +408,11 @@ textarea:focus {
   flex-direction: column;
   gap: 14px;
 }
+.resource-section-title {
+  margin: 0 0 4px;
+  font-size: inherit;
+  color: var(--muted);
+}
 .resource-list {
   margin: 0;
   padding: 0;

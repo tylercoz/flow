@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Resource } from '../domain/Resource'
+import { RESOURCE_KINDS, type ResourceKind } from '../domain/ResourceKinds'
 import { useApp } from './AppProvider'
+import { KIND_LABELS } from './ResourcePicker'
 import { ResourceIcon } from './resourceIcons'
 import { useStore } from './useStore'
 export function ResourcesPanel() {
@@ -10,18 +12,31 @@ export function ResourcesPanel() {
   const resources = workspace.resources.all
   if (resources.length === 0) return <p className="inspector-empty">No resources yet.</p>
   return (
-    <ul className="resource-list">
-      {resources.map((resource) => (
-        <li key={resource.id} onDoubleClick={() => setEditingId(resource.id)}>
-          <ResourceIcon kind={resource.kind} />{' '}
-          {editingId === resource.id ? (
-            <NameInput resource={resource} onDone={() => setEditingId(null)} />
-          ) : (
-            resource.name || 'Unnamed'
-          )}
-        </li>
-      ))}
-    </ul>
+    <>
+      {(Object.keys(RESOURCE_KINDS) as ResourceKind[]).map((kind) => {
+        const ofKind = workspace.resources.byKind(kind)
+        if (ofKind.length === 0) return null
+        return (
+          <section key={kind} aria-label={KIND_LABELS[kind]}>
+            <h3 className="resource-section-title">
+              {KIND_LABELS[kind]} ({ofKind.length})
+            </h3>
+            <ul className="resource-list">
+              {ofKind.map((resource) => (
+                <li key={resource.id} onDoubleClick={() => setEditingId(resource.id)}>
+                  <ResourceIcon kind={resource.kind} />{' '}
+                  {editingId === resource.id ? (
+                    <NameInput resource={resource} onDone={() => setEditingId(null)} />
+                  ) : (
+                    resource.name || 'Unnamed'
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      })}
+    </>
   )
 }
 function NameInput({ resource, onDone }: { resource: Resource; onDone: () => void }) {
