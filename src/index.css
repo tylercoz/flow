@@ -637,6 +637,11 @@ form.dialog-fields button[type='submit'] {
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
+.react-flow__panel button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
 .canvas-menu button {
   display: flex;
   align-items: center;

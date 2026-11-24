@@ -134,6 +134,7 @@ flowchart TD
     Level -->|owns one, built from AppServices.scheduler| RenameController
     Level -->|provides it through RenameContext| RenameInput
     CanvasView -->|holds the copied Fragment, so it survives Level changes| Level
+    CanvasView -->|"holds grid mode (view state, not saved), so it survives Level changes"| Level
     Level -->|classifies key events| clipboardShortcut
     Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
     Level -->|"Cmd/Ctrl+C, V, D: copy, paste, duplicate (copy then paste, skipping the copied Fragment)"| Workspace

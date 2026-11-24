@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type R
 import {
   Background,
   ConnectionMode,
+  Panel,
   ReactFlow,
   useEdgesState,
   useNodesState,
@@ -33,6 +34,10 @@ import { NODE_SIZE } from './nodeSize'
 import { selectionKey } from './selectionKey'
 import { useStore } from './useStore'
 
+// Also the Background's gap, so snapped nodes land on the visible dots.
+const GRID_SIZE = 20
+const SNAP_GRID: [number, number] = [GRID_SIZE, GRID_SIZE]
+const snap = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE
 const isMac = /Mac|iPhone|iPad/.test(navigator.userAgent)
 
 function centreOf(el: HTMLElement | null): { x: number; y: number } | null {
@@ -66,14 +71,18 @@ export function CanvasView({ deleteFlow, onSelectionChange, reveal, onRevealed }
   useStore(navigator)
   // Lives here, not in Level, so a copy survives navigating to another Level.
   const clipboard = useRef<Copied | null>(null)
+  // Lives here, not in Level, so the mode survives navigating to another Level.
+  const [gridMode, setGridMode] = useState(false)
   const diagram = navigator.current
   // Keyed by Diagram id so each Level remounts and applies its own saved defaultViewport.
   return (
-    <Level key={diagram.id} diagram={diagram} notifier={notifier} clipboard={clipboard} deleteFlow={deleteFlow} onSelectionChange={onSelectionChange} reveal={reveal} onRevealed={onRevealed} />
+    <Level key={diagram.id} gridMode={gridMode} onGridModeChange={setGridMode} diagram={diagram} notifier={notifier} clipboard={clipboard} deleteFlow={deleteFlow} onSelectionChange={onSelectionChange} reveal={reveal} onRevealed={onRevealed} />
   )
 }
 
 interface LevelProps extends CanvasViewProps {
+  gridMode: boolean
+  onGridModeChange: (on: boolean) => void
   diagram: Diagram
   notifier: Notifier
   clipboard: RefObject<Copied | null>
@@ -90,7 +99,7 @@ interface Copied {
   sizes: ReadonlyMap<string, Size>
 }
 
-function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange, reveal, onRevealed }: LevelProps) {
+function Level({ gridMode, onGridModeChange, diagram, notifier, clipboard, deleteFlow, onSelectionChange, reveal, onRevealed }: LevelProps) {
   const { workspace, scheduler, navigator, history } = useApp()
   const [rename] = useState(() => new RenameController(scheduler))
   // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
@@ -211,8 +220,10 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange, re
   const onDragStop = (e: ReactMouseEvent | MouseEvent | TouchEvent, moved: Node[]) => {
     if (!dropIntoComponent(e, moved)) moved.forEach(savePosition)
   }
-  const openMenu = (e: { clientX: number; clientY: number }) =>
-    setMenu({ screen: { x: e.clientX, y: e.clientY }, point: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
+  const openMenu = (e: { clientX: number; clientY: number }) => {
+    const point = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    setMenu({ screen: { x: e.clientX, y: e.clientY }, point: gridMode ? { x: snap(point.x), y: snap(point.y) } : point })
+  }
 
   // Keyboard events carry no pointer position, so the last one seen over the canvas is kept for paste.
   const cursor = useRef<{ x: number; y: number } | null>(null)
@@ -297,6 +308,8 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange, re
           nodes={nodes}
           edges={edges}
           nodeTypes={nodeTypes}
+          snapToGrid={gridMode}
+          snapGrid={SNAP_GRID}
           edgeTypes={edgeTypes}
           onEdgeDoubleClick={(_, edge) => rename.start(edge.id)}
           defaultViewport={{ ...diagram.viewport }}
@@ -346,7 +359,12 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange, re
           // Double-click renames a Placement or Link, so it must not also zoom.
           zoomOnDoubleClick={false}
         >
-          <Background />
+          <Background gap={GRID_SIZE} />
+          <Panel position="top-right">
+            <button type="button" aria-pressed={gridMode} title="Lock placements to the grid" onClick={() => onGridModeChange(!gridMode)}>
+              Snap
+            </button>
+          </Panel>
         </ReactFlow>
         {menu && (
           <div className="canvas-menu" role="menu" style={{ left: menu.screen.x, top: menu.screen.y }}>
