@@ -9,6 +9,7 @@ export class Resource {
   private _name: string
   private _typeId: string | null
   private _remote: string | null
+  private _format: string | null
   private readonly onChange: () => void
 
   constructor(
@@ -19,6 +20,7 @@ export class Resource {
     definition: ComponentDefinition | null,
     onChange: () => void,
     remote: string | null = null,
+    format: string | null = null,
   ) {
     const invalid = kindInvariantError(kind, typeId, definition !== null)
     if (invalid) throw new DomainError('INVALID_RESOURCE', invalid)
@@ -29,6 +31,8 @@ export class Resource {
     this.definition = definition
     // Only a repository has a remote; a new one starts empty rather than null so the field shows in the Inspector.
     this._remote = kind === 'repository' ? (remote ?? '') : null
+    // Only an artifact has a format; like the remote, it starts empty so the field shows in the Inspector.
+    this._format = kind === 'artifact' ? (format ?? '') : null
     this.onChange = onChange
   }
   get name(): string {
@@ -39,6 +43,9 @@ export class Resource {
   }
   get remote(): string | null {
     return this._remote
+  }
+  get format(): string | null {
+    return this._format
   }
   // Read live from the definition, so a port edit shows in every Diagram with no copying.
   handleIds(role: HandleRole): readonly string[] {
@@ -54,6 +61,14 @@ export class Resource {
       throw new DomainError('INVALID_RESOURCE', `A ${this.kind} resource cannot have a remote.`)
     }
     this._remote = remote
+    this.onChange()
+  }
+  // Free text stored as typed, like the name.
+  setFormat(format: string): void {
+    if (this.kind !== 'artifact') {
+      throw new DomainError('INVALID_RESOURCE', `A ${this.kind} resource cannot have a format.`)
+    }
+    this._format = format
     this.onChange()
   }
   // Workspace.setResourceType checks the id against the catalog; this class only guards the kind.

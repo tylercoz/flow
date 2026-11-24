@@ -74,6 +74,12 @@ export function Inspector({ item, diagram, deleteFlow }: InspectorProps) {
             <RemoteField resource={resource} id={`${idPrefix}-remote`} />
           </div>
         )}
+        {resource.format !== null && (
+          <div>
+            <label htmlFor={`${idPrefix}-format`}>Format</label>
+            <input id={`${idPrefix}-format`} type="text" value={resource.format} onChange={(e) => resource.setFormat(e.target.value)} />
+          </div>
+        )}
         {RESOURCE_KINDS[resource.kind].typed && (
           <div>
             <label htmlFor={`${idPrefix}-type`}>Data Type</label>

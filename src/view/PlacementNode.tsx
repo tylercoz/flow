@@ -84,7 +84,12 @@ function ResourceBody({ id, resource, style }: { id: string; resource: Resource;
         ) : (
           <span className="placement-name">{resource.name}</span>
         )}
-        {typeName && <span className="placement-type">{typeName}</span>}
+        {(typeName || resource.format) && (
+          <div className="placement-meta">
+            <span className="placement-type">{typeName}</span>
+            {resource.format && <span className="placement-format">{resource.format}</span>}
+          </div>
+        )}
       </div>
       {SIDE_PORTS.map((side) => (
         <span key={side}>

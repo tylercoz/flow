@@ -166,10 +166,12 @@ classDiagram
         name
         typeId: DataType id or null
         remote: web link, non-null only for repository
+        format: free text, non-null only for artifact
         definition: ComponentDefinition, non-null only for component
         setName(name)
         setType(typeId)
         setRemote(remote)
+        setFormat(format)
         handleIds(role)
     }
     class ResourceKind {

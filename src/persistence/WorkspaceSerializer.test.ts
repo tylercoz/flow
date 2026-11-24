@@ -282,6 +282,13 @@ describe('WorkspaceSerializer', () => {
       const bad = withResources(diagram('r'), { resources: [{ ...repo, kind: 'database' }] })
       expect(() => serializer.deserialize(bad)).toThrow(PersistenceError)
     })
+    it('round-trips an artifact format and rejects a format on another kind', () => {
+      const artifact = { ...resources[1], format: 'PDF' }
+      const raw = withResources(diagram('r'), { resources: [artifact] })
+      expect(serializer.deserialize(JSON.parse(JSON.stringify(raw)))).toEqual(raw)
+      const bad = withResources(diagram('r'), { resources: [{ ...resources[0], format: 'PDF' }] })
+      expect(() => serializer.deserialize(bad)).toThrow(PersistenceError)
+    })
     it('round-trips resources, placements with a size, and a link between placements', () => {
       const out = componentResource('c', { outputs: [port('o')] })
       const link = { id: 'l', name: '', sourceId: 'pc', targetId: 'p1', sourcePortId: 'o', targetPortId: 'left' }

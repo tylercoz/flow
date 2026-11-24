@@ -64,6 +64,17 @@ describe('Resource', () => {
     expect(db.remote).toBeNull()
     expect(() => db.setRemote('https://example.com')).toThrow(DomainError)
   })
+  it('only an artifact has a format, which starts empty and can be set', () => {
+    const onChange = vi.fn()
+    const artifact = new Resource('a', 'artifact', 'A', 't1', null, onChange)
+    expect(artifact.format).toBe('')
+    artifact.setFormat('PDF')
+    expect(artifact.format).toBe('PDF')
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const db = new Resource('d', 'database', 'D', null, null, onChange)
+    expect(db.format).toBeNull()
+    expect(() => db.setFormat('PDF')).toThrow(DomainError)
+  })
   it('setName and setType update the value and call onChange', () => {
     const onChange = vi.fn()
     const r = make('a', 'artifact', onChange)

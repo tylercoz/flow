@@ -46,6 +46,8 @@ export type ResourceDto = {
   typeId: string | null
   // Only a repository has one. Optional so data saved before it existed still loads.
   remote?: string
+  // Only an artifact has one. Optional so data saved before it existed still loads.
+  format?: string
   component: ComponentDto | null
 }
 
