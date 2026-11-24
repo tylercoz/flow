@@ -49,14 +49,22 @@ export class ComponentDefinition {
   setPorts(field: 'inputs' | 'outputs', ports: readonly Port[]): void {
     if (field === 'inputs') this._inputs = copyPorts(ports)
     else this._outputs = copyPorts(ports)
-    const live = new Set([...this._inputs, ...this._outputs].map((p) => p.id))
+    this.syncPortPlacements()
+    this.onChange()
+  }
+  // Every input, output and environment variable keeps at least one node; the nodes of a removed one go with its Links.
+  // Does not notify, so callers that change several things can notify once.
+  private syncPortPlacements(): void {
+    const live = this.livePortIds()
     const gone = new Set(this._portPlacements.filter((n) => !live.has(n.portId)).map((n) => n.id))
     this._portPlacements = this._portPlacements.filter((n) => !gone.has(n.id))
     for (const id of live) {
       if (!this._portPlacements.some((n) => n.portId === id)) this._portPlacements.push({ id: this.ids.next(), portId: id, position: null })
     }
     this.diagram.dropLinksOfNodes(gone)
-    this.onChange()
+  }
+  private livePortIds(): Set<string> {
+    return new Set([...this._inputs, ...this._outputs].map((p) => p.id).concat(this._environmentVariableIds))
   }
 
   get portPlacements(): readonly PortPlacement[] {
@@ -76,7 +84,8 @@ export class ComponentDefinition {
   portRole(nodeId: string): PortRole | undefined {
     const portId = this.portPlacement(nodeId)?.portId
     if (this._inputs.some((p) => p.id === portId)) return 'input'
-    return this._outputs.some((p) => p.id === portId) ? 'output' : undefined
+    if (this._outputs.some((p) => p.id === portId)) return 'output'
+    return this._environmentVariableIds.some((id) => id === portId) ? 'environment' : undefined
   }
 
   setPortPlacementPosition(id: string, p: Position): void {
@@ -88,7 +97,7 @@ export class ComponentDefinition {
 
   // One notification for the batch, so a paste is a single undo step.
   addPortPlacements(items: readonly { portId: string; position: Position }[]): PortPlacement[] {
-    const known = new Set([...this._inputs, ...this._outputs].map((p) => p.id))
+    const known = this.livePortIds()
     if (items.some((i) => !known.has(i.portId))) throw new DomainError('INVALID_PORT', 'The port no longer exists.')
     const added = items.map((i) => ({ id: this.ids.next(), portId: i.portId, position: { x: i.position.x, y: i.position.y } }))
     this._portPlacements.push(...added)
@@ -127,12 +136,14 @@ export class ComponentDefinition {
 
   setEnvironmentVariables(ids: readonly string[]): void {
     this._environmentVariableIds = [...new Set(ids)]
+    this.syncPortPlacements()
     this.onChange()
   }
 
   // Does not notify, for the same reason as dropException.
   dropEnvironmentVariable(id: string): void {
     this._environmentVariableIds = this._environmentVariableIds.filter((v) => v !== id)
+    this.syncPortPlacements()
   }
 
   get exceptionIds(): readonly string[] {

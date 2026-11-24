@@ -35,7 +35,7 @@ const componentResource = (id: string, over: Record<string, unknown> = {}, child
 }
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 14,
+  schemaVersion: 15,
   project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],
@@ -61,7 +61,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(14)
+    expect(serializer.serialize(ws).schemaVersion).toBe(15)
     expect(serializer.serialize(ws).diagrams[0].diagram.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -135,7 +135,7 @@ describe('WorkspaceSerializer', () => {
     expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { exceptionIds: ['ghost'] })]))).toThrow(PersistenceError)
   })
   it('keeps environment variables and the variable ids of component Resources', () => {
-    const raw = valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['v1'] })], {
+    const raw = valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['v1'], portNodes: [{ id: 'n1', portId: 'v1', position: null }] })], {
       environmentVariables: [{ id: 'v1', name: 'DATABASE_URL' }],
     })
     expect(serializer.deserialize(raw)).toEqual(raw)
@@ -204,7 +204,7 @@ describe('WorkspaceSerializer', () => {
   it.each([
     ['null', null],
     ['array', []],
-    ['missing diagrams', { schemaVersion: 14 }],
+    ['missing diagrams', { schemaVersion: 15 }],
     ['missing portNodes', valid(diagram('r'), [componentResource('c', { portNodes: undefined })])],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],

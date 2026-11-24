@@ -17,19 +17,20 @@ export function toNodes(diagram: Diagram, owner: ComponentDefinition | null = nu
   }))
   return [...placements, ...(owner ? toPortNodes(owner) : [])]
 }
-// Default slots for a port node the user has not moved: inputs on the left, outputs on the right, one row per port.
+// Default slots for a port node the user has not moved: inputs and environment variables on the left, outputs on the right, one row per port.
 const OUTPUT_COLUMN_X = 480
 const PORT_ROW_HEIGHT = 72
 function toPortNodes(owner: ComponentDefinition): Node[] {
   return owner.portPlacements.map((n) => {
     const role = owner.portRole(n.id)
-    const index = (role === 'input' ? owner.inputs : owner.outputs).findIndex((p) => p.id === n.portId)
+    // Environment variables stack under the inputs, so no default slot overlaps.
+    const row = role === 'environment' ? owner.inputs.length + owner.environmentVariableIds.indexOf(n.portId) : (role === 'input' ? owner.inputs : owner.outputs).findIndex((p) => p.id === n.portId)
     return {
       // The node id is the Link end, so Links and React Flow events map straight back to the domain.
       id: n.id,
       type: 'port',
       // Every node of an unmoved port shares the slot of the port's order, so a copy is placed explicitly when it is made.
-      position: n.position ? { ...n.position } : { x: role === 'input' ? 0 : OUTPUT_COLUMN_X, y: index * PORT_ROW_HEIGHT },
+      position: n.position ? { ...n.position } : { x: role === 'output' ? OUTPUT_COLUMN_X : 0, y: row * PORT_ROW_HEIGHT },
       data: {},
     }
   })

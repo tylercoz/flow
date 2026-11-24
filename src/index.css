@@ -12,6 +12,7 @@
   --danger: #c14a4a;
   /* Saturated pure hues, shared by both themes: the muted Gruvbox red and green turned muddy when tinted. */
   --input: #e5303a;
+  --environment: #e6b800;
   --output: #1fb35a;
   --shadow: 0 1px 2px rgba(101, 71, 53, 0.1), 0 4px 12px rgba(101, 71, 53, 0.1);
   font-family: 'Roboto Mono Variable', ui-monospace, Menlo, monospace;
@@ -213,6 +214,9 @@ textarea:focus {
 }
 .output-port-node {
   border-right: 4px solid var(--output);
+}
+.environment-port-node {
+  border-left: 4px solid var(--environment);
 }
 .placement-text {
   display: flex;

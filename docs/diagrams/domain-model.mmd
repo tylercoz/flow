@@ -110,10 +110,10 @@ classDiagram
     class ComponentDefinition {
         inputs: list of Port
         outputs: list of Port
-        portPlacements: list of PortPlacement, every port has at least one
+        portPlacements: list of PortPlacement, every port and environment variable has at least one
         portPlacement(id)
         portOf(nodeId) the Port a node shows
-        portRole(nodeId) input, output or undefined
+        portRole(nodeId) input, output, environment or undefined
         setPortPlacementPosition(id, p)
         addPortPlacements(items)  %% one change; refuses an unknown port
         removePortPlacements(ids)  %% one change, drops their Links; refuses to leave a port with no node
@@ -125,7 +125,7 @@ classDiagram
         environmentVariableIds: EnvironmentVariable ids
         setExceptions(ids)
         dropException(id)
-        setEnvironmentVariables(ids)
+        setEnvironmentVariables(ids)  %% each variable gets a port node that only starts Links
         dropEnvironmentVariable(id)
     }
     class NodeBounds {
@@ -202,8 +202,8 @@ classDiagram
         name
         typeId: DataType id or null
         multiple, optional: flags on an input, omitted when false
-        PortRole: input or output
-        portNodeHandleIds(portRole, linkRole)  %% an input port node only starts Links, an output port node only ends them
+        PortRole: input, output or environment
+        portNodeHandleIds(portRole, linkRole)  %% an input or environment port node only starts Links, an output port node only ends them
     }
     class Catalog {
         all: list of entries
@@ -260,7 +260,7 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 14
+        schemaVersion: 15
         project: ProjectDto, name, description, createdAt, updatedAt
         types: list of DataType
         exceptions: list of ExceptionType

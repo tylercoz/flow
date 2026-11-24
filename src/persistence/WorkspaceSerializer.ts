@@ -3,7 +3,7 @@ import type { EnvironmentVariable } from '../domain/EnvironmentVariable'
 import type { ExceptionType } from '../domain/ExceptionType'
 import { findCycle } from '../domain/DiagramGraph'
 import { checkLink } from '../domain/LinkRules'
-import { portNodeHandleIds, type Port } from '../domain/Port'
+import { portNodeHandleIds, type Port, type PortRole } from '../domain/Port'
 import { handleIds, isResourceKind, kindInvariantError } from '../domain/ResourceKinds'
 import type { Workspace } from '../domain/Workspace'
 import type { ComponentDto, DiagramDto, LinkDto, PlacementDto, PortPlacementDto, ProjectDto, ResourceDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
@@ -22,7 +22,7 @@ export class WorkspaceSerializer {
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
     // No migrations while in development: data from any other version is rejected and must be cleared.
-    if (obj.schemaVersion !== 14) {
+    if (obj.schemaVersion !== 15) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
     const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
@@ -71,7 +71,7 @@ export class WorkspaceSerializer {
     assertTypesExist(resources, typeIds)
     assertExceptionsExist(resources, new Set(exceptions.map((e) => e.id)))
     assertEnvironmentVariablesExist(resources, new Set(environmentVariables.map((v) => v.id)))
-    return { schemaVersion: 14, project: parseProject(obj.project), types, exceptions, environmentVariables, resources, diagrams }
+    return { schemaVersion: 15, project: parseProject(obj.project), types, exceptions, environmentVariables, resources, diagrams }
   }
 }
 
@@ -205,9 +205,7 @@ function parseHeader(v: unknown, path: string, typeIds: ReadonlySet<string>): Re
       portNodes: parsePortNodes(c, `${path}.component`),
       notes: asString(c.notes, `${path}.component.notes`),
       exceptionIds: asArray(c.exceptionIds, `${path}.component.exceptionIds`).map((e, i) => asString(e, `${path}.component.exceptionIds[${i}]`)),
-      environmentVariableIds: asArray(c.environmentVariableIds, `${path}.component.environmentVariableIds`).map((e, i) =>
-        asString(e, `${path}.component.environmentVariableIds[${i}]`),
-      ),
+      environmentVariableIds: parseEnvironmentVariableIds(c, `${path}.component`),
       rawDiagram: c.diagram,
     }
   }
@@ -229,10 +227,14 @@ function parsePlacement(v: unknown, path: string, shapes: ReadonlyMap<string, En
   }
 }
 
+function parseEnvironmentVariableIds(c: Obj, path: string): string[] {
+  return asArray(c.environmentVariableIds, `${path}.environmentVariableIds`).map((e, i) => asString(e, `${path}.environmentVariableIds[${i}]`))
+}
 // A node for a port the component lacks could never be shown or removed, and a port with no node could never be
 // linked or have one added by copying, so both are rejected at load.
 function parsePortNodes(c: Obj, path: string): PortPlacementDto[] {
-  const ports = new Set([...parsePorts(c, 'inputs', path), ...parsePorts(c, 'outputs', path)].map((p) => p.id))
+  // An environment variable is a port too, so it needs a node and can have no more than the component's own.
+  const ports = new Set([...parsePorts(c, 'inputs', path), ...parsePorts(c, 'outputs', path)].map((p) => p.id).concat(parseEnvironmentVariableIds(c, path)))
   const seen = new Set<string>()
   const nodes = asArray(c.portNodes, `${path}.portNodes`).map((v, i): PortPlacementDto => {
     const at = `${path}.portNodes[${i}]`
@@ -251,10 +253,12 @@ function parsePortNodes(c: Obj, path: string): PortPlacementDto[] {
   return nodes
 }
 // Each Port_Node of a component is a node on its child Diagram, with the handles of its port's role.
-function portEnds(c: Pick<ComponentDto, 'inputs' | 'outputs' | 'portNodes'>): Map<string, End> {
+function portEnds(c: Pick<ComponentDto, 'inputs' | 'outputs' | 'portNodes' | 'environmentVariableIds'>): Map<string, End> {
   const inputs = new Set(c.inputs.map((p) => p.id))
-  const end = (role: 'input' | 'output'): End => ({ source: portNodeHandleIds(role, 'source'), target: portNodeHandleIds(role, 'target') })
-  return new Map(c.portNodes.map((n) => [n.id, end(inputs.has(n.portId) ? 'input' : 'output')] as const))
+  const variables = new Set(c.environmentVariableIds)
+  const end = (role: PortRole): End => ({ source: portNodeHandleIds(role, 'source'), target: portNodeHandleIds(role, 'target') })
+  const roleOf = (portId: string): PortRole => (inputs.has(portId) ? 'input' : variables.has(portId) ? 'environment' : 'output')
+  return new Map(c.portNodes.map((n) => [n.id, end(roleOf(n.portId))] as const))
 }
 function parseDiagram(v: unknown, path: string, shapes: ReadonlyMap<string, End>, ports: ReadonlyMap<string, End>): DiagramDto {
   const o = asObject(v, path)

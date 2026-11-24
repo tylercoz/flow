@@ -68,7 +68,7 @@ export type ProjectDto = {
   updatedAt: string
 }
 export type WorkspaceSnapshot = {
-  schemaVersion: 14
+  schemaVersion: 15
   project: ProjectDto
   types: DataType[]
   exceptions: ExceptionType[]

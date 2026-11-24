@@ -67,7 +67,7 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
         WorkspaceSerializer -->|checkLink, handleIds, kindInvariantError| Domain
-        WorkspaceSerializer -->|"schemaVersion 14; findCycle rejects Reference_Cycle"| DiagramGraph
+        WorkspaceSerializer -->|"schemaVersion 15; findCycle rejects Reference_Cycle"| DiagramGraph
         ProjectFiles --> WorkspaceSerializer
         ProjectFiles -->|"load, stampSaved; reset History, reconcile Navigator"| Workspace
         ProjectFiles --> FileTransfer
