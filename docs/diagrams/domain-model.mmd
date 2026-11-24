@@ -67,11 +67,15 @@ classDiagram
         root: Diagram  %% the top-level Diagram being viewed
         current: Diagram  %% last component's child Diagram, or root
         openDiagram(id)
+        goTo(rootId, path)  %% opens a Level in one notification
         currentComponent: ComponentDefinition or null at the root
         trail() Resource[]
         open(placementId)
         navigateTo(index)
         reconcile()
+    }
+    class PlacementLocator {
+        locatePlacements(workspace, resourceId) PlacementLocation[]  %% rootId, path of Placement ids, placementId
     }
     class History {
         canUndo
@@ -339,6 +343,7 @@ classDiagram
     Link ..> Port : joins an output to an input, by id
     Port ..> DataType : refers by id
     Workspace --> DomainError : TYPE_IN_USE
+    PlacementLocator --> Workspace : walks diagrams and resources, each Diagram once
     Navigator --> Diagram : reads root, follows Placement ids via resourceOf
     Notifier --> Scheduler
     TimerScheduler ..|> Scheduler

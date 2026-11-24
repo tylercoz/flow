@@ -160,7 +160,9 @@ textarea:focus {
   min-height: 0;
 }
 /* React Flow renders at 100% of its parent, so the parent needs a definite size. */
+/* Positioned so the find bar can sit over the canvas. */
 .app-canvas {
+  position: relative;
   flex: 1;
   min-width: 0;
 }
@@ -706,4 +708,31 @@ form.dialog-fields button[type='submit'] {
   border: none;
   border-radius: 0;
   box-shadow: none;
+}
+.resource-item {
+  cursor: pointer;
+}
+.find-bar {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.find-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.find-count {
+  color: var(--muted);
+  white-space: nowrap;
 }

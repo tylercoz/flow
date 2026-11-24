@@ -9,6 +9,7 @@ flowchart TD
         ProjectControls["ProjectControls: New, Open, Save, title, Ctrl+S, unsaved-changes warning"]
         ProjectDialog["ProjectDialog: name, description, dates"]
         CanvasView
+        PlacementFinder["PlacementFinder: find bar, steps through a Resource's Placements across Levels"]
         Sidebar["Sidebar: Details and Resources tabs"]
         Inspector
         RemoteField["RemoteField: link when not editing"]
@@ -94,6 +95,10 @@ flowchart TD
     ProjectControls -->|"save, open, newProject, isDirty"| ProjectFiles
     Breadcrumb -->|trail| Navigator
     App --> CanvasView
+    App --> PlacementFinder
+    App -->|"locatePlacements; goTo; reveal id"| Navigator
+    ResourcesPanel -->|"click a Resource: onFind"| App
+    CanvasView -->|"reveal: select and centre the Placement"| Diagram
     App --> Sidebar
     Sidebar -->|Details tab| Inspector
     Sidebar -->|Resources tab| ResourcesPanel

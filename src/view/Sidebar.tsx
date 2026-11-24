@@ -16,8 +16,10 @@ type Props = {
   deleteFlow: DeleteFlow
   /** Width in px; owned by App so it survives selection changes. */
   width: number
+  /** Starts finding the Placements of a Resource. */
+  onFind: (resourceId: string) => void
 }
-export function Sidebar({ item, diagram, deleteFlow, width }: Props) {
+export function Sidebar({ item, diagram, deleteFlow, width, onFind }: Props) {
   const [tab, setTab] = useState<TabId>('details')
   return (
     <aside className="inspector" style={{ width }} aria-label="Sidebar">
@@ -39,7 +41,7 @@ export function Sidebar({ item, diagram, deleteFlow, width }: Props) {
       </div>
       <div className="sidebar-panel" role="tabpanel" id="sidebar-panel" aria-labelledby={`sidebar-tab-${tab}`}>
         {tab === 'resources' ? (
-          <ResourcesPanel />
+          <ResourcesPanel onFind={onFind} />
         ) : item ? (
           <Inspector key={item.id} item={item} diagram={diagram} deleteFlow={deleteFlow} />
         ) : (

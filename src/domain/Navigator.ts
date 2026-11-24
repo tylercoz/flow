@@ -39,6 +39,18 @@ export class Navigator implements ObservableStore {
     this.signal.notify()
   }
 
+  // Jumps to a Level in one notification, so the view never renders a path that belongs to another Diagram.
+  goTo(rootId: string, path: readonly string[]): void {
+    const previous = { rootId: this.rootId, path: this._path }
+    this.rootId = rootId
+    this._path = path
+    if (!this.workspace.diagrams.some((d) => d.diagram.id === rootId) || !this.resolvePath()) {
+      this.rootId = previous.rootId
+      this._path = previous.path
+      throw new DomainError('NOT_IN_DIAGRAM', 'That location no longer exists.')
+    }
+    this.signal.notify()
+  }
   trail(): readonly Resource[] {
     const steps = this.resolvePath()
     if (!steps) throw new DomainError('NOT_IN_DIAGRAM', 'Path placement no longer exists.')

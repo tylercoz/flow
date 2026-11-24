@@ -29,6 +29,7 @@ import { toEdges, toNodes } from './DiagramProjector'
 import { RenameController } from './RenameController'
 import { DUPLICATE_OFFSET, clipboardAction } from './clipboardShortcut'
 import { offsetToCenter } from './pasteOffset'
+import { NODE_SIZE } from './nodeSize'
 import { selectionKey } from './selectionKey'
 import { useStore } from './useStore'
 
@@ -54,9 +55,13 @@ interface CanvasViewProps {
   deleteFlow: DeleteFlow
   /** Called whenever the selection changes, including when it is cleared (e.g. after a Level change or deletion). */
   onSelectionChange: (selection: CanvasSelection) => void
+  /** Placement id to select and centre once its Level is showing; null when there is none. */
+  reveal: string | null
+  /** Called once the reveal has been applied. */
+  onRevealed: () => void
 }
 
-export function CanvasView({ deleteFlow, onSelectionChange }: CanvasViewProps) {
+export function CanvasView({ deleteFlow, onSelectionChange, reveal, onRevealed }: CanvasViewProps) {
   const { navigator, notifier } = useApp()
   useStore(navigator)
   // Lives here, not in Level, so a copy survives navigating to another Level.
@@ -64,7 +69,7 @@ export function CanvasView({ deleteFlow, onSelectionChange }: CanvasViewProps) {
   const diagram = navigator.current
   // Keyed by Diagram id so each Level remounts and applies its own saved defaultViewport.
   return (
-    <Level key={diagram.id} diagram={diagram} notifier={notifier} clipboard={clipboard} deleteFlow={deleteFlow} onSelectionChange={onSelectionChange} />
+    <Level key={diagram.id} diagram={diagram} notifier={notifier} clipboard={clipboard} deleteFlow={deleteFlow} onSelectionChange={onSelectionChange} reveal={reveal} onRevealed={onRevealed} />
   )
 }
 
@@ -85,7 +90,7 @@ interface Copied {
   sizes: ReadonlyMap<string, Size>
 }
 
-function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: LevelProps) {
+function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange, reveal, onRevealed }: LevelProps) {
   const { workspace, scheduler, navigator, history } = useApp()
   const [rename] = useState(() => new RenameController(scheduler))
   // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
@@ -103,7 +108,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(toNodes(diagram, owner))
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(toEdges(diagram))
   const [syncedVersion, setSyncedVersion] = useState(version)
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, setCenter, getZoom } = useReactFlow()
   // Where the pane context menu was opened (screen) and the flow point a new Placement will take.
   const [menu, setMenu] = useState<{ screen: { x: number; y: number }; point: { x: number; y: number } } | null>(null)
   const [picking, setPicking] = useState<{ kind: ResourceKind; point: { x: number; y: number } } | null>(null)
@@ -120,6 +125,16 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
     setNodes(toNodes(diagram, owner).map((n) => ({ ...n, selected: selected.has(n.id) })))
     setEdges(toEdges(diagram).map((e) => ({ ...e, selected: selected.has(e.id) })))
   }
+
+  // Waits for the Level that holds the Placement: a reveal for another Level stays pending until navigation remounts this one.
+  useEffect(() => {
+    const placement = reveal ? diagram.placement(reveal) : undefined
+    if (!placement) return
+    const size = placement.size ?? NODE_SIZE
+    setNodes((ns) => ns.map((n) => ({ ...n, selected: n.id === placement.id })))
+    void setCenter(placement.position.x + size.width / 2, placement.position.y + size.height / 2, { zoom: getZoom() })
+    onRevealed()
+  }, [reveal, diagram, setNodes, setCenter, getZoom, onRevealed])
 
   const onConnect = ({ source, target, sourceHandle, targetHandle }: Connection) => {
     // Every Handle is a port, so a missing id is a wiring bug.

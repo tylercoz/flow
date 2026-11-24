@@ -5,7 +5,7 @@ import { useApp } from './AppProvider'
 import { KIND_LABELS } from './ResourcePicker'
 import { ResourceIcon } from './resourceIcons'
 import { useStore } from './useStore'
-export function ResourcesPanel() {
+export function ResourcesPanel({ onFind }: { onFind: (resourceId: string) => void }) {
   const { workspace } = useApp()
   useStore(workspace)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -23,7 +23,7 @@ export function ResourcesPanel() {
             </h3>
             <ul className="resource-list">
               {ofKind.map((resource) => (
-                <li key={resource.id} onDoubleClick={() => setEditingId(resource.id)}>
+                <li key={resource.id} className="resource-item" onClick={() => onFind(resource.id)} onDoubleClick={() => setEditingId(resource.id)}>
                   <ResourceIcon kind={resource.kind} />{' '}
                   {editingId === resource.id ? (
                     <NameInput resource={resource} onDone={() => setEditingId(null)} />

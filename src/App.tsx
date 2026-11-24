@@ -7,7 +7,9 @@ import { DeleteFlow } from './view/DeleteFlow'
 import { DiagramTabs } from './view/DiagramTabs'
 import { ProjectControls } from './view/ProjectControls'
 import { HistoryControls } from './view/HistoryControls'
+import { PlacementFinder } from './view/PlacementFinder'
 import { Sidebar } from './view/Sidebar'
+import { locatePlacements } from './domain/PlacementLocator'
 import { EnvironmentVariablesDialog } from './view/EnvironmentVariablesDialog'
 import { ExceptionsDialog } from './view/ExceptionsDialog'
 import { TypesDialog } from './view/TypesDialog'
@@ -57,6 +59,28 @@ function Layout() {
     e.preventDefault()
     setSidebarWidth((w) => clampWidth(w + (e.key === 'ArrowLeft' ? 16 : -16)))
   }
+  // `nonce` remounts the bar on every start, so its Next button takes focus again.
+  const [find, setFind] = useState<{ resourceId: string; index: number; nonce: number } | null>(null)
+  const [reveal, setReveal] = useState<string | null>(null)
+  const showPlacement = (resourceId: string, index: number, nonce: number) => {
+    const locations = locatePlacements(workspace, resourceId)
+    if (locations.length === 0) return
+    const i = (index + locations.length) % locations.length
+    const { rootId, path, placementId } = locations[i]
+    navigator.goTo(rootId, path)
+    setReveal(placementId)
+    setFind({ resourceId, index: i, nonce })
+  }
+  const startFind = (resourceId: string) => {
+    const here = locatePlacements(workspace, resourceId).findIndex(
+      (l) => l.rootId === navigator.root.id && l.path.join() === navigator.path.join(),
+    )
+    showPlacement(resourceId, Math.max(here, 0), (find?.nonce ?? 0) + 1)
+  }
+  const findLocations = find ? locatePlacements(workspace, find.resourceId) : []
+  const findResource = find && workspace.resources.get(find.resourceId)
+  // The last Placement can be deleted while the bar is open.
+  if (find && (!findResource || findLocations.length === 0)) setFind(null)
   const diagram = navigator.current
   // Resolve the live item every render; a stale id (deleted item, other Level) means no selection.
   const live = selection?.diagramId === diagram.id ? selection : undefined
@@ -85,9 +109,24 @@ function Layout() {
         <div className="app-canvas">
           <CanvasView
             deleteFlow={deleteFlow}
+            reveal={reveal}
+            onRevealed={() => setReveal(null)}
             // Links carry only a label, edited on the canvas, so only Placements get an Inspector.
             onSelectionChange={(s) => setSelection(s?.kind === 'placement' ? { diagramId: navigator.current.id, id: s.id } : null)}
           />
+          {find && findResource && findLocations.length > 0 && (
+            <PlacementFinder
+              key={find.nonce}
+              resource={findResource}
+              index={Math.min(find.index, findLocations.length - 1)}
+              count={findLocations.length}
+              onStep={(delta) => showPlacement(find.resourceId, find.index + delta, find.nonce)}
+              onClose={() => {
+                setFind(null)
+                setReveal(null)
+              }}
+            />
+          )}
         </div>
         <div
           className="sidebar-handle"
@@ -104,7 +143,7 @@ function Layout() {
           onPointerCancel={endResize}
           onKeyDown={resizeByKey}
         />
-        <Sidebar item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} />
+        <Sidebar item={placement} diagram={diagram} deleteFlow={deleteFlow} width={sidebarWidth} onFind={startFind} />
       </main>
       <ConfirmDialog deleteFlow={deleteFlow} />
       {typesOpen && <TypesDialog onClose={() => setTypesOpen(false)} />}
