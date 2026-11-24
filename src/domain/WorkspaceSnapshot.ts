@@ -3,6 +3,7 @@ import type { DataType } from './DataType'
 import type { Port } from './Port'
 import type { EnvironmentVariable } from './EnvironmentVariable'
 import type { ExceptionType } from './ExceptionType'
+import type { LocalVariable } from './LocalVariable'
 import type { ResourceKind } from './ResourceKinds'
 import type { Viewport } from './Viewport'
 
@@ -28,6 +29,8 @@ export type ComponentDto = {
   notes: string
   exceptionIds: string[]
   environmentVariableIds: string[]
+  // Named only inside this component, so they have no workspace catalog.
+  localVariables: LocalVariable[]
   diagram: DiagramDto
 }
 
@@ -68,7 +71,7 @@ export type ProjectDto = {
   updatedAt: string
 }
 export type WorkspaceSnapshot = {
-  schemaVersion: 15
+  schemaVersion: 16
   project: ProjectDto
   types: DataType[]
   exceptions: ExceptionType[]

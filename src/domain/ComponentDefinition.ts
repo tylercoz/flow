@@ -1,6 +1,7 @@
 import type { Diagram } from './Diagram'
 import { DomainError } from './DomainError'
 import type { IdGenerator } from './IdGenerator'
+import type { LocalVariable, NewLocalVariable } from './LocalVariable'
 import type { Position } from './NodeBounds'
 import type { Port, PortPlacement, PortRole } from './Port'
 import type { ComponentDto } from './WorkspaceSnapshot'
@@ -21,6 +22,8 @@ export class ComponentDefinition {
   private _exceptionIds: string[]
   // Ids into Workspace.environmentVariables.
   private _environmentVariableIds: string[]
+  // Owned by this component, unlike the shared environment variables.
+  private _localVariables: LocalVariable[]
   private readonly onChange: () => void
 
   constructor(diagram: Diagram, onChange: () => void, ids: IdGenerator, initial: Partial<Omit<ComponentDto, 'diagram'>> = {}) {
@@ -32,6 +35,7 @@ export class ComponentDefinition {
     this._notes = initial.notes ?? ''
     this._exceptionIds = [...(initial.exceptionIds ?? [])]
     this._environmentVariableIds = [...(initial.environmentVariableIds ?? [])]
+    this._localVariables = (initial.localVariables ?? []).map((v) => ({ ...v }))
     this.onChange = onChange
     diagram.attachPortOwner(this)
   }
@@ -52,7 +56,7 @@ export class ComponentDefinition {
     this.syncPortPlacements()
     this.onChange()
   }
-  // Every input, output and environment variable keeps at least one node; the nodes of a removed one go with its Links.
+  // Every input, output, environment variable and local variable keeps at least one node; the nodes of a removed one go with its Links.
   // Does not notify, so callers that change several things can notify once.
   private syncPortPlacements(): void {
     const live = this.livePortIds()
@@ -64,7 +68,7 @@ export class ComponentDefinition {
     this.diagram.dropLinksOfNodes(gone)
   }
   private livePortIds(): Set<string> {
-    return new Set([...this._inputs, ...this._outputs].map((p) => p.id).concat(this._environmentVariableIds))
+    return new Set([...this._inputs, ...this._outputs].map((p) => p.id).concat(this._environmentVariableIds, this._localVariables.map((v) => v.id)))
   }
 
   get portPlacements(): readonly PortPlacement[] {
@@ -85,7 +89,8 @@ export class ComponentDefinition {
     const portId = this.portPlacement(nodeId)?.portId
     if (this._inputs.some((p) => p.id === portId)) return 'input'
     if (this._outputs.some((p) => p.id === portId)) return 'output'
-    return this._environmentVariableIds.some((id) => id === portId) ? 'environment' : undefined
+    if (this._environmentVariableIds.includes(portId ?? '')) return 'environment'
+    return this._localVariables.some((v) => v.id === portId) ? 'local' : undefined
   }
 
   setPortPlacementPosition(id: string, p: Position): void {
@@ -144,6 +149,17 @@ export class ComponentDefinition {
   dropEnvironmentVariable(id: string): void {
     this._environmentVariableIds = this._environmentVariableIds.filter((v) => v !== id)
     this.syncPortPlacements()
+  }
+
+  get localVariables(): readonly LocalVariable[] {
+    return this._localVariables
+  }
+
+  // Replaces the whole list, like setPorts. A removed variable takes its nodes and their Links with it.
+  setLocalVariables(variables: readonly NewLocalVariable[]): void {
+    this._localVariables = variables.map((v) => ({ id: v.id ?? this.ids.next(), name: v.name }))
+    this.syncPortPlacements()
+    this.onChange()
   }
 
   get exceptionIds(): readonly string[] {

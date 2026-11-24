@@ -57,6 +57,7 @@ export function resourceToDto(r: Resource, includeViewports: boolean): ResourceD
       notes: d.notes,
       exceptionIds: [...d.exceptionIds],
       environmentVariableIds: [...d.environmentVariableIds],
+      localVariables: d.localVariables.map((v) => ({ ...v })),
       diagram: diagramToDto(d.diagram, includeViewports),
     },
   }

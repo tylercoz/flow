@@ -112,6 +112,20 @@ describe('ComponentDefinition port nodes', () => {
     expect(code(() => def.diagram.addLink(node.id, inner.id, 'top', 'top'))).toBe('none')
     expect(code(() => def.diagram.addLink(inner.id, node.id, 'top', 'top'))).toBe('INVALID_PORT')
   })
+  it('gives a local variable the same node behavior and removes it with the variable', () => {
+    const { def, inner } = setup()
+    def.setLocalVariables([{ name: 'counter' }])
+    const v = def.localVariables[0]
+    const node = def.portPlacements.find((n) => n.portId === v.id)!
+    expect(def.portRole(node.id)).toBe('local')
+    expect(code(() => def.diagram.addLink(node.id, inner.id, 'top', 'top'))).toBe('none')
+    expect(code(() => def.diagram.addLink(inner.id, node.id, 'top', 'top'))).toBe('INVALID_PORT')
+    def.setLocalVariables([{ ...v, name: 'renamed' }])
+    expect(def.portPlacements.filter((n) => n.portId === v.id)).toHaveLength(1)
+    def.setLocalVariables([])
+    expect(def.portPlacements.some((n) => n.portId === v.id)).toBe(false)
+    expect(def.diagram.links).toHaveLength(0)
+  })
   it('removes the node and its Links when the variable is unassigned or deleted', () => {
     const { ws, def, inner } = setup()
     const v = ws.addEnvironmentVariable('DATABASE_URL')

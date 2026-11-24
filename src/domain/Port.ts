@@ -4,12 +4,12 @@ import { SIDE_PORTS, type HandleRole } from './ResourceKinds'
 // `multiple` marks an input that takes several arguments and `optional` one that may be left unfed. Both are
 // omitted when false, so data saved before they existed still loads and round-trips unchanged. No Link rule reads them.
 export type Port = { id: string; name: string; typeId: string | null; multiple?: boolean; optional?: boolean }
-// An environment variable of the component is a port that only feeds, like an input, and is never visible outside.
-export type PortRole = 'input' | 'output' | 'environment'
+// An environment or local variable of the component is a port that only feeds, like an input, and is never visible outside.
+export type PortRole = 'input' | 'output' | 'environment' | 'local'
 // One node that shows a port on its component's Level. It holds no name or type, so a port with several nodes
 // cannot drift. A null position means the default slot, which the view derives from the port's order.
 export type PortPlacement = { id: string; portId: string; position: Position | null }
-// Inside a component an input or environment port feeds the Links that start there, and an output port receives Links that end there.
+// Inside a component an input, environment or local port feeds the Links that start there, and an output port receives Links that end there.
 export function portNodeHandleIds(portRole: PortRole, linkRole: HandleRole): readonly string[] {
   return (portRole !== 'output') === (linkRole === 'source') ? SIDE_PORTS : []
 }

@@ -129,6 +129,29 @@ export function Inspector({ item, diagram, deleteFlow }: InspectorProps) {
               onChange={(ids) => definition.setEnvironmentVariables(ids)}
             />
             <div>
+              <label>Local variables</label>
+              {definition.localVariables.map((variable, i) => (
+                <div className="field-row" key={variable.id}>
+                  <input
+                    type="text"
+                    aria-label={`Local variable ${i + 1} name`}
+                    value={variable.name}
+                    onChange={(e) => definition.setLocalVariables(definition.localVariables.map((v, j) => (j === i ? { ...v, name: e.target.value } : v)))}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`Remove local variable ${i + 1}`}
+                    onClick={() => definition.setLocalVariables(definition.localVariables.filter((_, j) => j !== i))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => definition.setLocalVariables([...definition.localVariables, { name: '' }])}>
+                Add local variable
+              </button>
+            </div>
+            <div>
               <label htmlFor={`${idPrefix}-notes`}>Notes</label>
               <textarea
                 id={`${idPrefix}-notes`}

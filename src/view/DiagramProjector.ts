@@ -17,14 +17,20 @@ export function toNodes(diagram: Diagram, owner: ComponentDefinition | null = nu
   }))
   return [...placements, ...(owner ? toPortNodes(owner) : [])]
 }
-// Default slots for a port node the user has not moved: inputs and environment variables on the left, outputs on the right, one row per port.
+// Default slots for a port node the user has not moved: inputs and variables on the left, outputs on the right, one row per port.
 const OUTPUT_COLUMN_X = 480
 const PORT_ROW_HEIGHT = 72
 function toPortNodes(owner: ComponentDefinition): Node[] {
   return owner.portPlacements.map((n) => {
     const role = owner.portRole(n.id)
-    // Environment variables stack under the inputs, so no default slot overlaps.
-    const row = role === 'environment' ? owner.inputs.length + owner.environmentVariableIds.indexOf(n.portId) : (role === 'input' ? owner.inputs : owner.outputs).findIndex((p) => p.id === n.portId)
+    // Environment then local variables stack under the inputs, so no default slot overlaps.
+    const envRows = owner.inputs.length
+    const row =
+      role === 'environment'
+        ? envRows + owner.environmentVariableIds.indexOf(n.portId)
+        : role === 'local'
+          ? envRows + owner.environmentVariableIds.length + owner.localVariables.findIndex((v) => v.id === n.portId)
+          : (role === 'input' ? owner.inputs : owner.outputs).findIndex((p) => p.id === n.portId)
     return {
       // The node id is the Link end, so Links and React Flow events map straight back to the domain.
       id: n.id,

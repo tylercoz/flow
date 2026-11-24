@@ -12,8 +12,9 @@ export function PortNode({ id }: NodeProps) {
   const owner = navigator.currentComponent
   const role = owner?.portRole(id)
   const port = owner?.portOf(id)
-  // An environment variable has no Port: its name lives in the workspace catalog and it has no type.
-  const variable = role === 'environment' ? workspace.environmentVariables.find((v) => v.id === owner?.portPlacement(id)?.portId) : undefined
+  // A variable has no Port or type: an environment variable's name lives in the workspace catalog, a local one's on the component.
+  const catalog = role === 'environment' ? workspace.environmentVariables : role === 'local' ? (owner?.localVariables ?? []) : []
+  const variable = catalog.find((v) => v.id === owner?.portPlacement(id)?.portId)
   if (!role || !(port || variable)) return null
   const typeName = port?.typeId ? workspace.types.find((t) => t.id === port.typeId)?.name : undefined
   return (
@@ -23,7 +24,7 @@ export function PortNode({ id }: NodeProps) {
         {typeName && <span className="placement-type">{typeName}</span>}
       </div>
       {SIDE_PORTS.map((side) => (
-        // An input or environment variable starts Links and an output ends them, so each node offers only the matching Handle type.
+        // An input or variable starts Links and an output ends them, so each node offers only the matching Handle type.
         <Handle key={side} id={side} type={role === 'output' ? 'target' : 'source'} position={SIDE_POSITIONS[side]} />
       ))}
     </div>

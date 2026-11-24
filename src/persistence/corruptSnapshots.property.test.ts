@@ -23,6 +23,7 @@ function componentResource(id: string, placements: unknown[] = [], links: unknow
       notes: '',
       exceptionIds: [],
       environmentVariableIds: [],
+      localVariables: [],
       diagram: { id: `${id}-diagram`, viewport, placements, links },
     },
   }
@@ -42,9 +43,9 @@ const snapshotArb = workspaceArb.map(({ workspace }) => JSON.parse(JSON.stringif
 
 describe('Feature: components-as-resources, Property 11: Corrupt snapshots are rejected', () => {
   // **Validates: Requirements 8.2**
-  it('rejects any schemaVersion other than 15', () => {
+  it('rejects any schemaVersion other than 16', () => {
     fc.assert(
-      fc.property(snapshotArb, fc.integer().filter((v) => v !== 15), (raw, version) => {
+      fc.property(snapshotArb, fc.integer().filter((v) => v !== 16), (raw, version) => {
         raw.schemaVersion = version
         reject(raw)
       }),

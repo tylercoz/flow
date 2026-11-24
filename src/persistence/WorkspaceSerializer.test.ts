@@ -28,6 +28,7 @@ const componentResource = (id: string, over: Record<string, unknown> = {}, child
       notes: '',
       exceptionIds: [],
       environmentVariableIds: [],
+      localVariables: [],
       diagram: child,
       ...over,
     },
@@ -35,7 +36,7 @@ const componentResource = (id: string, over: Record<string, unknown> = {}, child
 }
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 15,
+  schemaVersion: 16,
   project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],
@@ -61,7 +62,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(15)
+    expect(serializer.serialize(ws).schemaVersion).toBe(16)
     expect(serializer.serialize(ws).diagrams[0].diagram.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -197,6 +198,15 @@ describe('WorkspaceSerializer', () => {
     expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['ghost'] })]))).toThrow(PersistenceError)
   })
 
+  it('keeps the local variables of component Resources', () => {
+    const raw = valid(diagram('r'), [
+      componentResource('a', { localVariables: [{ id: 'l1', name: 'counter' }], portNodes: [{ id: 'n1', portId: 'l1', position: null }] }),
+    ])
+    expect(serializer.deserialize(raw)).toEqual(raw)
+  })
+  it('rejects a local variable with no node', () => {
+    expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { localVariables: [{ id: 'l1', name: 'counter' }] })]))).toThrow(PersistenceError)
+  })
   it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [undefined], ['13']])('rejects schemaVersion %s', (schemaVersion) => {
     expect(() => serializer.deserialize({ ...valid(), schemaVersion })).toThrow(PersistenceError)
   })
@@ -204,10 +214,11 @@ describe('WorkspaceSerializer', () => {
   it.each([
     ['null', null],
     ['array', []],
-    ['missing diagrams', { schemaVersion: 15 }],
+    ['missing diagrams', { schemaVersion: 16 }],
     ['missing portNodes', valid(diagram('r'), [componentResource('c', { portNodes: undefined })])],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],
+    ['missing localVariables', valid(diagram('r'), [componentResource('c', { localVariables: undefined })])],
     ['non-array placements', valid({ ...diagram('r'), placements: {} } as never)],
     ['missing notes', valid(diagram('r'), [componentResource('c', { notes: undefined })])],
     ['non-array inputs', valid(diagram('r'), [componentResource('c', { inputs: 'x' })])],

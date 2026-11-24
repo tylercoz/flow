@@ -12,11 +12,11 @@ const componentDto = (id: string, name: string, diagram: DiagramDto): ResourceDt
   kind: 'component',
   name,
   typeId: null,
-  component: { inputs: [], outputs: [], portNodes: [], notes: '', exceptionIds: [], environmentVariableIds: [], diagram },
+  component: { inputs: [], outputs: [], portNodes: [], notes: '', exceptionIds: [], environmentVariableIds: [], localVariables: [], diagram },
 })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 15,
+  schemaVersion: 16,
   project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],

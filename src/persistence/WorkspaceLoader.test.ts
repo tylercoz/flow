@@ -36,7 +36,7 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 15,
+  schemaVersion: 16,
   project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],
@@ -54,6 +54,7 @@ const stored = {
         notes: '',
         exceptionIds: [],
         environmentVariableIds: [],
+        localVariables: [],
         diagram: { id: 'd1', viewport: { x: 0, y: 0, zoom: 1 }, placements: [], links: [] },
       },
     },
