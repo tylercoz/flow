@@ -1,4 +1,8 @@
-import type { NewPort } from '../domain/Port'
+import type { NewPort, Port } from '../domain/Port'
+// Shown after a port's name: … for several arguments, ? for an optional one.
+export function portMarks(port: Pick<Port, 'multiple' | 'optional'>): string {
+  return `${port.multiple ? '…' : ''}${port.optional ? '?' : ''}`
+}
 // An index past the end means a port being added. An empty name deletes the port (or abandons the add).
 // Returns undefined when nothing changes, so the caller does not record an empty undo step.
 export function applyPortName(ports: readonly NewPort[], index: number, name: string): NewPort[] | undefined {

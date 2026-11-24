@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import type { NewPort, Port } from '../domain/Port'
-import { applyPortName, movePort } from './portEdit'
+import { applyPortName, movePort, portMarks } from './portEdit'
 
 interface PortListProps {
   ports: readonly Port[]
@@ -30,7 +30,7 @@ export function PortList({ ports, field, onChange }: PortListProps) {
           {ports[i] && (
             <Handle id={ports[i].id} type={input ? 'target' : 'source'} position={input ? Position.Left : Position.Right} />
           )}
-          {editing === i ? <PortInput initial={name} onDone={(value) => commit(i, value)} /> : name}
+          {editing === i ? <PortInput initial={name} onDone={(value) => commit(i, value)} /> : name + (ports[i] ? portMarks(ports[i]) : '')}
           {ports[i] && editing !== i && ports.length > 1 && (
             <PortGrip
               name={name}

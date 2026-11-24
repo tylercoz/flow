@@ -50,6 +50,18 @@ export function Inspector({ item, diagram, deleteFlow }: InspectorProps) {
                 </option>
               ))}
             </select>
+            {field === 'inputs' && (
+              <>
+                <label>
+                  <input type="checkbox" aria-label={`${noun} ${i + 1} accepts multiple`} checked={!!port.multiple} onChange={(e) => update(i, { multiple: e.target.checked || undefined })} />
+                  …
+                </label>
+                <label>
+                  <input type="checkbox" aria-label={`${noun} ${i + 1} optional`} checked={!!port.optional} onChange={(e) => update(i, { optional: e.target.checked || undefined })} />
+                  ?
+                </label>
+              </>
+            )}
             <button type="button" aria-label={`Remove ${noun} ${i + 1}`} onClick={() => set(ports.filter((_, j) => j !== i))}>
               ×
             </button>

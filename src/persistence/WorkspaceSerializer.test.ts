@@ -65,6 +65,17 @@ describe('WorkspaceSerializer', () => {
     expect(serializer.serialize(ws).diagrams[0].diagram.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
+  it('round-trips the multiple and optional flags and loads ports saved without them', () => {
+    const flagged = { ...port('p'), multiple: true, optional: true }
+    const raw = valid(diagram('root'), [componentResource('c', { inputs: [flagged, port('q')] })])
+    const inputs = serializer.deserialize(JSON.parse(JSON.stringify(raw))).resources[0].component!.inputs
+    expect(inputs).toEqual([flagged, port('q')])
+    expect(inputs[1]).not.toHaveProperty('multiple')
+  })
+  it('rejects a port flag that is not a boolean', () => {
+    const raw = valid(diagram('root'), [componentResource('c', { inputs: [{ ...port('p'), optional: 'yes' }] })])
+    expect(() => serializer.deserialize(raw)).toThrow(PersistenceError)
+  })
   it('round-trips Link bend points and loads Links saved without them', () => {
     let n = 0
     const ws = Workspace.empty({ next: () => `id${++n}` })

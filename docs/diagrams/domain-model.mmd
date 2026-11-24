@@ -200,6 +200,7 @@ classDiagram
         id
         name
         typeId: DataType id or null
+        multiple, optional: flags on an input, omitted when false
         PortRole: input or output
         portNodeHandleIds(portRole, linkRole)  %% an input port node only starts Links, an output port node only ends them
     }

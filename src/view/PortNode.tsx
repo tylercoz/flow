@@ -1,5 +1,6 @@
 import { Handle, type NodeProps } from '@xyflow/react'
 import { SIDE_PORTS } from '../domain/ResourceKinds'
+import { portMarks } from './portEdit'
 import { useApp } from './AppProvider'
 import { SIDE_POSITIONS } from './PlacementNode'
 import { useStore } from './useStore'
@@ -16,7 +17,7 @@ export function PortNode({ id }: NodeProps) {
   return (
     <div className={`placement-node port-node ${role}-port-node`}>
       <div className="placement-text">
-        <span className="placement-name">{port.name}</span>
+        <span className="placement-name">{port.name + portMarks(port)}</span>
         {typeName && <span className="placement-type">{typeName}</span>}
       </div>
       {SIDE_PORTS.map((side) => (

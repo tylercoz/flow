@@ -115,7 +115,19 @@ function parseProject(v: unknown): ProjectDto {
 }
 function parsePort(v: unknown, path: string): Port {
   const o = asObject(v, path)
-  return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`), typeId: o.typeId === null ? null : asString(o.typeId, `${path}.typeId`) }
+  return {
+    id: asString(o.id, `${path}.id`),
+    name: asString(o.name, `${path}.name`),
+    typeId: o.typeId === null ? null : asString(o.typeId, `${path}.typeId`),
+    ...(asFlag(o.multiple, `${path}.multiple`) && { multiple: true }),
+    ...(asFlag(o.optional, `${path}.optional`) && { optional: true }),
+  }
+}
+// Absent means false, so older saves load.
+function asFlag(v: unknown, path: string): boolean {
+  if (v === undefined) return false
+  if (typeof v !== 'boolean') throw malformed(path)
+  return v
 }
 // A port naming a missing type could never be shown or fixed, so reject it at load.
 function assertTypesExist(resources: readonly ResourceDto[], typeIds: ReadonlySet<string>): void {
