@@ -1,18 +1,19 @@
-export type ResourceKind = 'database' | 'repository' | 'artifact' | 'user' | 'input-object' | 'component'
+export type ResourceKind = 'database' | 'repository' | 'artifact' | 'user' | 'input-object' | 'component' | 'text'
 export type FixedHandleKind = Exclude<ResourceKind, 'component'>
 export type HandleRole = 'source' | 'target'
 
 export const SIDE_PORTS = ['top', 'right', 'bottom', 'left'] as const
 
+// Key order is the display order in the canvas menu and the Resources panel.
 export const RESOURCE_KINDS: Record<ResourceKind, { readonly typed: boolean }> = {
+  component: { typed: false },
+  artifact: { typed: true }, // artifact and input-object carry a Data Type
   database: { typed: false },
   repository: { typed: false },
-  artifact: { typed: true }, // artifact and input-object carry a Data Type
   user: { typed: false },
   'input-object': { typed: true },
-  component: { typed: false },
+  text: { typed: false },
 }
-
 // A component has no entry: its handles are its ports, which the caller supplies.
 export const FIXED_HANDLES: Record<FixedHandleKind, { readonly source: readonly string[]; readonly target: readonly string[] }> = {
   database: { source: SIDE_PORTS, target: SIDE_PORTS },
@@ -20,6 +21,8 @@ export const FIXED_HANDLES: Record<FixedHandleKind, { readonly source: readonly 
   artifact: { source: SIDE_PORTS, target: SIDE_PORTS },
   user: { source: SIDE_PORTS, target: SIDE_PORTS },
   'input-object': { source: SIDE_PORTS, target: SIDE_PORTS },
+  // A label, not a node in the flow, so no Link can end on it.
+  text: { source: [], target: [] },
 }
 
 type PortLists = { readonly inputs: readonly { readonly id: string }[]; readonly outputs: readonly { readonly id: string }[] }

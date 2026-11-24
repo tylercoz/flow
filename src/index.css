@@ -198,6 +198,11 @@ textarea:focus {
   box-shadow: var(--shadow);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+.placement-node.text-node {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}
 .placement-node:hover,
 .react-flow__node.selected .placement-node {
   border-color: var(--accent);

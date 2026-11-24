@@ -14,6 +14,7 @@ export const KIND_LABELS: Record<ResourceKind, string> = {
   user: 'User',
   'input-object': 'Input object',
   component: 'Component',
+  text: 'Text',
 }
 
 type Props = { kind: ResourceKind; diagram: Diagram; position: Position; onClose: () => void }

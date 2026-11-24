@@ -341,7 +341,12 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
                 role="menuitem"
                 key={kind}
                 onClick={() => {
-                  setPicking({ kind, point: menu.point })
+                  // Text has no fields besides its content, so it is typed in place instead of through the picker.
+                  if (kind === 'text') {
+                    rename.start(workspace.createPlacedResource(diagram, { kind, name: '' }, menu.point).id)
+                  } else {
+                    setPicking({ kind, point: menu.point })
+                  }
                   setMenu(null)
                 }}
               >

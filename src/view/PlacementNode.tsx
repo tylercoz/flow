@@ -74,10 +74,11 @@ function ResourceBody({ id, resource, style }: { id: string; resource: Resource;
   const { workspace } = useApp()
   const controller = useRenameController()
   useStore(controller)
+  const isText = resource.kind === 'text'
   const typeName = resource.typeId ? workspace.types.find((t) => t.id === resource.typeId)?.name : undefined
   return (
-    <div style={style} className="placement-node" onDoubleClick={() => controller.start(id)}>
-      <ResourceIcon kind={resource.kind} />
+    <div style={style} className={isText ? 'placement-node text-node' : 'placement-node'} onDoubleClick={() => controller.start(id)}>
+      {!isText && <ResourceIcon kind={resource.kind} />}
       <div className="placement-text">
         {controller.editingId === id ? (
           <RenameInput target={resource} controller={controller} />
@@ -91,7 +92,7 @@ function ResourceBody({ id, resource, style }: { id: string; resource: Resource;
           </div>
         )}
       </div>
-      {SIDE_PORTS.map((side) => (
+      {(isText ? [] : SIDE_PORTS).map((side) => (
         <span key={side}>
           {/* Same id and side for both roles; loose connection mode lets either start or end a Link.
               The two Handles overlap and the later one in the DOM receives the press, so the source goes last:

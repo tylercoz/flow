@@ -48,6 +48,12 @@ const ICONS: Record<ResourceKind, ReactElement> = {
       <path d="M7 4h13v16H7zM3 9h8M3 15h8" />
     </svg>
   ),
+  // A capital T: serif bar over a stem.
+  text: (
+    <svg {...SVG_PROPS}>
+      <path d="M5 6V4h14v2M12 4v16M9 20h6" />
+    </svg>
+  ),
   'input-object': (
     <svg {...SVG_PROPS}>
       <path d="M4 5h16v14H4zM8 10h8M8 14h5" />

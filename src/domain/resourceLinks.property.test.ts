@@ -33,6 +33,8 @@ function endAllows(diagram: Diagram, nodeId: string, portId: string, role: 'sour
   const resource = diagram.resourceOf(nodeId)
   if (!resource) return false
   if (resource.definition) return (role === 'source' ? resource.definition.outputs : resource.definition.inputs).some((p) => p.id === portId)
+  // A Text label has no handles.
+  if (resource.kind === 'text') return false
   return SIDES.includes(portId)
 }
 
