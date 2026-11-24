@@ -9,7 +9,8 @@ export function Breadcrumb() {
   useStore(navigator)
   const trail = navigator.trail()
 
-  const labels = ['Root', ...trail.map((r) => r.name || 'Untitled')]
+  const rootName = workspace.diagrams.find((d) => d.diagram === navigator.root)?.name
+  const labels = [rootName || 'Untitled', ...trail.map((r) => r.name || 'Untitled')]
   return (
     <nav aria-label="Diagram path">
       <ol className="breadcrumb">

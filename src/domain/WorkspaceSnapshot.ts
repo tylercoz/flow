@@ -56,13 +56,24 @@ export type DiagramDto = {
   links: LinkDto[]
 }
 
+// A top-level Diagram. Component Levels are named by their component, so only these carry a name.
+export type NamedDiagramDto = { name: string; diagram: DiagramDto }
+export type ProjectDto = {
+  name: string
+  description: string
+  // ISO 8601 timestamps. `updatedAt` is when the project was last saved to a file.
+  createdAt: string
+  updatedAt: string
+}
 export type WorkspaceSnapshot = {
-  schemaVersion: 13
+  schemaVersion: 14
+  project: ProjectDto
   types: DataType[]
   exceptions: ExceptionType[]
   environmentVariables: EnvironmentVariable[]
   resources: ResourceDto[]
-  root: DiagramDto
+  // At least one; the first is the one shown on start.
+  diagrams: NamedDiagramDto[]
 }
 // Detached copy of Placements and the Links between them, as produced by Workspace.copy.
 export type Fragment = { placements: PlacementDto[]; links: LinkDto[] }

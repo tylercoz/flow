@@ -194,7 +194,7 @@ describe('resources properties', () => {
           else placement.setPosition(position)
 
           const expected = structuredClone(before)
-          const dtos = [...expected.root.placements, ...expected.resources.flatMap((r) => r.component?.diagram.placements ?? [])]
+          const dtos = [...expected.diagrams[0].diagram.placements, ...expected.resources.flatMap((r) => r.component?.diagram.placements ?? [])]
           const dto = dtos.find((d) => d.id === placement.id)!
           dto.position = position
           if (size) dto.size = size

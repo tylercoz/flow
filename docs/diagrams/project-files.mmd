@@ -1,0 +1,38 @@
+sequenceDiagram
+    participant U as User
+    participant C as ProjectControls
+    participant P as ProjectFiles
+    participant F as FileTransfer
+    participant S as WorkspaceSerializer
+    participant W as Workspace
+    participant H as History
+    participant V as Navigator
+    participant N as Notifier
+    U->>C: Save (button or Ctrl/Cmd+S)
+    C->>P: save()
+    P->>W: stampSaved(now)
+    P->>S: serialize(workspace)
+    P->>F: download(slug.flow.json, JSON)
+    P->>P: savedCapture = capture(), now clean
+    U->>C: Open
+    C->>C: confirm discard if isDirty
+    C->>P: open()
+    P->>F: pick()
+    alt cancelled
+        F-->>P: null
+    else file chosen
+        F-->>P: name, text
+        P->>S: deserialize(JSON.parse(text))
+        alt unreadable or other schemaVersion
+            S-->>P: PersistenceError
+            P->>N: post("project-file", transient)
+            Note over P,W: current project is untouched
+        else valid
+            P->>W: load(snapshot)
+            P->>H: reset()
+            P->>V: reconcile()
+            P->>P: savedCapture = capture(), now clean
+        end
+    end
+    Note over W: Autosave also sees load, so the opened project becomes the crash-recovery copy
+    Note over C: beforeunload warns while isDirty, which compares capture() with savedCapture, so undo back to the saved state is clean

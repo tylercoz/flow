@@ -17,7 +17,7 @@ import { RESOURCE_KINDS, type ResourceKind } from './ResourceKinds'
 import { ResourceRegistry } from './ResourceRegistry'
 import type { ObservableStore } from './ObservableStore'
 import type { Viewport } from './Viewport'
-import type { Fragment, ResourceDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
+import type { Fragment, NamedDiagramDto, ProjectDto, ResourceDto, WorkspaceSnapshot } from './WorkspaceSnapshot'
 import { buildDiagram, buildLink, buildResource, diagramToDto, resourceToDto, withFreshIds } from './WorkspaceSnapshotMapper'
 
 export type ResourceImpact = {
@@ -27,23 +27,27 @@ export type ResourceImpact = {
   contents?: { nodes: number; links: number }
 }
 
+// A top-level Diagram and its name. Component Levels are named by their component instead.
+export type TopDiagram = { name: string; readonly diagram: Diagram }
 export class Workspace implements ObservableStore {
   private readonly signal = new ChangeSignal()
   // One context for every Diagram, so restored and new content share the id source, signal and cycle rule.
   private readonly ctx: DiagramContext
   private readonly _resources = new ResourceRegistry()
-  private _root: Diagram
+  private _diagrams: TopDiagram[]
+  private _project: ProjectDto
   private readonly _types: Catalog<DataType>
   private readonly _exceptions: Catalog<ExceptionType>
   private readonly _environmentVariables: Catalog<EnvironmentVariable>
 
   private constructor(
     ids: IdGenerator,
+    project: ProjectDto,
     types: readonly DataType[],
     exceptions: readonly ExceptionType[],
     environmentVariables: readonly EnvironmentVariable[],
     resources: readonly ResourceDto[],
-    makeRoot: (ctx: DiagramContext) => Diagram,
+    makeDiagrams: (ctx: DiagramContext) => TopDiagram[],
   ) {
     this.ctx = {
       ids,
@@ -53,41 +57,103 @@ export class Workspace implements ObservableStore {
       pruneOrphans: () => this.pruneOrphans(),
     }
     this.loadResources(resources)
-    this._root = makeRoot(this.ctx)
+    this._diagrams = makeDiagrams(this.ctx)
+    this._project = { ...project }
     this._types = new Catalog(ids, types)
     this._exceptions = new Catalog(ids, exceptions)
     this._environmentVariables = new Catalog(ids, environmentVariables)
   }
 
-  // A getter because replaceContent swaps the tree; readers must not hold the old root.
+  // Getters because replaceContent and load swap the tree; readers must not hold the old Diagrams.
+  get diagrams(): readonly TopDiagram[] {
+    return this._diagrams
+  }
+  // The Diagram shown on start and the fallback when the one being viewed is gone.
   get root(): Diagram {
-    return this._root
+    return this._diagrams[0].diagram
+  }
+  get project(): Readonly<ProjectDto> {
+    return this._project
+  }
+  setProjectName(name: string): void {
+    this._project.name = name
+    this.signal.notify()
+  }
+  setProjectDescription(description: string): void {
+    this._project.description = description
+    this.signal.notify()
+  }
+  // Silent and outside History: a save is not an edit, so it must not become an undo step.
+  stampSaved(at: string): void {
+    this._project.updatedAt = at
+  }
+  addDiagram(name: string): Diagram {
+    const diagram = new Diagram(this.ctx.ids.next(), this.ctx)
+    this._diagrams.push({ name, diagram })
+    this.signal.notify()
+    return diagram
+  }
+  renameDiagram(id: string, name: string): void {
+    this.topDiagram(id).name = name
+    this.signal.notify()
+  }
+  // What removeDiagram will delete, so the UI can warn first.
+  diagramImpact(id: string): { nodes: number; links: number } {
+    const { diagram } = this.topDiagram(id)
+    return { nodes: diagram.placements.length, links: diagram.links.length }
+  }
+  // Resources placed nowhere else are deleted with it, as when a component's contents go.
+  removeDiagram(id: string): void {
+    const target = this.topDiagram(id)
+    if (this._diagrams.length === 1) throw new DomainError('LAST_DIAGRAM', 'A project needs at least one diagram.')
+    this._diagrams = this._diagrams.filter((d) => d !== target)
+    this.pruneOrphans()
+    this.signal.notify()
+  }
+  private topDiagram(id: string): TopDiagram {
+    const found = this._diagrams.find((d) => d.diagram.id === id)
+    if (!found) throw new DomainError('MISSING_DIAGRAM', 'The diagram no longer exists.')
+    return found
   }
   toSnapshot(includeViewports = true): WorkspaceSnapshot {
     const entries = (c: Catalog) => c.all.map((e) => ({ id: e.id, name: e.name }))
     return {
-      schemaVersion: 13,
+      schemaVersion: 14,
+      project: { ...this._project },
       types: entries(this._types),
       exceptions: entries(this._exceptions),
       environmentVariables: entries(this._environmentVariables),
       resources: this._resources.all.map((r) => resourceToDto(r, includeViewports)),
-      root: diagramToDto(this._root, includeViewports),
+      diagrams: this._diagrams.map((d): NamedDiagramDto => ({ name: d.name, diagram: diagramToDto(d.diagram, includeViewports) })),
     }
   }
   // Viewport-free, deterministic string so equal content compares with ===.
+  // Timestamps are blanked: a save changes them, and that must be neither an edit nor an undo step.
   capture(): string {
-    return JSON.stringify(this.toSnapshot(false))
+    const snapshot = this.toSnapshot(false)
+    return JSON.stringify({ ...snapshot, project: { ...snapshot.project, createdAt: '', updatedAt: '' } })
   }
   // Keeps current viewports so undo does not move the canvas; only this class's own capture() output is accepted.
   replaceContent(snapshot: string): void {
     const parsed = JSON.parse(snapshot) as WorkspaceSnapshot
     const viewports = new Map<string, Viewport>(this.allDiagrams().map((d) => [d.id, { ...d.viewport }]))
-    this.loadResources(parsed.resources, viewports)
-    this._root = buildDiagram(parsed.root, this.ctx, viewports)
-    this._types.replace(parsed.types)
-    this._exceptions.replace(parsed.exceptions)
-    this._environmentVariables.replace(parsed.environmentVariables)
+    this.apply(parsed, viewports)
+    this._project.name = parsed.project.name
+    this._project.description = parsed.project.description
     this.signal.notify()
+  }
+  // Replaces everything, including the stored viewports and timestamps; the caller resets History and Navigator.
+  load(snapshot: WorkspaceSnapshot): void {
+    this.apply(snapshot)
+    this._project = { ...snapshot.project }
+    this.signal.notify()
+  }
+  private apply(s: WorkspaceSnapshot, viewports?: ReadonlyMap<string, Viewport>): void {
+    this.loadResources(s.resources, viewports)
+    this._diagrams = s.diagrams.map((d) => ({ name: d.name, diagram: buildDiagram(d.diagram, this.ctx, viewports) }))
+    this._types.replace(s.types)
+    this._exceptions.replace(s.exceptions)
+    this._environmentVariables.replace(s.environmentVariables)
   }
   // Copies the chosen Placements and the Links between them; Resources are never copied.
   copy(diagram: Diagram, nodeIds: ReadonlySet<string>): Fragment {
@@ -174,7 +240,7 @@ export class Workspace implements ObservableStore {
   }
   // Every Diagram: the root plus the child Diagram of each component Resource, placed or not.
   allDiagrams(): Diagram[] {
-    return [this._root, ...this.definitions().map((d) => d.diagram)]
+    return [...this._diagrams.map((d) => d.diagram), ...this.definitions().map((d) => d.diagram)]
   }
   componentResources(): readonly Resource[] {
     return this._resources.byKind('component')
@@ -284,13 +350,17 @@ export class Workspace implements ObservableStore {
   subscribe = this.signal.subscribe
   getVersion = this.signal.getVersion
 
-  static empty(ids: IdGenerator): Workspace {
+  static empty(ids: IdGenerator, now: () => string = () => new Date().toISOString()): Workspace {
     const defaults = ['number', 'string', 'boolean'].map((name) => ({ id: ids.next(), name }))
-    return new Workspace(ids, defaults, [], [], [], (ctx) => new Diagram(ids.next(), ctx))
+    const created = now()
+    const project = { name: 'Untitled project', description: '', createdAt: created, updatedAt: created }
+    return new Workspace(ids, project, defaults, [], [], [], (ctx) => [{ name: 'Diagram 1', diagram: new Diagram(ids.next(), ctx) }])
   }
 
   // Expects a snapshot already validated by WorkspaceSerializer.
   static restore(snapshot: WorkspaceSnapshot, ids: IdGenerator): Workspace {
-    return new Workspace(ids, snapshot.types, snapshot.exceptions, snapshot.environmentVariables, snapshot.resources, (ctx) => buildDiagram(snapshot.root, ctx))
+    return new Workspace(ids, snapshot.project, snapshot.types, snapshot.exceptions, snapshot.environmentVariables, snapshot.resources, (ctx) =>
+      snapshot.diagrams.map((d) => ({ name: d.name, diagram: buildDiagram(d.diagram, ctx) })),
+    )
   }
 }

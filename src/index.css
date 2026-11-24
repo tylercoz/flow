@@ -403,6 +403,18 @@ textarea:focus {
   display: flex;
   gap: 4px;
 }
+.project-controls,
+.diagram-tab {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.diagram-tabs {
+  align-items: center;
+  padding: 6px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
 .tab[aria-selected='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);

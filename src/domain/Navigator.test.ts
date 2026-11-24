@@ -75,7 +75,7 @@ describe('Navigator', () => {
     // Swapping the root mimics Workspace.replaceContent building a new tree.
     function swappable() {
       const { a, b, root } = setup()
-      const holder = { root }
+      const holder = { root, diagrams: [{ name: 'D', diagram: root }] }
       return { holder, a, b, nav: new Navigator(holder) }
     }
 
@@ -84,6 +84,7 @@ describe('Navigator', () => {
       nav.open(a.id)
       nav.open(b.id)
       holder.root = build().workspace.root
+      holder.diagrams = [{ name: 'D', diagram: holder.root }]
       let calls = 0
       nav.subscribe(() => calls++)
       nav.reconcile()
@@ -96,6 +97,7 @@ describe('Navigator', () => {
       const { holder, a, nav } = swappable()
       nav.open(a.id)
       holder.root = Workspace.empty({ next: () => 'y' }).root
+      holder.diagrams = [{ name: 'D', diagram: holder.root }]
       let calls = 0
       nav.subscribe(() => calls++)
       nav.reconcile()

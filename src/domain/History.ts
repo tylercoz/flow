@@ -54,6 +54,15 @@ export class History implements ObservableStore {
     this.workspace.subscribe(this.onWorkspaceChange)
   }
 
+  // For a project swap: undoing across it would mix two projects' content.
+  reset(): void {
+    this.grouping = false
+    this.undoStack.length = 0
+    this.redoStack.length = 0
+    this.baseline = this.workspace.capture()
+    this.signal.notify()
+  }
+
   // A flag, not a counter, so a missed or doubled call cannot leave the group stuck.
   beginGroup(): void {
     this.grouping = true

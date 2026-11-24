@@ -5,6 +5,9 @@ flowchart TD
         App
         DeleteFlow
         Breadcrumb
+        DiagramTabs["DiagramTabs: switch, add, rename, delete a diagram"]
+        ProjectControls["ProjectControls: New, Open, Save, title, Ctrl+S, unsaved-changes warning"]
+        ProjectDialog["ProjectDialog: name, description, dates"]
         CanvasView
         Sidebar["Sidebar: Details and Resources tabs"]
         Inspector
@@ -64,19 +67,31 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
         WorkspaceSerializer -->|checkLink, handleIds, kindInvariantError| Domain
-        WorkspaceSerializer -->|"schemaVersion 13; findCycle rejects Reference_Cycle"| DiagramGraph
+        WorkspaceSerializer -->|"schemaVersion 14; findCycle rejects Reference_Cycle"| DiagramGraph
+        ProjectFiles --> WorkspaceSerializer
+        ProjectFiles -->|"load, stampSaved; reset History, reconcile Navigator"| Workspace
+        ProjectFiles --> FileTransfer
+        BrowserFileTransfer -.implements.-> FileTransfer
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
     end
     Main -->|builds and starts| Persistence
     Main -->|creates| Domain
-    Main -->|"services: workspace, navigator, history, notifier, scheduler"| AppProvider
+    Main -->|"services: workspace, navigator, history, notifier, scheduler, projectFiles"| AppProvider
     Main -->|creates and starts| History
+    Main -->|creates| ProjectFiles
     Main -->|shares one scheduler with| AutoSaver
     AppProvider --> App
     App -->|owns one instance| DeleteFlow
     App --> Breadcrumb
+    App --> DiagramTabs
+    DiagramTabs -->|"addDiagram, renameDiagram, removeDiagram"| Workspace
+    DiagramTabs -->|openDiagram| Navigator
+    App --> ProjectControls
+    ProjectControls --> ProjectDialog
+    ProjectDialog -->|"setProjectName, setProjectDescription"| Workspace
+    ProjectControls -->|"save, open, newProject, isDirty"| ProjectFiles
     Breadcrumb -->|trail| Navigator
     App --> CanvasView
     App --> Sidebar
@@ -163,3 +178,4 @@ flowchart TD
     AutoSaver -->|save failures| Notifier
     WorkspaceLoader -->|load failures| Notifier
     LocalStorageRepository --> Browser[(localStorage)]
+    BrowserFileTransfer -->|download link, file input| Disk[(user's files)]

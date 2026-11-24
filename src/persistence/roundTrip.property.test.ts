@@ -35,11 +35,11 @@ describe('Property 12: Snapshots round trip', () => {
   const serializer = new WorkspaceSerializer()
 
   // **Validates: Requirements 8.1, 8.6**
-  it('Feature: components-as-resources, Property 12: serialize(restore(deserialize(JSON round trip))) equals serialize(w) at schemaVersion 13', () => {
+  it('Feature: components-as-resources, Property 12: serialize(restore(deserialize(JSON round trip))) equals serialize(w) at schemaVersion 14', () => {
     fc.assert(
       fc.property(workspaceArb, ({ workspace }) => {
         const snapshot = serializer.serialize(workspace)
-        expect(snapshot.schemaVersion).toBe(13)
+        expect(snapshot.schemaVersion).toBe(14)
         const raw: unknown = JSON.parse(JSON.stringify(snapshot))
         const restored = Workspace.restore(serializer.deserialize(raw), new CounterIds())
         expect(serializer.serialize(restored)).toEqual(snapshot)

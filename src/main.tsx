@@ -10,7 +10,9 @@ import { Notifier } from './domain/Notifier'
 import { TimerScheduler } from './domain/Scheduler'
 import { UuidGenerator } from './domain/IdGenerator'
 import { AutoSaver } from './persistence/AutoSaver'
+import { BrowserFileTransfer } from './persistence/FileTransfer'
 import { LocalStorageRepository } from './persistence/LocalStorageRepository'
+import { ProjectFiles } from './persistence/ProjectFiles'
 import { WorkspaceLoader } from './persistence/WorkspaceLoader'
 import { WorkspaceSerializer } from './persistence/WorkspaceSerializer'
 import { AppProvider } from './view/AppProvider'
@@ -25,13 +27,14 @@ async function main() {
   const navigator = new Navigator(workspace)
   const history = new History(workspace, navigator)
   history.start()
+  const projectFiles = new ProjectFiles(workspace, serializer, history, navigator, notifier, new BrowserFileTransfer(), ids)
 
   // Saving after a failed load would overwrite stored data the user may still recover (requirement 5.5).
   if (canSave) new AutoSaver(workspace, serializer, repository, notifier, scheduler).start()
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <AppProvider services={{ workspace, navigator, history, notifier, scheduler }}>
+      <AppProvider services={{ workspace, navigator, history, notifier, scheduler, projectFiles }}>
         <App />
       </AppProvider>
     </StrictMode>,

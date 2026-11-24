@@ -36,7 +36,8 @@ class FakeRepository implements Repository {
 }
 
 const stored = {
-  schemaVersion: 13,
+  schemaVersion: 14,
+  project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -57,12 +58,17 @@ const stored = {
       },
     },
   ],
-  root: {
-    id: 'root',
-    viewport: { x: 0, y: 0, zoom: 1 },
-    placements: [{ id: 'c1', resourceId: 'r1', position: { x: 1, y: 2 } }],
-    links: [],
-  },
+  diagrams: [
+    {
+      name: 'D',
+      diagram: {
+        id: 'root',
+        viewport: { x: 0, y: 0, zoom: 1 },
+        placements: [{ id: 'c1', resourceId: 'r1', position: { x: 1, y: 2 } }],
+        links: [],
+      },
+    },
+  ],
 }
 
 function setup(outcome: () => unknown, serializer = new WorkspaceSerializer()) {
@@ -120,8 +126,8 @@ describe('WorkspaceLoader', () => {
   })
 
   it('rejects a snapshot with a dangling resource reference', async () => {
-    const root = { ...stored.root, placements: [{ id: 'p', resourceId: 'ghost', position: { x: 0, y: 0 } }] }
-    const { loader, repository } = setup(() => ({ ...stored, root }))
+    const root = { ...stored.diagrams[0].diagram, placements: [{ id: 'p', resourceId: 'ghost', position: { x: 0, y: 0 } }] }
+    const { loader, repository } = setup(() => ({ ...stored, diagrams: [{ name: 'D', diagram: root }] }))
     const result = await loader.load()
     expect(result.canSave).toBe(false)
     expect(repository.saveCalls).toBe(0)

@@ -6,7 +6,7 @@ import { checkLink } from '../domain/LinkRules'
 import { portNodeHandleIds, type Port } from '../domain/Port'
 import { handleIds, isResourceKind, kindInvariantError } from '../domain/ResourceKinds'
 import type { Workspace } from '../domain/Workspace'
-import type { ComponentDto, DiagramDto, LinkDto, PlacementDto, PortPlacementDto, ResourceDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
+import type { ComponentDto, DiagramDto, LinkDto, PlacementDto, PortPlacementDto, ProjectDto, ResourceDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
 import { PersistenceError } from './PersistenceError'
 
 type Obj = Record<string, unknown>
@@ -22,7 +22,7 @@ export class WorkspaceSerializer {
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
     // No migrations while in development: data from any other version is rejected and must be cleared.
-    if (obj.schemaVersion !== 13) {
+    if (obj.schemaVersion !== 14) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
     const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
@@ -56,12 +56,21 @@ export class WorkspaceSerializer {
       },
     }))
     // The root belongs to no component, so no port id is a node there.
-    const root = parseDiagram(obj.root, 'root', shapes, new Map())
-    assertNoCycle(root, resources)
+    const diagrams = asArray(obj.diagrams, 'diagrams').map((d, i) => {
+      const o = asObject(d, `diagrams[${i}]`)
+      return { name: asString(o.name, `diagrams[${i}].name`), diagram: parseDiagram(o.diagram, `diagrams[${i}].diagram`, shapes, new Map()) }
+    })
+    if (diagrams.length === 0) throw new PersistenceError('A project needs at least one diagram')
+    const diagramIds = new Set<string>()
+    for (const { diagram } of diagrams) {
+      if (diagramIds.has(diagram.id)) throw new PersistenceError(`Duplicate diagram id ${diagram.id}`)
+      diagramIds.add(diagram.id)
+    }
+    assertNoCycle(diagrams.map((d) => d.diagram), resources)
     assertTypesExist(resources, typeIds)
     assertExceptionsExist(resources, new Set(exceptions.map((e) => e.id)))
     assertEnvironmentVariablesExist(resources, new Set(environmentVariables.map((v) => v.id)))
-    return { schemaVersion: 13, types, exceptions, environmentVariables, resources, root }
+    return { schemaVersion: 14, project: parseProject(obj.project), types, exceptions, environmentVariables, resources, diagrams }
   }
 }
 
@@ -94,6 +103,15 @@ function parseType(v: unknown, path: string): DataType & ExceptionType & Environ
   const o = asObject(v, path)
   return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`) }
 }
+function parseProject(v: unknown): ProjectDto {
+  const o = asObject(v, 'project')
+  return {
+    name: asString(o.name, 'project.name'),
+    description: asString(o.description, 'project.description'),
+    createdAt: asString(o.createdAt, 'project.createdAt'),
+    updatedAt: asString(o.updatedAt, 'project.updatedAt'),
+  }
+}
 function parsePort(v: unknown, path: string): Port {
   const o = asObject(v, path)
   return { id: asString(o.id, `${path}.id`), name: asString(o.name, `${path}.name`), typeId: o.typeId === null ? null : asString(o.typeId, `${path}.typeId`) }
@@ -121,10 +139,10 @@ function assertEnvironmentVariablesExist(resources: readonly ResourceDto[], vari
   }
 }
 // A cycle of component Resources would make the model infinite, so reject it at load.
-function assertNoCycle(root: DiagramDto, resources: readonly ResourceDto[]): void {
+function assertNoCycle(roots: readonly DiagramDto[], resources: readonly ResourceDto[]): void {
   const childOf = new Map<string, string>()
   const ownerOf = new Map<string, string>()
-  const diagrams = [root]
+  const diagrams = [...roots]
   for (const r of resources) {
     if (!r.component) continue
     childOf.set(r.id, r.component.diagram.id)

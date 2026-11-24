@@ -12,7 +12,7 @@ sequenceDiagram
     alt data found
         R-->>L: raw
         L->>S: deserialize(raw)
-        Note over S: rejects schemaVersion other than 13, unknown resource or port, a Link end that is neither a Placement nor a port node of its component, a wrong-direction port node Link, a port node of an unknown port, a port with no node, and Diagram cycles
+        Note over S: rejects schemaVersion other than 14, a project with no diagram, unknown resource or port, a Link end that is neither a Placement nor a port node of its component, a wrong-direction port node Link, a port node of an unknown port, a port with no node, and Diagram cycles
         S-->>L: snapshot (plain data)
         L->>W: Workspace.restore(snapshot, ids)
     else none stored
@@ -45,3 +45,5 @@ sequenceDiagram
         A->>N: clear("save")
     end
     Note over A: pagehide calls flush() and saves immediately
+
+    Note over M,W: Save, open and new are file actions, separate from the autosave copy in localStorage

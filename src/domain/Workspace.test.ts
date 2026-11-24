@@ -16,7 +16,8 @@ const componentDto = (id: string, name: string, diagram: DiagramDto): ResourceDt
 })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 13,
+  schemaVersion: 14,
+  project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -24,7 +25,7 @@ const snapshot: WorkspaceSnapshot = {
     componentDto('ra', 'A', diagramDto('ad', [{ id: 'pb', resourceId: 'rb', position: { x: 3, y: 4 } }])),
     componentDto('rb', 'B', diagramDto('bd')),
   ],
-  root: diagramDto('r', [{ id: 'pa', resourceId: 'ra', position: { x: 1, y: 2 } }]),
+  diagrams: [{ name: 'D', diagram: diagramDto('r', [{ id: 'pa', resourceId: 'ra', position: { x: 1, y: 2 } }]) }],
 }
 
 function restore() {

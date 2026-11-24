@@ -4,6 +4,8 @@ import { Breadcrumb } from './view/Breadcrumb'
 import { CanvasView } from './view/CanvasView'
 import { ConfirmDialog } from './view/ConfirmDialog'
 import { DeleteFlow } from './view/DeleteFlow'
+import { DiagramTabs } from './view/DiagramTabs'
+import { ProjectControls } from './view/ProjectControls'
 import { HistoryControls } from './view/HistoryControls'
 import { Sidebar } from './view/Sidebar'
 import { EnvironmentVariablesDialog } from './view/EnvironmentVariablesDialog'
@@ -64,6 +66,7 @@ function Layout() {
   return (
     <div className="app">
       <header className="app-header">
+        <ProjectControls />
         <Breadcrumb />
         <HistoryControls />
         <button type="button" onClick={() => setTypesOpen(true)}>
@@ -76,6 +79,7 @@ function Layout() {
           Environment variables
         </button>
       </header>
+      <DiagramTabs />
       <NotificationBar />
       <main className="app-main">
         <div className="app-canvas">

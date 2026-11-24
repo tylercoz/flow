@@ -10,7 +10,17 @@ classDiagram
         notify()
     }
     class Workspace {
-        root: Diagram
+        diagrams: list of TopDiagram, name and Diagram
+        root: Diagram  %% the first diagram
+        project: name, description, createdAt, updatedAt
+        setProjectName(name)
+        setProjectDescription(description)
+        stampSaved(at)  %% silent, not an undo step
+        addDiagram(name)
+        renameDiagram(id, name)
+        diagramImpact(id)
+        removeDiagram(id)  %% LAST_DIAGRAM, MISSING_DIAGRAM
+        load(snapshot)  %% replaces everything for a project swap
         types: list of DataType
         addType(name)
         renameType(id, name)
@@ -53,7 +63,9 @@ classDiagram
     }
     class Navigator {
         path: string[]  %% Placement ids
+        root: Diagram  %% the top-level Diagram being viewed
         current: Diagram  %% last component's child Diagram, or root
+        openDiagram(id)
         currentComponent: ComponentDefinition or null at the root
         trail() Resource[]
         open(placementId)
@@ -68,6 +80,7 @@ classDiagram
         endGroup()
         undo()
         redo()
+        reset()  %% clears both stacks after a project swap
     }
     class Restorable {
         <<interface>>
@@ -243,12 +256,13 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 13
+        schemaVersion: 14
+        project: ProjectDto, name, description, createdAt, updatedAt
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable
         resources: list of ResourceDto, a component carries ComponentDto with its child DiagramDto and portNodes
-        root: DiagramDto
+        diagrams: list of NamedDiagramDto, at least one
     }
     class Fragment {
         <<plain data>>
@@ -276,7 +290,7 @@ classDiagram
     DiagramContext --> IdGenerator
     Diagram --> DomainError : throws
     Diagram *-- Viewport
-    Workspace *-- Diagram : root
+    Workspace *-- Diagram : one or more top-level diagrams, each named
     Diagram *-- Link
     Diagram *-- Placement
     Diagram --> LinkRules : addLink calls checkLink

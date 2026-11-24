@@ -42,9 +42,9 @@ const snapshotArb = workspaceArb.map(({ workspace }) => JSON.parse(JSON.stringif
 
 describe('Feature: components-as-resources, Property 11: Corrupt snapshots are rejected', () => {
   // **Validates: Requirements 8.2**
-  it('rejects any schemaVersion other than 13', () => {
+  it('rejects any schemaVersion other than 14', () => {
     fc.assert(
-      fc.property(snapshotArb, fc.integer().filter((v) => v !== 13), (raw, version) => {
+      fc.property(snapshotArb, fc.integer().filter((v) => v !== 14), (raw, version) => {
         raw.schemaVersion = version
         reject(raw)
       }),
@@ -55,7 +55,7 @@ describe('Feature: components-as-resources, Property 11: Corrupt snapshots are r
   it('rejects a Placement of an unknown Resource, naming the Placement id', () => {
     fc.assert(
       fc.property(snapshotArb, (raw) => {
-        raw.root.placements.push(placement('bad-placement', 'bad-no-such-resource'))
+        raw.diagrams[0].diagram.placements.push(placement('bad-placement', 'bad-no-such-resource'))
         expect(reject(raw).message).toContain('bad-placement')
       }),
     )
@@ -67,10 +67,10 @@ describe('Feature: components-as-resources, Property 11: Corrupt snapshots are r
     fc.assert(
       fc.property(snapshotArb, endArb, fc.string({ minLength: 1 }), (raw, end, junk) => {
         raw.resources.push(componentResource('bad-a'), componentResource('bad-b'))
-        raw.root.placements.push(placement('bad-pa', 'bad-a'), placement('bad-pb', 'bad-b'))
+        raw.diagrams[0].diagram.placements.push(placement('bad-pa', 'bad-a'), placement('bad-pb', 'bad-b'))
         const link = { id: 'bad-link', name: '', sourceId: 'bad-pa', targetId: 'bad-pb', sourcePortId: 'out', targetPortId: 'in' }
         link[end] = `bad-missing-${junk}`
-        raw.root.links.push(link)
+        raw.diagrams[0].diagram.links.push(link)
         expect(reject(raw).message).toContain('bad-link')
       }),
     )

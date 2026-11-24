@@ -35,12 +35,13 @@ const componentResource = (id: string, over: Record<string, unknown> = {}, child
 }
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 13,
+  schemaVersion: 14,
+  project: { name: 'P', description: '', createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z' },
   types: [],
   exceptions: [],
   environmentVariables: [],
   resources,
-  root,
+  diagrams: [{ name: 'Diagram 1', diagram: root }],
   ...over,
 })
 
@@ -60,8 +61,8 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(13)
-    expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
+    expect(serializer.serialize(ws).schemaVersion).toBe(14)
+    expect(serializer.serialize(ws).diagrams[0].diagram.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
   it('round-trips Link bend points and loads Links saved without them', () => {
@@ -70,10 +71,10 @@ describe('WorkspaceSerializer', () => {
     const a = ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 0, y: 0 })
     const b = ws.createPlacedResource(ws.root, { kind: 'component', name: 'b' }, { x: 5, y: 5 })
     const link = connect(ws, ws.root, a, b)
-    expect(serializer.serialize(ws).root.links[0].waypoints).toBeUndefined()
+    expect(serializer.serialize(ws).diagrams[0].diagram.links[0].waypoints).toBeUndefined()
     link.setWaypoints([{ x: 1, y: 2 }, { x: 3, y: 4 }])
     const snapshot = serializer.serialize(ws)
-    expect(snapshot.root.links[0].waypoints).toEqual([{ x: 1, y: 2 }, { x: 3, y: 4 }])
+    expect(snapshot.diagrams[0].diagram.links[0].waypoints).toEqual([{ x: 1, y: 2 }, { x: 3, y: 4 }])
     expect(serializer.deserialize(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot)
   })
 
@@ -90,8 +91,8 @@ describe('WorkspaceSerializer', () => {
   it('round-trips a Placement size and loads data saved without one', () => {
     const resources = [componentResource('a')]
     const sized = { ...placement('p', 'a'), size: { width: 200, height: 80 } }
-    expect(serializer.deserialize(valid(diagram('r', [sized]), resources)).root.placements[0].size).toEqual({ width: 200, height: 80 })
-    expect(serializer.deserialize(valid(diagram('r', [placement('p', 'a')]), resources)).root.placements[0].size).toBeUndefined()
+    expect(serializer.deserialize(valid(diagram('r', [sized]), resources)).diagrams[0].diagram.placements[0].size).toEqual({ width: 200, height: 80 })
+    expect(serializer.deserialize(valid(diagram('r', [placement('p', 'a')]), resources)).diagrams[0].diagram.placements[0].size).toBeUndefined()
   })
 
   it('round-trips one Resource shared by Placements in two Diagrams, and an unplaced Resource', () => {
@@ -192,7 +193,7 @@ describe('WorkspaceSerializer', () => {
   it.each([
     ['null', null],
     ['array', []],
-    ['missing root', { schemaVersion: 13 }],
+    ['missing diagrams', { schemaVersion: 14 }],
     ['missing portNodes', valid(diagram('r'), [componentResource('c', { portNodes: undefined })])],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],
@@ -272,7 +273,7 @@ describe('WorkspaceSerializer', () => {
       { id: 'r1', kind: 'database', name: 'Orders', typeId: null, component: null },
       { id: 'r2', kind: 'artifact', name: 'Invoice', typeId: 't1', component: null },
     ]
-    const withResources = (root: unknown, overrides: Record<string, unknown> = {}) => ({ ...valid(), types, resources, root, ...overrides })
+    const withResources = (root: unknown, overrides: Record<string, unknown> = {}) => ({ ...valid(), types, resources, diagrams: [{ name: 'Diagram 1', diagram: root }], ...overrides })
 
     it('round-trips a repository remote and rejects a remote on another kind', () => {
       const repo = { id: 'r3', kind: 'repository', name: 'Code', typeId: null, remote: 'https://example.com/a.git', component: null }

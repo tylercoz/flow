@@ -4,6 +4,7 @@ import type { Navigator } from '../domain/Navigator'
 import type { Notifier } from '../domain/Notifier'
 import type { Scheduler } from '../domain/Scheduler'
 import type { Workspace } from '../domain/Workspace'
+import type { ProjectFiles } from '../persistence/ProjectFiles'
 
 interface AppServices {
   workspace: Workspace
@@ -11,6 +12,7 @@ interface AppServices {
   history: History
   notifier: Notifier
   scheduler: Scheduler
+  projectFiles: ProjectFiles
 }
 
 const AppContext = createContext<AppServices | null>(null)

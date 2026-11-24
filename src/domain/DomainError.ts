@@ -11,6 +11,8 @@ type DomainErrorCode =
   | 'REFERENCE_CYCLE'
   | 'NOT_A_COMPONENT'
   | 'LAST_PORT_NODE'
+  | 'MISSING_DIAGRAM'
+  | 'LAST_DIAGRAM'
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode
