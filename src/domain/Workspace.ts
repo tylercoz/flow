@@ -183,6 +183,22 @@ export class Workspace implements ObservableStore {
     diagram.addAll(placements, links)
     return { placements, links }
   }
+  // Moves Placements into a component's own Level, keeping their layout and the Links between them. Links to
+  // Placements left behind are dropped, since a Link cannot cross Levels. The Resources are kept, not recreated.
+  // A rejected move (the component contains itself) changes nothing, because paste validates before mutating.
+  moveIntoComponent(from: Diagram, nodeIds: ReadonlySet<string>, componentPlacementId: string, origin: Position): Placement[] {
+    const inner = from.resourceOf(componentPlacementId)?.definition?.diagram
+    if (!inner) throw new DomainError('INVALID_RESOURCE', 'Placements can only be moved into a component.')
+    // A component dropped on itself has nowhere to go, so it stays where it is.
+    const moving = new Set([...nodeIds].filter((id) => id !== componentPlacementId && from.placement(id)))
+    if (moving.size === 0) return []
+    const fragment = this.copy(from, moving)
+    const left = Math.min(...fragment.placements.map((p) => p.position.x))
+    const top = Math.min(...fragment.placements.map((p) => p.position.y))
+    const { placements } = this.paste(inner, fragment, { x: origin.x - left, y: origin.y - top })
+    moving.forEach((id) => from.removePlacement(id))
+    return placements
+  }
   get types(): readonly DataType[] {
     return this._types.all
   }

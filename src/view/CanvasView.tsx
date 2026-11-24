@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react'
 import {
   Background,
   ConnectionMode,
@@ -40,6 +40,8 @@ function centreOf(el: HTMLElement | null): { x: number; y: number } | null {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }
 
+// Where the top-left of Placements moved into a component lands on its Level, clear of the input port column.
+const MOVE_ORIGIN = { x: 160, y: 0 }
 // Must be module-level: a new object per render would make React Flow remount every node.
 const nodeTypes = { placement: PlacementNode, port: PortNode }
 const edgeTypes = { link: LinkEdge }
@@ -154,6 +156,32 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
     if (n.type === 'port') owner?.setPortPlacementPosition(n.id, n.position)
     else diagram.placement(n.id)?.setPosition(n.position)
   }
+  // Drops land on the component under the pointer, not on one the dragged boxes merely overlap, so repositioning
+  // a node next to a component never moves it by accident.
+  const dropIntoComponent = (e: ReactMouseEvent | MouseEvent | TouchEvent, moved: Node[]): boolean => {
+    const point = 'changedTouches' in e ? e.changedTouches[0] : e
+    const movedIds = new Set(moved.filter((n) => n.type === 'placement').map((n) => n.id))
+    if (!point || movedIds.size === 0) return false
+    const targetId = document
+      .elementsFromPoint(point.clientX, point.clientY)
+      .map((el) => el.closest<HTMLElement>('.react-flow__node')?.dataset.id)
+      .find((id) => id && !movedIds.has(id) && diagram.resourceOf(id)?.definition)
+    if (!targetId) return false
+    // One group, so the copy into the component and the removal here are one undo step.
+    history.beginGroup()
+    try {
+      workspace.moveIntoComponent(diagram, movedIds, targetId, MOVE_ORIGIN)
+    } catch (err) {
+      if (!(err instanceof DomainError)) throw err
+      notifier.post('move', err.message, 'transient')
+    } finally {
+      history.endGroup()
+    }
+    return true
+  }
+  const onDragStop = (e: ReactMouseEvent | MouseEvent | TouchEvent, moved: Node[]) => {
+    if (!dropIntoComponent(e, moved)) moved.forEach(savePosition)
+  }
   const openMenu = (e: { clientX: number; clientY: number }) =>
     setMenu({ screen: { x: e.clientX, y: e.clientY }, point: screenToFlowPosition({ x: e.clientX, y: e.clientY }) })
 
@@ -246,9 +274,9 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
           onEdgesChange={onEdgesChange}
           onNodeDragStart={() => rename.cancel()}
           // Dragging one member of a multi-selection moves all of them, so persist every moved node.
-          onNodeDragStop={(_, __, moved) => moved.forEach(savePosition)}
+          onNodeDragStop={(e, __, moved) => onDragStop(e, moved)}
           onSelectionDragStart={() => rename.cancel()}
-          onSelectionDragStop={(_, moved) => moved.forEach(savePosition)}
+          onSelectionDragStop={onDragStop}
           // Loose mode lets a side handle (one source and one target Handle per side) start or end a Link.
           connectionMode={ConnectionMode.Loose}
           onPaneContextMenu={(e) => {

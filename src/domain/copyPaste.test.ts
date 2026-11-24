@@ -12,6 +12,64 @@ function setup() {
   return { workspace, root, component }
 }
 
+describe('Workspace moveIntoComponent', () => {
+  const origin = { x: 160, y: 0 }
+
+  it('moves Placements and the Links between them, keeping layout and Resources', () => {
+    const { workspace, root, component } = setup()
+    const target = component()
+    const a = workspace.createPlacedResource(root, { kind: 'user', name: 'a' }, { x: 300, y: 200 })
+    const b = workspace.createPlacedResource(root, { kind: 'user', name: 'b' }, { x: 400, y: 230 })
+    root.addLink(a.id, b.id, 'right', 'left')
+    const inner = workspace.resources.get(target.resourceId)!.definition!.diagram
+    const resources = workspace.resources.all.length
+    const moved = workspace.moveIntoComponent(root, new Set([a.id, b.id]), target.id, origin)
+    expect(root.placements.map((p) => p.id)).toEqual([target.id])
+    expect(inner.placements.map((p) => p.resourceId)).toEqual([a.resourceId, b.resourceId])
+    expect(moved.map((p) => p.position)).toEqual([{ x: 160, y: 0 }, { x: 260, y: 30 }])
+    expect(inner.links).toHaveLength(1)
+    expect(root.links).toHaveLength(0)
+    expect(workspace.resources.all).toHaveLength(resources)
+  })
+
+  it('drops Links to Placements that stay behind', () => {
+    const { workspace, root, component } = setup()
+    const target = component()
+    const a = workspace.createPlacedResource(root, { kind: 'user', name: 'a' }, { x: 300, y: 0 })
+    const b = workspace.createPlacedResource(root, { kind: 'user', name: 'b' }, { x: 400, y: 0 })
+    root.addLink(a.id, b.id, 'right', 'left')
+    const inner = workspace.resources.get(target.resourceId)!.definition!.diagram
+    workspace.moveIntoComponent(root, new Set([a.id]), target.id, origin)
+    expect(root.links).toHaveLength(0)
+    expect(inner.links).toHaveLength(0)
+  })
+
+  it('ignores the component itself in the selection', () => {
+    const { workspace, root, component } = setup()
+    const target = component()
+    expect(workspace.moveIntoComponent(root, new Set([target.id]), target.id, origin)).toEqual([])
+    expect(root.placements).toHaveLength(1)
+  })
+
+  it('rejects a move that would make a component contain itself, changing nothing', () => {
+    const { workspace, root, component } = setup()
+    const outer = component()
+    const inner = workspace.resources.get(outer.resourceId)!.definition!.diagram
+    const nested = workspace.createPlacedResource(inner, { kind: 'component', name: '' }, { x: 0, y: 0 })
+    // `nested` also sits on root, and `outer` already contains it, so moving `outer` into it closes a loop.
+    const nestedOnRoot = workspace.paste(root, workspace.copy(inner, new Set([nested.id])), { x: 0, y: 0 }).placements[0]
+    expect(() => workspace.moveIntoComponent(root, new Set([outer.id]), nestedOnRoot.id, origin)).toThrow(/contain itself/)
+    expect(root.placements).toHaveLength(2)
+  })
+
+  it('refuses a target that is not a component', () => {
+    const { workspace, root } = setup()
+    const a = workspace.createPlacedResource(root, { kind: 'user', name: 'a' }, { x: 0, y: 0 })
+    const b = workspace.createPlacedResource(root, { kind: 'user', name: 'b' }, { x: 0, y: 0 })
+    expect(() => workspace.moveIntoComponent(root, new Set([a.id]), b.id, origin)).toThrow()
+  })
+})
+
 describe('Workspace copy and paste', () => {
   it('keeps only Links between copied Placements', () => {
     const { workspace, root, component } = setup()
