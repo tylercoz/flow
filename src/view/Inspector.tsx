@@ -78,7 +78,7 @@ export function Inspector({ item, diagram, deleteFlow }: InspectorProps) {
       <FocusGroup className="inspector-fields">
         <div>
           <label htmlFor={`${idPrefix}-name`}>Name</label>
-          <input id={`${idPrefix}-name`} type="text" value={resource.name} onChange={(e) => resource.setName(e.target.value)} />
+          <textarea id={`${idPrefix}-name`} rows={resource.name.split('\n').length} value={resource.name} onChange={(e) => resource.setName(e.target.value)} />
         </div>
         {resource.remote !== null && (
           <div>

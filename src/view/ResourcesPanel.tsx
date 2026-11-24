@@ -41,7 +41,7 @@ export function ResourcesPanel() {
 }
 function NameInput({ resource, onDone }: { resource: Resource; onDone: () => void }) {
   const [draft, setDraft] = useState(resource.name)
-  const input = useRef<HTMLInputElement>(null)
+  const input = useRef<HTMLTextAreaElement>(null)
   // Unmounting a focused input can still deliver a blur; this keeps Escape from committing through it.
   const finished = useRef(false)
   useEffect(() => input.current?.select(), [])
@@ -53,13 +53,17 @@ function NameInput({ resource, onDone }: { resource: Resource; onDone: () => voi
     onDone()
   }
   const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') finish(true)
+    // Shift+Enter falls through to the textarea's default and inserts a newline.
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      finish(true)
+    }
     if (e.key === 'Escape') finish(false)
   }
   return (
-    <input
+    <textarea
       ref={input}
-      type="text"
+      rows={draft.split('\n').length}
       aria-label="Resource name"
       autoFocus
       value={draft}

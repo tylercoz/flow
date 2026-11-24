@@ -62,7 +62,21 @@ export function ResourcePicker({ kind, diagram, position, onClose }: Props) {
         >
           <div className="field-row">
             {/* Focused on open so the user can name the new resource without clicking first. */}
-            <input type="text" aria-label="New resource name" value={name} onChange={(e) => setName(e.target.value)} disabled={noTypes} autoFocus />
+            <textarea
+              aria-label="New resource name"
+              rows={name.split('\n').length}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              // Enter submits like a single-line field; Shift+Enter inserts a newline.
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  e.currentTarget.form?.requestSubmit()
+                }
+              }}
+              disabled={noTypes}
+              autoFocus
+            />
           </div>
           {typed && (
             <div className="field-row">

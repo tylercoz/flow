@@ -220,6 +220,11 @@ textarea:focus {
   flex: 1;
   min-width: 0;
 }
+.placement-name,
+.picker-item,
+.resource-list li {
+  white-space: pre-wrap;
+}
 .placement-type {
   font-size: 0.85em;
   opacity: 0.7;
