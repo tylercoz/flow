@@ -10,7 +10,7 @@ export function PortNode({ id }: NodeProps) {
   useStore(workspace)
   const owner = navigator.currentComponent
   const role = owner?.portRole(id)
-  const port = (role === 'input' ? owner?.inputs : owner?.outputs)?.find((p) => p.id === id)
+  const port = owner?.portOf(id)
   if (!role || !port) return null
   const typeName = port.typeId ? workspace.types.find((t) => t.id === port.typeId)?.name : undefined
   return (

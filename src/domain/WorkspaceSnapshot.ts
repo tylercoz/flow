@@ -18,12 +18,13 @@ export type LinkDto = {
   waypoints?: Position[]
 }
 
+export type PortPlacementDto = { id: string; portId: string; position: Position | null }
 // The state only a component Resource has. Position and size belong to each Placement.
 export type ComponentDto = {
   inputs: Port[]
   outputs: Port[]
-  // Keyed by port id; a port without an entry has not been moved from its default slot.
-  portPositions: Record<string, Position>
+  // Every port has at least one entry. A null position means the port's default slot.
+  portNodes: PortPlacementDto[]
   notes: string
   exceptionIds: string[]
   environmentVariableIds: string[]
@@ -56,7 +57,7 @@ export type DiagramDto = {
 }
 
 export type WorkspaceSnapshot = {
-  schemaVersion: 12
+  schemaVersion: 13
   types: DataType[]
   exceptions: ExceptionType[]
   environmentVariables: EnvironmentVariable[]

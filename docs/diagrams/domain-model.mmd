@@ -96,10 +96,13 @@ classDiagram
     class ComponentDefinition {
         inputs: list of Port
         outputs: list of Port
-        portPositions: Port id to Position of its port node on the child Diagram
-        portRole(id) input, output or undefined
-        portPosition(id)
-        setPortPosition(id, p)
+        portPlacements: list of PortPlacement, every port has at least one
+        portPlacement(id)
+        portOf(nodeId) the Port a node shows
+        portRole(nodeId) input, output or undefined
+        setPortPlacementPosition(id, p)
+        addPortPlacements(items)  %% one change; refuses an unknown port
+        removePortPlacements(ids)  %% one change, drops their Links; refuses to leave a port with no node
         notes
         setPorts(field, ports)
         setNotes(notes)
@@ -170,7 +173,7 @@ classDiagram
     class Link {
         id
         name
-        sourceId, targetId: Placement ids in the same Diagram, or port ids of the component that owns it
+        sourceId, targetId: Placement ids in the same Diagram, or PortPlacement ids of the component that owns it
         sourcePortId: output port id of the source Resource, or a side handle of an input port node
         targetPortId: input port id of the target Resource, or a side handle of an output port node
         waypoints: list of Position, bend points from source to target, empty for the automatic curve
@@ -219,6 +222,12 @@ classDiagram
         cancel(handle)
     }
     class TimerScheduler
+    class PortPlacement {
+        <<type>>
+        id: a Link end, from the same IdGenerator as Placement ids
+        portId: the Port it shows
+        position: Position, or null for the default slot
+    }
     class IdGenerator {
         <<interface>>
         next()
@@ -234,11 +243,11 @@ classDiagram
     }
     class WorkspaceSnapshot {
         <<plain data>>
-        schemaVersion: 12
+        schemaVersion: 13
         types: list of DataType
         exceptions: list of ExceptionType
         environmentVariables: list of EnvironmentVariable
-        resources: list of ResourceDto, a component carries ComponentDto with its child DiagramDto and portPositions
+        resources: list of ResourceDto, a component carries ComponentDto with its child DiagramDto and portNodes
         root: DiagramDto
     }
     class Fragment {
@@ -295,6 +304,10 @@ classDiagram
     Catalog o-- EnvironmentVariable
     ComponentDefinition ..> EnvironmentVariable : relies on, by id
     ComponentDefinition *-- Port
+    ComponentDefinition *-- PortPlacement : one or more per Port, so one input can feed many nodes
+    PortPlacement ..> Port : shows by portId, holds no name or type
+    ComponentDefinition --> IdGenerator : names new PortPlacements
+    ComponentDefinition --> DomainError : LAST_PORT_NODE, INVALID_PORT
     ComponentDefinition ..> Diagram : attachPortOwner(this), so addLink accepts its port ids
     Diagram ..> Port : addLink resolves a port id with portNodeHandleIds
     Link ..> Port : joins an output to an input, by id

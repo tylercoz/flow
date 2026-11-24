@@ -52,7 +52,7 @@ export function resourceToDto(r: Resource, includeViewports: boolean): ResourceD
     component: d && {
       inputs: d.inputs.map((p) => ({ ...p })),
       outputs: d.outputs.map((p) => ({ ...p })),
-      portPositions: Object.fromEntries([...d.portPositions].map(([id, p]) => [id, { x: p.x, y: p.y }])),
+      portNodes: d.portPlacements.map((n) => ({ id: n.id, portId: n.portId, position: n.position && { x: n.position.x, y: n.position.y } })),
       notes: d.notes,
       exceptionIds: [...d.exceptionIds],
       environmentVariableIds: [...d.environmentVariableIds],
@@ -63,7 +63,7 @@ export function resourceToDto(r: Resource, includeViewports: boolean): ResourceD
 
 export function buildResource(dto: ResourceDto, ctx: DiagramContext, viewports?: ReadonlyMap<string, Viewport>): Resource {
   const c = dto.component
-  const definition = c && new ComponentDefinition(buildDiagram(c.diagram, ctx, viewports), ctx.onChange, c)
+  const definition = c && new ComponentDefinition(buildDiagram(c.diagram, ctx, viewports), ctx.onChange, ctx.ids, c)
   return new Resource(dto.id, dto.kind, dto.name, dto.typeId, definition, ctx.onChange, dto.remote ?? null)
 }
 

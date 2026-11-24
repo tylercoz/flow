@@ -13,16 +13,29 @@ const diagram = (id: string, placements: unknown[] = [], links: unknown[] = []) 
 })
 const placement = (id: string, resourceId: string) => ({ id, resourceId, position: { x: 1, y: 2 } })
 // A component Resource.
-const componentResource = (id: string, over: Record<string, unknown> = {}, child = diagram(`${id}-d`)) => ({
-  id,
-  kind: 'component',
-  name: '',
-  typeId: null,
-  component: { inputs: [], outputs: [], portPositions: {}, notes: '', exceptionIds: [], environmentVariableIds: [], diagram: child, ...over },
-})
+// Every port gets one default node, named `<port id>-node`, unless `over.portNodes` says otherwise.
+const componentResource = (id: string, over: Record<string, unknown> = {}, child = diagram(`${id}-d`)) => {
+  const ports = [...((over.inputs ?? []) as { id: string }[]), ...((over.outputs ?? []) as { id: string }[])]
+  return {
+    id,
+    kind: 'component',
+    name: '',
+    typeId: null,
+    component: {
+      inputs: [],
+      outputs: [],
+      portNodes: ports.map((p) => ({ id: `${p.id}-node`, portId: p.id, position: null })),
+      notes: '',
+      exceptionIds: [],
+      environmentVariableIds: [],
+      diagram: child,
+      ...over,
+    },
+  }
+}
 const port = (id: string) => ({ id, name: id, typeId: null })
 const valid = (root = diagram('root'), resources: unknown[] = [], over: Record<string, unknown> = {}) => ({
-  schemaVersion: 12,
+  schemaVersion: 13,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -47,7 +60,7 @@ describe('WorkspaceSerializer', () => {
     ws.root.setViewport({ x: 3, y: 4, zoom: 2 })
     ws.createPlacedResource(ws.root, { kind: 'component', name: 'a' }, { x: 1, y: 1 })
     expect(serializer.serialize(ws)).toEqual(ws.toSnapshot())
-    expect(serializer.serialize(ws).schemaVersion).toBe(12)
+    expect(serializer.serialize(ws).schemaVersion).toBe(13)
     expect(serializer.serialize(ws).root.viewport).toEqual({ x: 3, y: 4, zoom: 2 })
   })
 
@@ -131,40 +144,56 @@ describe('WorkspaceSerializer', () => {
         componentResource('a', { ...ports, ...over }, diagram('a-d', [placement('p', 'db')], links)),
         { id: 'db', kind: 'database', name: '', typeId: null, component: null },
       ])
-    it('keeps port positions and Links on port nodes', () => {
-      const raw = withLinks([link('l1', 'in', 'p', 'right', 'left'), link('l2', 'p', 'out', 'right', 'left')], {
-        portPositions: { in: { x: 1, y: 2 } },
-      })
+    it('keeps several nodes per port, their positions, and Links on port nodes', () => {
+      const portNodes = [
+        { id: 'in-node', portId: 'in', position: { x: 1, y: 2 } },
+        { id: 'in-copy', portId: 'in', position: null },
+        { id: 'out-node', portId: 'out', position: null },
+      ]
+      const raw = withLinks(
+        [link('l1', 'in-node', 'p', 'right', 'left'), link('l2', 'in-copy', 'p', 'right', 'left'), link('l3', 'p', 'out-node', 'right', 'left')],
+        { portNodes },
+      )
       expect(serializer.deserialize(raw)).toEqual(raw)
     })
-    it('rejects a Link whose end is neither a Placement nor a port of the component', () => {
+    it('rejects a Link whose end is neither a Placement nor a port node of the component', () => {
       expect(() => serializer.deserialize(withLinks([link('l', 'ghost', 'p', 'right', 'left')]))).toThrow(PersistenceError)
     })
-    it('rejects a Link that ends at an input port or starts at an output port', () => {
-      expect(() => serializer.deserialize(withLinks([link('l', 'p', 'in', 'right', 'left')]))).toThrow(PersistenceError)
-      expect(() => serializer.deserialize(withLinks([link('l', 'out', 'p', 'right', 'left')]))).toThrow(PersistenceError)
+    it('rejects a Link that ends at an input port node or starts at an output port node', () => {
+      expect(() => serializer.deserialize(withLinks([link('l', 'p', 'in-node', 'right', 'left')]))).toThrow(PersistenceError)
+      expect(() => serializer.deserialize(withLinks([link('l', 'out-node', 'p', 'right', 'left')]))).toThrow(PersistenceError)
     })
-    it('rejects a port id as a node on the root', () => {
-      const raw = valid(diagram('r', [], [link('l', 'in', 'out', 'right', 'left')]), [componentResource('a', ports)])
+    it('rejects a port node id as a node on the root', () => {
+      const raw = valid(diagram('r', [], [link('l', 'in-node', 'out-node', 'right', 'left')]), [componentResource('a', ports)])
       expect(() => serializer.deserialize(raw)).toThrow(PersistenceError)
     })
-    it('rejects a position for a port the component does not have', () => {
-      expect(() => serializer.deserialize(withLinks([], { portPositions: { ghost: { x: 0, y: 0 } } }))).toThrow(PersistenceError)
+    it('rejects a node for a port the component does not have', () => {
+      const portNodes = [...componentResource('a', ports).component.portNodes, { id: 'x', portId: 'ghost', position: null }]
+      expect(() => serializer.deserialize(withLinks([], { portNodes }))).toThrow(PersistenceError)
+    })
+    it('rejects a port that has no node', () => {
+      expect(() => serializer.deserialize(withLinks([], { portNodes: [{ id: 'in-node', portId: 'in', position: null }] }))).toThrow(PersistenceError)
+    })
+    it('rejects a node id used twice, or equal to a Placement id', () => {
+      const dup = [...componentResource('a', ports).component.portNodes, { id: 'in-node', portId: 'in', position: null }]
+      expect(() => serializer.deserialize(withLinks([], { portNodes: dup }))).toThrow(PersistenceError)
+      const clash = [...componentResource('a', ports).component.portNodes, { id: 'p', portId: 'in', position: null }]
+      expect(() => serializer.deserialize(withLinks([], { portNodes: clash }))).toThrow(PersistenceError)
     })
   })
   it('rejects a component Resource that names a missing environment variable', () => {
     expect(() => serializer.deserialize(valid(diagram('r'), [componentResource('a', { environmentVariableIds: ['ghost'] })]))).toThrow(PersistenceError)
   })
 
-  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [undefined], ['12']])('rejects schemaVersion %s', (schemaVersion) => {
+  it.each([[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11], [12], [undefined], ['13']])('rejects schemaVersion %s', (schemaVersion) => {
     expect(() => serializer.deserialize({ ...valid(), schemaVersion })).toThrow(PersistenceError)
   })
 
   it.each([
     ['null', null],
     ['array', []],
-    ['missing root', { schemaVersion: 12 }],
-    ['missing portPositions', valid(diagram('r'), [componentResource('c', { portPositions: undefined })])],
+    ['missing root', { schemaVersion: 13 }],
+    ['missing portNodes', valid(diagram('r'), [componentResource('c', { portNodes: undefined })])],
     ['missing exceptionIds', valid(diagram('r'), [componentResource('c', { exceptionIds: undefined })])],
     ['missing environmentVariableIds', valid(diagram('r'), [componentResource('c', { environmentVariableIds: undefined })])],
     ['non-array placements', valid({ ...diagram('r'), placements: {} } as never)],

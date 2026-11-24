@@ -1,17 +1,21 @@
 import type { Diagram } from './Diagram'
+import { DomainError } from './DomainError'
+import type { IdGenerator } from './IdGenerator'
 import type { Position } from './NodeBounds'
-import type { Port, PortRole } from './Port'
+import type { Port, PortPlacement, PortRole } from './Port'
 import type { ComponentDto } from './WorkspaceSnapshot'
 
 const copyPorts = (ports: readonly Port[]): Port[] => ports.map((p) => ({ ...p }))
+const copyPlacement = (n: PortPlacement): PortPlacement => ({ id: n.id, portId: n.portId, position: n.position && { x: n.position.x, y: n.position.y } })
 
 // The state only a component Resource has. Shared by every Placement of that Resource.
 export class ComponentDefinition {
   readonly diagram: Diagram
   private _inputs: Port[]
   private _outputs: Port[]
-  // Where each port's node sits on the child Diagram; a port with no entry gets a default slot in the view.
-  private _portPositions: Map<string, Position>
+  // Every port has at least one entry, which setPorts and removePortPlacements keep true.
+  private _portPlacements: PortPlacement[]
+  private readonly ids: IdGenerator
   private _notes: string
   // Ids into Workspace.exceptions.
   private _exceptionIds: string[]
@@ -19,11 +23,12 @@ export class ComponentDefinition {
   private _environmentVariableIds: string[]
   private readonly onChange: () => void
 
-  constructor(diagram: Diagram, onChange: () => void, initial: Partial<Omit<ComponentDto, 'diagram'>> = {}) {
+  constructor(diagram: Diagram, onChange: () => void, ids: IdGenerator, initial: Partial<Omit<ComponentDto, 'diagram'>> = {}) {
     this.diagram = diagram
+    this.ids = ids
     this._inputs = copyPorts(initial.inputs ?? [])
     this._outputs = copyPorts(initial.outputs ?? [])
-    this._portPositions = new Map(Object.entries(initial.portPositions ?? {}).map(([id, p]) => [id, { x: p.x, y: p.y }]))
+    this._portPlacements = (initial.portNodes ?? []).map(copyPlacement)
     this._notes = initial.notes ?? ''
     this._exceptionIds = [...(initial.exceptionIds ?? [])]
     this._environmentVariableIds = [...(initial.environmentVariableIds ?? [])]
@@ -39,25 +44,71 @@ export class ComponentDefinition {
     return this._outputs
   }
 
-  // Ports must change through Workspace.setPorts, which also removes the Links of removed ports.
+  // Ports must change through Workspace.setPorts, which also removes the Links of removed ports on other Diagrams.
+  // The nodes of this component's own Level are handled here so the port, its nodes and their Links change in one notification.
   setPorts(field: 'inputs' | 'outputs', ports: readonly Port[]): void {
     if (field === 'inputs') this._inputs = copyPorts(ports)
     else this._outputs = copyPorts(ports)
-    for (const id of this._portPositions.keys()) if (!this.portRole(id)) this._portPositions.delete(id)
+    const live = new Set([...this._inputs, ...this._outputs].map((p) => p.id))
+    const gone = new Set(this._portPlacements.filter((n) => !live.has(n.portId)).map((n) => n.id))
+    this._portPlacements = this._portPlacements.filter((n) => !gone.has(n.id))
+    for (const id of live) {
+      if (!this._portPlacements.some((n) => n.portId === id)) this._portPlacements.push({ id: this.ids.next(), portId: id, position: null })
+    }
+    this.diagram.dropLinksOfNodes(gone)
     this.onChange()
   }
-  portRole(id: string): PortRole | undefined {
-    if (this._inputs.some((p) => p.id === id)) return 'input'
-    return this._outputs.some((p) => p.id === id) ? 'output' : undefined
+
+  get portPlacements(): readonly PortPlacement[] {
+    return this._portPlacements
   }
-  portPosition(id: string): Readonly<Position> | undefined {
-    return this._portPositions.get(id)
+
+  portPlacement(id: string): PortPlacement | undefined {
+    return this._portPlacements.find((n) => n.id === id)
   }
-  get portPositions(): ReadonlyMap<string, Readonly<Position>> {
-    return this._portPositions
+
+  // The port a node shows, so a name or type change reaches every node of that port.
+  portOf(nodeId: string): Port | undefined {
+    const portId = this.portPlacement(nodeId)?.portId
+    return [...this._inputs, ...this._outputs].find((p) => p.id === portId)
   }
-  setPortPosition(id: string, p: Position): void {
-    this._portPositions.set(id, { x: p.x, y: p.y })
+
+  portRole(nodeId: string): PortRole | undefined {
+    const portId = this.portPlacement(nodeId)?.portId
+    if (this._inputs.some((p) => p.id === portId)) return 'input'
+    return this._outputs.some((p) => p.id === portId) ? 'output' : undefined
+  }
+
+  setPortPlacementPosition(id: string, p: Position): void {
+    const node = this.portPlacement(id)
+    if (!node) throw new DomainError('NOT_IN_DIAGRAM', 'Port node is not in this diagram.')
+    node.position = { x: p.x, y: p.y }
+    this.onChange()
+  }
+
+  // One notification for the batch, so a paste is a single undo step.
+  addPortPlacements(items: readonly { portId: string; position: Position }[]): PortPlacement[] {
+    const known = new Set([...this._inputs, ...this._outputs].map((p) => p.id))
+    if (items.some((i) => !known.has(i.portId))) throw new DomainError('INVALID_PORT', 'The port no longer exists.')
+    const added = items.map((i) => ({ id: this.ids.next(), portId: i.portId, position: { x: i.position.x, y: i.position.y } }))
+    this._portPlacements.push(...added)
+    if (added.length > 0) this.onChange()
+    return added
+  }
+
+  // All or nothing: a port left with no node would have nothing to link, so the whole removal is refused.
+  removePortPlacements(ids: readonly string[]): void {
+    const gone = new Set(ids)
+    if (gone.size === 0) return
+    for (const id of gone) {
+      if (!this.portPlacement(id)) throw new DomainError('NOT_IN_DIAGRAM', 'Port node is not in this diagram.')
+    }
+    const kept = new Set(this._portPlacements.filter((n) => !gone.has(n.id)).map((n) => n.portId))
+    if (this._portPlacements.some((n) => gone.has(n.id) && !kept.has(n.portId))) {
+      throw new DomainError('LAST_PORT_NODE', 'A port needs at least one node. Remove the port on the component instead.')
+    }
+    this._portPlacements = this._portPlacements.filter((n) => !gone.has(n.id))
+    this.diagram.dropLinksOfNodes(gone)
     this.onChange()
   }
 

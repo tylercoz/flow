@@ -19,7 +19,7 @@ function componentResource(id: string, placements: unknown[] = [], links: unknow
     component: {
       inputs: [{ id: 'in', name: 'in', typeId: null }],
       outputs: [{ id: 'out', name: 'out', typeId: null }],
-      portPositions: {},
+      portNodes: [{ id: 'in-node', portId: 'in', position: null }, { id: 'out-node', portId: 'out', position: null }],
       notes: '',
       exceptionIds: [],
       environmentVariableIds: [],
@@ -42,9 +42,9 @@ const snapshotArb = workspaceArb.map(({ workspace }) => JSON.parse(JSON.stringif
 
 describe('Feature: components-as-resources, Property 11: Corrupt snapshots are rejected', () => {
   // **Validates: Requirements 8.2**
-  it('rejects any schemaVersion other than 12', () => {
+  it('rejects any schemaVersion other than 13', () => {
     fc.assert(
-      fc.property(snapshotArb, fc.integer().filter((v) => v !== 12), (raw, version) => {
+      fc.property(snapshotArb, fc.integer().filter((v) => v !== 13), (raw, version) => {
         raw.schemaVersion = version
         reject(raw)
       }),

@@ -12,11 +12,11 @@ const componentDto = (id: string, name: string, diagram: DiagramDto): ResourceDt
   kind: 'component',
   name,
   typeId: null,
-  component: { inputs: [], outputs: [], portPositions: {}, notes: '', exceptionIds: [], environmentVariableIds: [], diagram },
+  component: { inputs: [], outputs: [], portNodes: [], notes: '', exceptionIds: [], environmentVariableIds: [], diagram },
 })
 
 const snapshot: WorkspaceSnapshot = {
-  schemaVersion: 12,
+  schemaVersion: 13,
   types: [],
   exceptions: [],
   environmentVariables: [],
@@ -105,24 +105,26 @@ describe('Workspace types', () => {
     ws.setPorts(outer.resourceId, 'inputs', [{ name: 'a', typeId: null }, { name: 'b', typeId: null }])
     const def = ws.resources.get(outer.resourceId)!.definition!
     const [a, b] = def.inputs
+    const nodeOf = (portId: string) => def.portPlacements.find((n) => n.portId === portId)!
+    const [nodeA, nodeB] = [nodeOf(a.id), nodeOf(b.id)]
     const inner = ws.createPlacedResource(def.diagram, { kind: 'database', name: 'D' }, { x: 0, y: 0 })
-    def.diagram.addLink(a.id, inner.id, 'right', 'left')
-    def.diagram.addLink(b.id, inner.id, 'right', 'left')
-    def.setPortPosition(a.id, { x: 5, y: 6 })
+    def.diagram.addLink(nodeA.id, inner.id, 'right', 'left')
+    def.diagram.addLink(nodeB.id, inner.id, 'right', 'left')
     const before = ws.getVersion()
     ws.setPorts(outer.resourceId, 'inputs', [b])
-    expect(def.diagram.links.map((l) => l.sourceId)).toEqual([b.id])
-    expect(def.portPosition(a.id)).toBeUndefined()
+    expect(def.diagram.links.map((l) => l.sourceId)).toEqual([nodeB.id])
+    expect(def.portPlacement(nodeA.id)).toBeUndefined()
     expect(ws.getVersion()).toBe(before + 1)
   })
-  it('keeps a port position through an undo-style content replacement', () => {
+  it('keeps a port node position through an undo-style content replacement', () => {
     const ws = empty()
     const outer = ws.createPlacedResource(ws.root, { kind: 'component', name: 'O' }, { x: 0, y: 0 })
     ws.setPorts(outer.resourceId, 'outputs', [{ name: 'a', typeId: null }])
     const def = ws.resources.get(outer.resourceId)!.definition!
-    def.setPortPosition(def.outputs[0].id, { x: 7, y: 8 })
+    const node = def.portPlacements[0]
+    def.setPortPlacementPosition(node.id, { x: 7, y: 8 })
     ws.replaceContent(ws.capture())
-    expect(ws.resources.get(outer.resourceId)!.definition!.portPosition(def.outputs[0].id)).toEqual({ x: 7, y: 8 })
+    expect(ws.resources.get(outer.resourceId)!.definition!.portPlacement(node.id)?.position).toEqual({ x: 7, y: 8 })
   })
 })
 

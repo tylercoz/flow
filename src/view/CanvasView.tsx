@@ -11,7 +11,7 @@ import {
   type Node,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { Size } from '../domain/NodeBounds'
+import type { Position, Size } from '../domain/NodeBounds'
 import type { Diagram } from '../domain/Diagram'
 import { DomainError } from '../domain/DomainError'
 import type { Notifier } from '../domain/Notifier'
@@ -72,14 +72,19 @@ interface LevelProps extends CanvasViewProps {
   clipboard: RefObject<Copied | null>
 }
 
+type CopiedPortNode = { id: string; portId: string; position: Position }
+
 // Sizes are captured at copy time because the copied Placements may be on another Level when pasted.
+// Port nodes belong to one component's Level, so the Diagram they came from decides whether a paste may use them.
 interface Copied {
   fragment: Fragment
+  portNodes: readonly CopiedPortNode[]
+  fromDiagramId: string
   sizes: ReadonlyMap<string, Size>
 }
 
 function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: LevelProps) {
-  const { workspace, scheduler, navigator } = useApp()
+  const { workspace, scheduler, navigator, history } = useApp()
   const [rename] = useState(() => new RenameController(scheduler))
   // Level is keyed by Diagram id, so unmounting is a Level change and must drop any pending or active Rename.
   useEffect(
@@ -128,7 +133,15 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   // Deletion is routed through DeleteFlow (confirmation, cascade), so React Flow must not delete by itself.
   const onBeforeDelete = async ({ nodes: gone, edges: goneEdges }: { nodes: Node[]; edges: Edge[] }) => {
     const goneIds = new Set(gone.map((n) => n.id))
-    gone.forEach((n) => deleteFlow.request(diagram, { kind: 'placement', id: n.id }))
+    // Checked first and as a whole: refusing to leave a port without a node must not delete the rest of the selection.
+    try {
+      owner?.removePortPlacements(gone.filter((n) => n.type === 'port').map((n) => n.id))
+    } catch (e) {
+      if (!(e instanceof DomainError)) throw e
+      notifier.post('delete', e.message, 'transient')
+      return false
+    }
+    gone.filter((n) => n.type !== 'port').forEach((n) => deleteFlow.request(diagram, { kind: 'placement', id: n.id }))
     // Edges attached to a deleted node are handled by the cascade, and must survive a pending confirmation.
     goneEdges
       .filter((e) => !goneIds.has(e.source) && !goneIds.has(e.target))
@@ -138,7 +151,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
 
   // A port node keeps its position on the component, so it moves on every Level that shows that component.
   const savePosition = (n: Node) => {
-    if (n.type === 'port') owner?.setPortPosition(n.id, n.position)
+    if (n.type === 'port') owner?.setPortPlacementPosition(n.id, n.position)
     else diagram.placement(n.id)?.setPosition(n.position)
   }
   const openMenu = (e: { clientX: number; clientY: number }) =>
@@ -155,13 +168,22 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
       const action = clipboardAction(e, isMac)
       if (!action) return
       // A rejected paste (MISSING_RESOURCE, REFERENCE_CYCLE) changes nothing, so the reason is posted instead of thrown.
-      const paste = (fragment: Fragment, offset: { x: number; y: number }) => {
+      const paste = (copied: Copied, offset: { x: number; y: number }) => {
+        // One group, so a selection of Placements and port nodes is one undo step.
+        history.beginGroup()
         try {
-          const added = workspace.paste(diagram, fragment, offset)
-          setPendingFocus(new Set([...added.placements, ...added.links].map((x) => x.id)))
+          const added = copied.fragment.placements.length > 0 ? workspace.paste(diagram, copied.fragment, offset) : { placements: [], links: [] }
+          // Port nodes copied on another Level have no port here to show, so they are left out.
+          const ported =
+            owner && copied.fromDiagramId === diagram.id
+              ? owner.addPortPlacements(copied.portNodes.map((n) => ({ portId: n.portId, position: { x: n.position.x + offset.x, y: n.position.y + offset.y } })))
+              : []
+          setPendingFocus(new Set([...added.placements, ...added.links, ...ported].map((x) => x.id)))
         } catch (err) {
           if (!(err instanceof DomainError)) throw err
           notifier.post('paste', err.message, 'transient')
+        } finally {
+          history.endGroup()
         }
       }
       if (action === 'paste') {
@@ -172,30 +194,37 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
         // Before the pointer has moved over the canvas there is no cursor to aim at, so the canvas centre stands in.
         const screen = cursor.current ?? centreOf(canvas.current)
         if (!screen) return
-        const { fragment, sizes } = copied
-        paste(fragment, offsetToCenter(fragment, screenToFlowPosition(screen), sizes))
+        const { fragment, portNodes, sizes } = copied
+        paste(copied, offsetToCenter({ placements: [...fragment.placements, ...portNodes] }, screenToFlowPosition(screen), sizes))
         return
       }
-      // A port node belongs to its component, so it is never copied or duplicated.
-      const ids = new Set(nodes.filter((n) => n.selected && n.type === 'placement').map((n) => n.id))
+      const selected = nodes.filter((n) => n.selected)
+      const ids = new Set(selected.filter((n) => n.type === 'placement').map((n) => n.id))
+      const portNodes = selected.flatMap((n): CopiedPortNode[] => {
+        const portId = n.type === 'port' ? owner?.portPlacement(n.id)?.portId : undefined
+        return portId ? [{ id: n.id, portId, position: { x: n.position.x, y: n.position.y } }] : []
+      })
       // Acting on nothing keeps the previous copy instead of clearing it.
-      if (ids.size === 0) return
+      if (ids.size === 0 && portNodes.length === 0) return
       // Cmd+D is the browser's bookmark shortcut, so it is only taken over when it does something.
       e.preventDefault()
-      const fragment = workspace.copy(diagram, ids)
+      const sizes = new Map<string, Size>()
+      for (const n of nodes) {
+        const copiedNode = ids.has(n.id) || portNodes.some((p) => p.id === n.id)
+        if (copiedNode && n.measured?.width && n.measured.height) sizes.set(n.id, { width: n.measured.width, height: n.measured.height })
+      }
+      const copied: Copied = { fragment: workspace.copy(diagram, ids), portNodes, fromDiagramId: diagram.id, sizes }
       if (action === 'copy') {
-        const sizes = new Map<string, Size>()
-        for (const n of nodes) if (ids.has(n.id) && n.measured?.width && n.measured.height) sizes.set(n.id, { width: n.measured.width, height: n.measured.height })
-        clipboard.current = { fragment, sizes }
+        clipboard.current = copied
         return
       }
       // Duplicate bypasses the clipboard so it doesn't overwrite what the user copied.
       rename.cancel()
-      paste(fragment, { x: DUPLICATE_OFFSET, y: DUPLICATE_OFFSET })
+      paste(copied, { x: DUPLICATE_OFFSET, y: DUPLICATE_OFFSET })
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [nodes, clipboard, workspace, diagram, rename, screenToFlowPosition, notifier])
+  }, [nodes, clipboard, workspace, history, diagram, owner, rename, screenToFlowPosition, notifier])
 
   return (
     <RenameContext.Provider value={rename}>

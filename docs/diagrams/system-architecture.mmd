@@ -50,7 +50,7 @@ flowchart TD
         Diagram --> LinkRules
         Resource --> ResourceKinds
         LinkRules --> ResourceKinds
-        ComponentDefinition -->|"attachPortOwner: its port ids are nodes of the child Diagram"| Diagram
+        ComponentDefinition -->|"attachPortOwner: its PortPlacement ids are nodes of the child Diagram"| Diagram
         Diagram -->|"portNodeHandleIds for a port id"| Port
         Navigator -->|"root; path of Placement ids via resourceOf; currentComponent"| Diagram
         History -->|"subscribes; capture, replaceContent"| Workspace
@@ -64,7 +64,7 @@ flowchart TD
         WorkspaceLoader -->|restore| Workspace
         WorkspaceSerializer -->|toSnapshot| Workspace
         WorkspaceSerializer -->|checkLink, handleIds, kindInvariantError| Domain
-        WorkspaceSerializer -->|"schemaVersion 12; findCycle rejects Reference_Cycle"| DiagramGraph
+        WorkspaceSerializer -->|"schemaVersion 13; findCycle rejects Reference_Cycle"| DiagramGraph
         AutoSaver --> WorkspaceSerializer
         AutoSaver --> Repository
         LocalStorageRepository -.implements.-> Repository
@@ -122,7 +122,8 @@ flowchart TD
     PortNode -->|"reads the port live via navigator.currentComponent; Handles per side"| Navigator
     PortNode -->|"shares SIDE_POSITIONS"| PlacementNode
     DiagramProjector -->|"toNodes(diagram, owner): one port node per port, stored or default position"| Navigator
-    CanvasView -->|"drag a port node: setPortPosition"| ComponentDefinition
+    CanvasView -->|"drag a port node: setPortPlacementPosition; copy, paste, duplicate: addPortPlacements in one History group; Delete: removePortPlacements, refusal to Notifier"| ComponentDefinition
+    CanvasView -->|"beginGroup, endGroup around a paste of Placements and port nodes"| History
     CanvasView -->|"click on empty pane (not one that deselects) or right-click: pick a kind, component included"| ResourcePicker
     ResourcePicker -->|addPlacement| Diagram
     ResourcePicker -->|"createPlacedResource; lists resources.byKind without cyclic ones (wouldCreateCycle)"| Workspace

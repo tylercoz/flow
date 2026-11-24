@@ -10,6 +10,7 @@ type DomainErrorCode =
   | 'UNKNOWN_TYPE'
   | 'REFERENCE_CYCLE'
   | 'NOT_A_COMPONENT'
+  | 'LAST_PORT_NODE'
 
 export class DomainError extends Error {
   readonly code: DomainErrorCode

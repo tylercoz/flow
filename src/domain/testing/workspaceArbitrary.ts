@@ -44,6 +44,8 @@ export type Command =
   | { kind: 'addLink'; diagram: number; source: number; target: number; sourcePort: number; targetPort: number }
   | { kind: 'addPortLink'; diagram: number; source: number; target: number; sourceHandle: number; targetHandle: number }
   | { kind: 'movePortNode'; component: number; port: number; position: Position }
+  | { kind: 'duplicatePortNode'; component: number; port: number; position: Position }
+  | { kind: 'removePortNode'; component: number; port: number }
   | { kind: 'removeLink'; diagram: number; link: number }
   | { kind: 'patchComponent'; component: number; patch: ComponentPatch }
   | { kind: 'patchLink'; diagram: number; link: number; name: string }
@@ -71,6 +73,8 @@ export const commandArb: fc.Arbitrary<Command> = fc.oneof(
   { arbitrary: fc.record({ kind: fc.constant('addLink' as const), diagram: pick, source: pick, target: pick, sourcePort: pick, targetPort: pick }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('addPortLink' as const), diagram: pick, source: pick, target: pick, sourceHandle: pick, targetHandle: pick }), weight: 3 },
   { arbitrary: fc.record({ kind: fc.constant('movePortNode' as const), component: pick, port: pick, position: positionArb }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('duplicatePortNode' as const), component: pick, port: pick, position: positionArb }), weight: 2 },
+  { arbitrary: fc.record({ kind: fc.constant('removePortNode' as const), component: pick, port: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('removeLink' as const), diagram: pick, link: pick }), weight: 1 },
   { arbitrary: fc.record({ kind: fc.constant('patchComponent' as const), component: pick, patch: componentPatchArb }), weight: 2 },
   { arbitrary: fc.record({ kind: fc.constant('patchLink' as const), diagram: pick, link: pick, name: fc.string() }), weight: 1 },
@@ -152,8 +156,21 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
     }
     case 'movePortNode': {
       const c = at(components, cmd.component)?.definition
-      const port = c && at([...c.inputs, ...c.outputs], cmd.port)
-      if (c && port) c.setPortPosition(port.id, cmd.position)
+      const node = c && at(c.portPlacements, cmd.port)
+      if (c && node) c.setPortPlacementPosition(node.id, cmd.position)
+      return
+    }
+    case 'duplicatePortNode': {
+      const c = at(components, cmd.component)?.definition
+      const node = c && at(c.portPlacements, cmd.port)
+      if (c && node) c.addPortPlacements([{ portId: node.portId, position: cmd.position }])
+      return
+    }
+    case 'removePortNode': {
+      const c = at(components, cmd.component)?.definition
+      const node = c && at(c.portPlacements, cmd.port)
+      // A port's last node cannot go; that refusal is tested on its own, so here the command is skipped.
+      if (c && node && c.portPlacements.some((n) => n.portId === node.portId && n.id !== node.id)) c.removePortPlacements([node.id])
       return
     }
     case 'toggleEnvironmentVariable': {
@@ -217,7 +234,7 @@ export function applyCommand(workspace: Workspace, cmd: Command): void {
       // Only a component's own Level has port nodes; the root is skipped.
       const owner = components.find((c) => c.definition?.diagram === d)?.definition
       if (!owner) return
-      const nodes = [...owner.inputs.map((p) => p.id), ...owner.outputs.map((p) => p.id), ...d.placements.map((p) => p.id)]
+      const nodes = [...owner.portPlacements.map((n) => n.id), ...d.placements.map((p) => p.id)]
       const handlesOf = (id: string, role: 'source' | 'target') => {
         const placement = d.placement(id)
         if (placement) return handleIds(workspace, placement, role)

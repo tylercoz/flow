@@ -3,11 +3,10 @@ import type { EnvironmentVariable } from '../domain/EnvironmentVariable'
 import type { ExceptionType } from '../domain/ExceptionType'
 import { findCycle } from '../domain/DiagramGraph'
 import { checkLink } from '../domain/LinkRules'
-import type { Position } from '../domain/NodeBounds'
 import { portNodeHandleIds, type Port } from '../domain/Port'
 import { handleIds, isResourceKind, kindInvariantError } from '../domain/ResourceKinds'
 import type { Workspace } from '../domain/Workspace'
-import type { ComponentDto, DiagramDto, LinkDto, PlacementDto, ResourceDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
+import type { ComponentDto, DiagramDto, LinkDto, PlacementDto, PortPlacementDto, ResourceDto, WorkspaceSnapshot } from '../domain/WorkspaceSnapshot'
 import { PersistenceError } from './PersistenceError'
 
 type Obj = Record<string, unknown>
@@ -23,7 +22,7 @@ export class WorkspaceSerializer {
   deserialize(raw: unknown): WorkspaceSnapshot {
     const obj = asObject(raw, 'workspace')
     // No migrations while in development: data from any other version is rejected and must be cleared.
-    if (obj.schemaVersion !== 12) {
+    if (obj.schemaVersion !== 13) {
       throw new PersistenceError(`Unsupported schemaVersion: ${String(obj.schemaVersion)}`)
     }
     const types = asArray(obj.types, 'types').map((t, i) => parseType(t, `types[${i}]`))
@@ -49,7 +48,7 @@ export class WorkspaceSerializer {
       component: h.component && {
         inputs: h.component.inputs,
         outputs: h.component.outputs,
-        portPositions: h.component.portPositions,
+        portNodes: h.component.portNodes,
         notes: h.component.notes,
         exceptionIds: h.component.exceptionIds,
         environmentVariableIds: h.component.environmentVariableIds,
@@ -62,7 +61,7 @@ export class WorkspaceSerializer {
     assertTypesExist(resources, typeIds)
     assertExceptionsExist(resources, new Set(exceptions.map((e) => e.id)))
     assertEnvironmentVariablesExist(resources, new Set(environmentVariables.map((v) => v.id)))
-    return { schemaVersion: 12, types, exceptions, environmentVariables, resources, root }
+    return { schemaVersion: 13, types, exceptions, environmentVariables, resources, root }
   }
 }
 
@@ -170,7 +169,7 @@ function parseHeader(v: unknown, path: string, typeIds: ReadonlySet<string>): Re
     component = {
       inputs: parsePorts(c, 'inputs', `${path}.component`),
       outputs: parsePorts(c, 'outputs', `${path}.component`),
-      portPositions: parsePortPositions(c, `${path}.component`),
+      portNodes: parsePortNodes(c, `${path}.component`),
       notes: asString(c.notes, `${path}.component.notes`),
       exceptionIds: asArray(c.exceptionIds, `${path}.component.exceptionIds`).map((e, i) => asString(e, `${path}.component.exceptionIds[${i}]`)),
       environmentVariableIds: asArray(c.environmentVariableIds, `${path}.component.environmentVariableIds`).map((e, i) =>
@@ -197,22 +196,32 @@ function parsePlacement(v: unknown, path: string, shapes: ReadonlyMap<string, En
   }
 }
 
-// A position for a port the component does not have could never be shown or removed, so reject it at load.
-function parsePortPositions(c: Obj, path: string): Record<string, Position> {
+// A node for a port the component lacks could never be shown or removed, and a port with no node could never be
+// linked or have one added by copying, so both are rejected at load.
+function parsePortNodes(c: Obj, path: string): PortPlacementDto[] {
   const ports = new Set([...parsePorts(c, 'inputs', path), ...parsePorts(c, 'outputs', path)].map((p) => p.id))
-  const o = asObject(c.portPositions, `${path}.portPositions`)
-  const result: Record<string, Position> = {}
-  for (const [id, v] of Object.entries(o)) {
-    if (!ports.has(id)) throw new PersistenceError(`Position stored for unknown port ${id}`)
-    const p = asObject(v, `${path}.portPositions.${id}`)
-    result[id] = { x: asNumber(p.x, `${path}.portPositions.${id}.x`), y: asNumber(p.y, `${path}.portPositions.${id}.y`) }
-  }
-  return result
+  const seen = new Set<string>()
+  const nodes = asArray(c.portNodes, `${path}.portNodes`).map((v, i): PortPlacementDto => {
+    const at = `${path}.portNodes[${i}]`
+    const o = asObject(v, at)
+    const id = asString(o.id, `${at}.id`)
+    const portId = asString(o.portId, `${at}.portId`)
+    if (seen.has(id)) throw new PersistenceError(`Duplicate node id ${id}`)
+    seen.add(id)
+    if (!ports.has(portId)) throw new PersistenceError(`Port node ${id} shows unknown port ${portId}`)
+    if (o.position === null) return { id, portId, position: null }
+    const p = asObject(o.position, `${at}.position`)
+    return { id, portId, position: { x: asNumber(p.x, `${at}.position.x`), y: asNumber(p.y, `${at}.position.y`) } }
+  })
+  const shown = new Set(nodes.map((n) => n.portId))
+  for (const id of ports) if (!shown.has(id)) throw new PersistenceError(`Port ${id} has no node`)
+  return nodes
 }
-// Each port of a component is a node on its child Diagram, with the handles of its role.
-function portEnds(c: Pick<ComponentDto, 'inputs' | 'outputs'>): Map<string, End> {
+// Each Port_Node of a component is a node on its child Diagram, with the handles of its port's role.
+function portEnds(c: Pick<ComponentDto, 'inputs' | 'outputs' | 'portNodes'>): Map<string, End> {
+  const inputs = new Set(c.inputs.map((p) => p.id))
   const end = (role: 'input' | 'output'): End => ({ source: portNodeHandleIds(role, 'source'), target: portNodeHandleIds(role, 'target') })
-  return new Map([...c.inputs.map((p) => [p.id, end('input')] as const), ...c.outputs.map((p) => [p.id, end('output')] as const)])
+  return new Map(c.portNodes.map((n) => [n.id, end(inputs.has(n.portId) ? 'input' : 'output')] as const))
 }
 function parseDiagram(v: unknown, path: string, shapes: ReadonlyMap<string, End>, ports: ReadonlyMap<string, End>): DiagramDto {
   const o = asObject(v, path)

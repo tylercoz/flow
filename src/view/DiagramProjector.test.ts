@@ -35,20 +35,23 @@ describe('DiagramProjector', () => {
       const def = workspace.resources.get(p.resourceId)!.definition!
       return { def }
     }
-    it('adds one undeletable node per port, in default columns, after the Placements', () => {
+    it('adds one node per port node, in default columns, after the Placements', () => {
       const { def } = component()
       const nodes = toNodes(def.diagram, def)
       expect(nodes.map((n) => [n.id, n.type, n.position])).toEqual([
-        [def.inputs[0].id, 'port', { x: 0, y: 0 }],
-        [def.inputs[1].id, 'port', { x: 0, y: 72 }],
-        [def.outputs[0].id, 'port', { x: 480, y: 0 }],
+        [def.portPlacements[0].id, 'port', { x: 0, y: 0 }],
+        [def.portPlacements[1].id, 'port', { x: 0, y: 72 }],
+        [def.portPlacements[2].id, 'port', { x: 480, y: 0 }],
       ])
-      expect(nodes.every((n) => n.deletable === false)).toBe(true)
     })
-    it('uses a stored position over the default slot', () => {
+    it('uses a stored position over the default slot, and shows a copy of a port as its own node', () => {
       const { def } = component()
-      def.setPortPosition(def.inputs[1].id, { x: 9, y: 8 })
-      expect(toNodes(def.diagram, def).find((n) => n.id === def.inputs[1].id)?.position).toEqual({ x: 9, y: 8 })
+      def.setPortPlacementPosition(def.portPlacements[1].id, { x: 9, y: 8 })
+      const [copy] = def.addPortPlacements([{ portId: def.inputs[0].id, position: { x: 5, y: 6 } }])
+      const nodes = toNodes(def.diagram, def)
+      expect(nodes.find((n) => n.id === def.portPlacements[1].id)?.position).toEqual({ x: 9, y: 8 })
+      expect(nodes.find((n) => n.id === copy.id)?.position).toEqual({ x: 5, y: 6 })
+      expect(nodes).toHaveLength(4)
     })
     it('adds none at the root', () => {
       const { def } = component()

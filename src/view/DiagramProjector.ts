@@ -1,7 +1,6 @@
 import { MarkerType, type Edge, type Node } from '@xyflow/react'
 import type { ComponentDefinition } from '../domain/ComponentDefinition'
 import type { Diagram } from '../domain/Diagram'
-import type { Port, PortRole } from '../domain/Port'
 
 // Ids are shared with the domain so React Flow events map straight back to model objects.
 // Nodes are flat (no parentId): a component's contents live on its own Level.
@@ -22,16 +21,18 @@ export function toNodes(diagram: Diagram, owner: ComponentDefinition | null = nu
 const OUTPUT_COLUMN_X = 480
 const PORT_ROW_HEIGHT = 72
 function toPortNodes(owner: ComponentDefinition): Node[] {
-  const node = (port: Port, role: PortRole, index: number): Node => ({
-    // The port id doubles as the node id, so Links and React Flow events map straight back to the port.
-    id: port.id,
-    type: 'port',
-    position: { ...(owner.portPosition(port.id) ?? { x: role === 'input' ? 0 : OUTPUT_COLUMN_X, y: index * PORT_ROW_HEIGHT }) },
-    // A port node is a view of the port, so deleting it would have no meaning: ports are removed on the component.
-    deletable: false,
-    data: {},
+  return owner.portPlacements.map((n) => {
+    const role = owner.portRole(n.id)
+    const index = (role === 'input' ? owner.inputs : owner.outputs).findIndex((p) => p.id === n.portId)
+    return {
+      // The node id is the Link end, so Links and React Flow events map straight back to the domain.
+      id: n.id,
+      type: 'port',
+      // Every node of an unmoved port shares the slot of the port's order, so a copy is placed explicitly when it is made.
+      position: n.position ? { ...n.position } : { x: role === 'input' ? 0 : OUTPUT_COLUMN_X, y: index * PORT_ROW_HEIGHT },
+      data: {},
+    }
   })
-  return [...owner.inputs.map((p, i) => node(p, 'input', i)), ...owner.outputs.map((p, i) => node(p, 'output', i))]
 }
 
 export function toEdges(diagram: Diagram): Edge[] {

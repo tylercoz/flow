@@ -63,7 +63,7 @@ describe('port removal', () => {
       { numRuns: 100 },
     )
   })
-  it('setPorts leaves exactly the Links and positions of the kept ports on the component Level', () => {
+  it('setPorts keeps every port with a node and leaves no Link on a removed port\'s nodes', () => {
     fc.assert(
       fc.property(
         workspaceArb,
@@ -75,18 +75,24 @@ describe('port removal', () => {
           workspace.setPorts(placed.resourceId, 'inputs', [port('i1'), port('i2')])
           workspace.setPorts(placed.resourceId, 'outputs', [port('o1'), port('o2')])
           const inner = workspace.createPlacedResource(definition!.diagram, { kind: 'database', name: 'd' }, { x: 0, y: 0 })
-          for (const i of ['i1', 'i2']) definition!.diagram.addLink(i, inner.id, 'right', 'left')
-          for (const o of ['o1', 'o2']) definition!.diagram.addLink(inner.id, o, 'right', 'left')
-          for (const id of ['i1', 'i2', 'o1', 'o2']) definition!.setPortPosition(id, { x: 1, y: 2 })
+          // Two nodes per port, each linked to the inner node.
+          definition!.addPortPlacements(['i1', 'i2', 'o1', 'o2'].map((portId) => ({ portId, position: { x: 1, y: 2 } })))
+          for (const n of definition!.portPlacements) {
+            if (n.portId.startsWith('i')) definition!.diagram.addLink(n.id, inner.id, 'right', 'left')
+            else definition!.diagram.addLink(inner.id, n.id, 'right', 'left')
+          }
           const existing = field === 'inputs' ? ['i1', 'i2'] : ['o1', 'o2']
           const kept = existing.filter((_, n) => keep[n])
           workspace.setPorts(placed.resourceId, field, kept.map(port))
           const live = new Set([...definition!.inputs, ...definition!.outputs].map((p) => p.id))
-          expect(definition!.diagram.links).toHaveLength(2 + kept.length)
+          const nodes = new Set(definition!.portPlacements.map((n) => n.id))
+          for (const id of live) expect(definition!.portPlacements.some((n) => n.portId === id)).toBe(true)
+          for (const n of definition!.portPlacements) expect(live.has(n.portId)).toBe(true)
           for (const l of definition!.diagram.links) {
-            for (const end of [l.sourceId, l.targetId]) expect(end === inner.id || live.has(end)).toBe(true)
+            for (const end of [l.sourceId, l.targetId]) expect(end === inner.id || nodes.has(end)).toBe(true)
           }
-          expect([...definition!.portPositions.keys()].sort()).toEqual([...live].sort())
+          // The other field's ports keep both nodes and links, the changed field keeps two per kept port.
+          expect(definition!.diagram.links).toHaveLength(2 * (2 + kept.length))
         },
       ),
       { numRuns: 100 },

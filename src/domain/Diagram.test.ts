@@ -238,7 +238,8 @@ describe('Diagram', () => {
       const innerDef = s.definitionOf(inner)
       s.workspace.setPorts(inner.resourceId, 'inputs', [{ name: 'a', typeId: null }])
       s.workspace.setPorts(inner.resourceId, 'outputs', [{ name: 'b', typeId: null }])
-      return { ...s, outer, def, level, inner, innerDef, input: def.inputs[0].id, output: def.outputs[0].id }
+      const nodeOf = (portId: string) => def.portPlacements.find((n) => n.portId === portId)!.id
+      return { ...s, outer, def, level, inner, innerDef, input: nodeOf(def.inputs[0].id), output: nodeOf(def.outputs[0].id) }
     }
     it('links an input port node to an inner node and an inner node to an output port node', () => {
       const { level, inner, innerDef, input, output } = inside()
@@ -253,6 +254,12 @@ describe('Diagram', () => {
       const { level, inner, innerDef, input, output } = inside()
       expect(code(() => level.addLink(inner.id, input, innerDef.outputs[0].id, 'left'))).toBe('INVALID_PORT')
       expect(code(() => level.addLink(output, inner.id, 'right', innerDef.inputs[0].id))).toBe('INVALID_PORT')
+    })
+    it('links a copy of a port node like the first one', () => {
+      const { def, level, inner, innerDef } = inside()
+      const [copy] = def.addPortPlacements([{ portId: def.inputs[0].id, position: { x: 1, y: 2 } }])
+      expect(() => level.addLink(copy.id, inner.id, 'right', innerDef.inputs[0].id)).not.toThrow()
+      expect(code(() => level.addLink(inner.id, copy.id, innerDef.outputs[0].id, 'left'))).toBe('INVALID_PORT')
     })
     it('rejects a self Link and an id that is not a node of this Diagram', () => {
       const { diagram, level, input, output } = inside()
