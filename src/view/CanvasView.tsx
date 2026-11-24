@@ -158,14 +158,28 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
   }
   // Drops land on the component under the pointer, not on one the dragged boxes merely overlap, so repositioning
   // a node next to a component never moves it by accident.
-  const dropIntoComponent = (e: ReactMouseEvent | MouseEvent | TouchEvent, moved: Node[]): boolean => {
+  const componentUnder = (e: ReactMouseEvent | MouseEvent | TouchEvent, movedIds: ReadonlySet<string>): string | undefined => {
     const point = 'changedTouches' in e ? e.changedTouches[0] : e
-    const movedIds = new Set(moved.filter((n) => n.type === 'placement').map((n) => n.id))
-    if (!point || movedIds.size === 0) return false
-    const targetId = document
+    if (!point || movedIds.size === 0) return undefined
+    return document
       .elementsFromPoint(point.clientX, point.clientY)
       .map((el) => el.closest<HTMLElement>('.react-flow__node')?.dataset.id)
       .find((id) => id && !movedIds.has(id) && diagram.resourceOf(id)?.definition)
+  }
+  const placementIds = (moved: Node[]) => new Set(moved.filter((n) => n.type === 'placement').map((n) => n.id))
+  // The class only restyles the node (see index.css); it is applied to local React Flow state, not the model.
+  const [dropTarget, setDropTarget] = useState<string | undefined>()
+  const hoverComponent = (e: ReactMouseEvent | MouseEvent | TouchEvent, moved: Node[]) => {
+    const id = componentUnder(e, placementIds(moved))
+    if (id === dropTarget) return
+    setDropTarget(id)
+    setNodes((ns) => ns.map((n) => ({ ...n, className: n.id === id ? 'drop-target' : undefined })))
+  }
+  const dropIntoComponent = (e: ReactMouseEvent | MouseEvent | TouchEvent, moved: Node[]): boolean => {
+    const movedIds = placementIds(moved)
+    const targetId = componentUnder(e, movedIds)
+    setDropTarget(undefined)
+    setNodes((ns) => ns.map((n) => ({ ...n, className: undefined })))
     if (!targetId) return false
     // One group, so the copy into the component and the removal here are one undo step.
     history.beginGroup()
@@ -258,6 +272,7 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
     <RenameContext.Provider value={rename}>
       <div
         ref={canvas}
+        className={dropTarget ? 'drop-active' : undefined}
         style={{ width: '100%', height: '100%' }}
         onPointerMove={(e) => {
           cursor.current = { x: e.clientX, y: e.clientY }
@@ -275,6 +290,8 @@ function Level({ diagram, notifier, clipboard, deleteFlow, onSelectionChange }: 
           onNodeDragStart={() => rename.cancel()}
           // Dragging one member of a multi-selection moves all of them, so persist every moved node.
           onNodeDragStop={(e, __, moved) => onDragStop(e, moved)}
+          onNodeDrag={(e, __, moved) => hoverComponent(e, moved)}
+          onSelectionDrag={hoverComponent}
           onSelectionDragStart={() => rename.cancel()}
           onSelectionDragStop={onDragStop}
           // Loose mode lets a side handle (one source and one target Handle per side) start or end a Link.

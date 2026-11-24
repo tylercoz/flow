@@ -333,6 +333,29 @@ textarea:focus {
 .component-node:hover {
   border-color: var(--accent);
 }
+/* While nodes are dragged over a component: it grows to show it will take them, and everything else
+   that is not being dragged recedes. Scale is on the box, not the node, which React Flow positions with a transform. */
+.component-node {
+  /* Repeats the earlier transition on this selector, which this rule would otherwise replace. */
+  transition: border-color 0.15s, box-shadow 0.15s, transform 150ms ease;
+}
+.react-flow__node {
+  transition: filter 150ms ease;
+}
+.drop-active .react-flow__node:not(.drop-target, .dragging) {
+  filter: blur(2px);
+}
+.react-flow__node.drop-target .component-node {
+  transform: scale(1.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
+}
+@media (prefers-reduced-motion: reduce) {
+  .component-node,
+  .react-flow__node {
+    transition: none;
+  }
+}
 .react-flow__node.selected .component-node {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);

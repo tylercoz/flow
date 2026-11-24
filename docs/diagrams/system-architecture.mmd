@@ -132,7 +132,7 @@ flowchart TD
     Level -->|classifies key events| clipboardShortcut
     Level -->|"paste: centres the Fragment on the cursor"| pasteOffset
     Level -->|"Cmd/Ctrl+C, V, D: copy, paste, duplicate (copy then paste, skipping the copied Fragment)"| Workspace
-    Level -->|"drag stop with the pointer over a component node: moveIntoComponent in one History group, rejection to Notifier"| Workspace
+    Level -->|"dragging over a component node enlarges it and blurs the rest (CSS class); drag stop over it: moveIntoComponent in one History group, rejection to Notifier"| Workspace
     CanvasView -->|"nodeTypes 'placement' and 'port' (module-level)"| PlacementNode
     CanvasView -->|"nodeTypes 'port': only on a component's Level"| PortNode
     PortNode -->|"reads the port live via navigator.currentComponent; Handles per side"| Navigator
